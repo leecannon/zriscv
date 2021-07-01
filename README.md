@@ -1,5 +1,6 @@
-[![CI](https://github.com/leecannon/zriscv/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/leecannon/zriscv/actions/workflows/main.yml)
 # zriscv
+[![CI](https://github.com/leecannon/zriscv/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/leecannon/zriscv/actions/workflows/main.yml)
+
 RISC-V emulator in Zig
 
 Requires [Gyro](https://github.com/mattnite/gyro)

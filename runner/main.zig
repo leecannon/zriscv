@@ -19,9 +19,8 @@ pub fn main() !void {
     };
     defer allocator.free(file_contents);
 
-    const first_instruction = @bitCast(u32, file_contents[0..4].*);
-
-    std.log.info("{x:0>8} {b:0>32}", .{ first_instruction, first_instruction });
+    var cpu = zriscv.Cpu{ .memory = file_contents };
+    try cpu.execute();
 }
 
 comptime {

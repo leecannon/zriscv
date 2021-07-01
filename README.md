@@ -3,7 +3,7 @@
 
 RISC-V emulator in Zig
 
-Requires [Gyro](https://github.com/mattnite/gyro)
+Requires [Gyro](https://github.com/mattnite/gyro) and git lfs.
 
 ## What to expect
 This is the first emulator I've made other than CHIP-8, don't expect high quality nor speed.

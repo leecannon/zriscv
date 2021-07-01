@@ -6,6 +6,9 @@ pub const InstructionType = enum {
     /// Jump and link
     JAL,
 
+    /// Branch Not Equal
+    BNE,
+
     // Zicsr
 
     /// Atomic Read and Set Bits in CSR

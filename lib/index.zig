@@ -37,7 +37,7 @@ pub const Cpu = struct {
                 // I
                 .JAL => {
                     // J-type
-                    const imm = instruction.readJImm();
+                    const imm = instruction.j_imm.read();
                     const rd = instruction.rd.read();
 
                     std.log.debug("JAL - dest: x{}, offset: 0x{x}", .{ rd, imm });
@@ -47,8 +47,20 @@ pub const Cpu = struct {
                     }
 
                     self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
-
                     return;
+                },
+                .BNE => {
+                    // B-type
+                    const imm = instruction.b_imm.read();
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
+                    std.log.debug("BNE - src1: x{}, src2: x{}, offset: 0x{x}", .{ rs1, rs2, imm });
+
+                    if (self.registers.x[rs1] != self.registers.x[rs2]) {
+                        self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
+                        return;
+                    }
                 },
 
                 // Zicsr
@@ -56,7 +68,7 @@ pub const Cpu = struct {
                     // I-type
 
                     const rd = instruction.rd.read();
-                    const csr = instruction.imm11_0.read();
+                    const csr = instruction.csr.read();
                     const rs1 = instruction.rs1.read();
 
                     std.log.debug("CSRRS - csr: {}, dest: x{}, source: x{}", .{ csr, rd, rs1 });

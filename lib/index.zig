@@ -26,7 +26,7 @@ pub const Cpu = struct {
             const instruction_type: InstructionType = switch (instruction.opcode.read()) {
                 0b1101111 => .JAL,
                 else => |opcode| {
-                    std.log.emerg("unimplemented opcode: 0b{b:0>7}", .{opcode});
+                    std.log.emerg("unimplemented opcode: {b:0>7}", .{opcode});
                     return error.UnimplementedOpcode;
                 },
             };

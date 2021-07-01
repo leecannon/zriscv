@@ -1,3 +1,4 @@
+[![CI](https://github.com/leecannon/zriscv/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/leecannon/zriscv/actions/workflows/main.yml)
 # zriscv
 RISC-V emulator in Zig
 

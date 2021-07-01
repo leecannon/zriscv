@@ -136,17 +136,17 @@ pub const Instruction = extern union {
 };
 
 pub const RegisterFile = struct {
-    general_purpose_registers: [32]u64 = [_]u64{0} ** 32,
+    integer_registers: [32]u64 = [_]u64{0} ** 32,
     pc: u64 = 0,
+    csrs = [_]u64{0} ** 4096,
 
     pub inline fn getX(self: RegisterFile, x: u64) u64 {
-        // It's faster to just have a 32 long array of registers, instead of a branch and subtraction
-        return self.general_purpose_registers[x];
+        return self.integer_registers[x];
     }
 
     pub inline fn setX(self: *RegisterFile, x: u64, value: u64) void {
         std.debug.assert(x != 0);
-        self.general_purpose_registers[x] = value;
+        self.integer_registers[x] = value;
     }
 
     comptime {

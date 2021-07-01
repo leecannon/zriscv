@@ -1,4 +1,4 @@
-const std = @import("std");
+usingnamespace @import("common.zig");
 
 pub const Cpu = struct {
     registers: [32]u64 = [_]u64{0} ** 32,

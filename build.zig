@@ -1,4 +1,5 @@
 const std = @import("std");
+const pkgs = @import("deps.zig").pkgs;
 
 const lib_pkg = std.build.Pkg{ .name = "zriscv", .path = .{ .path = "lib/index.zig" } };
 
@@ -10,6 +11,7 @@ pub fn build(b: *std.build.Builder) void {
     runner.setTarget(target);
     runner.setBuildMode(mode);
     runner.addPackage(lib_pkg);
+    pkgs.addAllTo(runner);
     runner.install();
 
     // TODO: This is temporary
@@ -26,11 +28,13 @@ pub fn build(b: *std.build.Builder) void {
     const test_exe = b.addTest("tests/tests.zig");
     test_exe.setBuildMode(mode);
     test_exe.addPackage(lib_pkg);
+    pkgs.addAllTo(test_exe);
     test_exe.addBuildOption([]const u8, "resource_path", b.pathFromRoot("tests/resources"));
 
     const runner_test = b.addTest("runner/main.zig");
     runner_test.setBuildMode(mode);
     runner_test.addPackage(lib_pkg);
+    pkgs.addAllTo(runner_test);
 
     // TODO: This is temporary
     runner_test.addBuildOption([]const u8, "resource_path", b.pathFromRoot("tests/resources"));

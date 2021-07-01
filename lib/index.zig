@@ -1,10 +1,12 @@
-usingnamespace @import("common.zig");
+const std = @import("std");
+const Instruction = @import("Instruction.zig").Instruction;
+const InstructionType = @import("InstructionType.zig").InstructionType;
 
 pub const Cpu = struct {
     registers: RegisterFile = .{},
     memory: []u8,
 
-    pub fn execute(self: *Cpu) !void {
+    pub fn run(self: *Cpu) !void {
         var instruction: Instruction = undefined;
 
         while (true) {
@@ -14,75 +16,123 @@ pub const Cpu = struct {
                 std.debug.print("\n", .{});
             }
 
-            // Fetch
-            {
-                // This is not 100% compatible with extension C, as the very last 16 bits of memory could be
-                // a compressed instruction, however the below check will fail in that case
-                if (self.registers.pc + 3 >= self.memory.len) return error.ExecutionOutOfBounds;
-                instruction.backing = std.mem.readIntSlice(u32, self.memory[self.registers.pc..], .Little);
-            }
+            try self.fetch(&instruction);
+            try self.execute(instruction);
+        }
+    }
 
-            // Decode
-            const instruction_type: InstructionType = switch (instruction.opcode.read()) {
-                0b1101111 => .JAL,
-                else => |opcode| {
-                    std.log.emerg("unimplemented opcode: {b:0>7}", .{opcode});
-                    return error.UnimplementedOpcode;
-                },
-            };
+    fn fetch(self: *const Cpu, instruction: *Instruction) !void {
+        // This is not 100% compatible with extension C, as the very last 16 bits of memory could be
+        // a compressed instruction, however the below check will fail in that case
+        if (self.registers.pc + 3 >= self.memory.len) return error.ExecutionOutOfBounds;
+        instruction.backing = std.mem.readIntSlice(u32, self.memory[self.registers.pc..], .Little);
+    }
 
-            // Execute
-            var compressed = false;
+    fn execute(self: *Cpu, instruction: Instruction) !void {
+        var compressed = false;
 
-            switch (instruction_type) {
+        // This while loop is only used to allow break
+        while (true) {
+            switch (try instruction.decode()) {
+                // I
                 .JAL => {
-                    const offset = instruction.j.readImm();
-                    const dest = instruction.j.rd.read();
+                    // J-type
+                    const imm = instruction.readJImm();
+                    const rd = instruction.rd.read();
 
-                    std.log.debug("JAL - dest: x{:0>2}, offset: 0x{x:0>16}", .{ dest, offset });
+                    std.log.debug("JAL - dest: x{}, offset: 0x{x}", .{ rd, imm });
 
-                    if (dest != 0) {
-                        self.registers.setX(dest, self.registers.pc + 4);
+                    if (rd != 0) {
+                        self.registers.x[rd] = self.registers.pc + 4;
                     }
 
-                    self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, offset);
+                    self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
 
-                    continue;
+                    return;
+                },
+
+                // Zicsr
+                .CSRRS => {
+                    // I-type
+
+                    const rd = instruction.rd.read();
+                    const csr = instruction.imm11_0.read();
+                    const rs1 = instruction.rs1.read();
+
+                    std.log.debug("CSRRS - csr: {}, dest: x{}, source: x{}", .{ csr, rd, rs1 });
+
+                    if (rd != 0) {
+                        self.registers.x[rd] = self.registers.csr[csr];
+                    }
+
+                    if (rs1 == 0) break;
+
+                    self.registers.csr[csr] |= self.registers.x[rs1];
                 },
             }
 
-            self.registers.pc += if (compressed) 2 else 4;
+            break;
         }
+
+        self.registers.pc += @as(u64, if (compressed) 2 else 4);
     }
 
     fn dump(self: Cpu) void {
         var i: usize = 0;
         while (i < 32 - 3) : (i += 4) {
             if (i == 0) {
-                std.debug.print(" pc: 0x{x:0>16} x{:0>2}: 0x{x:0>16} x{:0>2}: 0x{x:0>16} x{:0>2}: 0x{x:0>16}\n", .{
+                std.debug.print(" pc: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
                     self.registers.pc,
                     i + 1,
-                    self.registers.getX(i + 1),
+                    self.registers.x[i + 1],
                     i + 2,
-                    self.registers.getX(i + 2),
+                    self.registers.x[i + 2],
                     i + 3,
-                    self.registers.getX(i + 3),
+                    self.registers.x[i + 3],
                 });
                 continue;
             }
 
-            std.debug.print("x{:0>2}: 0x{x:0>16} x{:0>2}: 0x{x:0>16} x{:0>2}: 0x{x:0>16} x{:0>2}: 0x{x:0>16}\n", .{
+            std.debug.print("x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
                 i,
-                self.registers.getX(i),
+                self.registers.x[i],
                 i + 1,
-                self.registers.getX(i + 1),
+                self.registers.x[i + 1],
                 i + 2,
-                self.registers.getX(i + 2),
+                self.registers.x[i + 2],
                 i + 3,
-                self.registers.getX(i + 3),
+                self.registers.x[i + 3],
             });
         }
+
+        i = 0;
+        for (self.registers.csr) |csr, j| {
+            if (csr == 0) continue;
+
+            if (i > 3) {
+                i = 0;
+                std.debug.print("\n", .{});
+            }
+
+            if (i == 0) {
+                std.debug.print("csr[{:>4}]: 0x{x:<16} 0b{b:<64}", .{ j, csr, csr });
+            } else {
+                std.debug.print(" csr[{:>4}]: 0x{x:<16} 0b{b:<64}", .{ j, csr, csr });
+            }
+
+            i += 1;
+        }
     }
+
+    const RegisterFile = struct {
+        x: [32]u64 = [_]u64{0} ** 32,
+        pc: u64 = 0,
+        csr: [4096]u64 = [_]u64{0} ** 4096,
+
+        comptime {
+            std.testing.refAllDecls(@This());
+        }
+    };
 
     comptime {
         std.testing.refAllDecls(@This());
@@ -95,64 +145,6 @@ inline fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {
     else
         unsigned +% @bitCast(u64, signed);
 }
-
-pub const InstructionType = enum {
-    JAL,
-};
-
-pub const Instruction = extern union {
-    j: J,
-
-    opcode: bitjuggle.Bitfield(u32, 0, 7),
-
-    backing: u32,
-
-    pub const J = extern union {
-        opcode: bitjuggle.Bitfield(u32, 0, 7),
-        rd: bitjuggle.Bitfield(u32, 7, 5),
-        imm19_12: bitjuggle.Bitfield(u32, 12, 8),
-        imm11: bitjuggle.Bitfield(u32, 20, 1),
-        imm10_1: bitjuggle.Bitfield(u32, 21, 10),
-        imm20: bitjuggle.Bitfield(u32, 31, 1),
-
-        backing: u32,
-
-        pub fn readImm(self: J) i64 {
-            const shift_amount = 11 + 32;
-
-            return @bitCast(
-                i64,
-                @as(u64, self.imm20.read()) << 20 + shift_amount |
-                    @as(u64, self.imm19_12.read()) << 12 + shift_amount |
-                    @as(u64, self.imm11.read()) << 11 + shift_amount |
-                    @as(u64, self.imm10_1.read()) << 1 + shift_amount,
-            ) >> shift_amount;
-        }
-    };
-
-    comptime {
-        std.testing.refAllDecls(@This());
-    }
-};
-
-pub const RegisterFile = struct {
-    integer_registers: [32]u64 = [_]u64{0} ** 32,
-    pc: u64 = 0,
-    csrs = [_]u64{0} ** 4096,
-
-    pub inline fn getX(self: RegisterFile, x: u64) u64 {
-        return self.integer_registers[x];
-    }
-
-    pub inline fn setX(self: *RegisterFile, x: u64, value: u64) void {
-        std.debug.assert(x != 0);
-        self.integer_registers[x] = value;
-    }
-
-    comptime {
-        std.testing.refAllDecls(@This());
-    }
-};
 
 comptime {
     std.testing.refAllDecls(@This());

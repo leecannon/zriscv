@@ -20,7 +20,7 @@ pub fn main() !void {
     defer allocator.free(file_contents);
 
     var cpu = zriscv.Cpu{ .memory = file_contents };
-    try cpu.execute();
+    try cpu.run();
 }
 
 comptime {

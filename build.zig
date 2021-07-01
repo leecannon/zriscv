@@ -25,13 +25,13 @@ pub fn build(b: *std.build.Builder) void {
     run_step.dependOn(&run_cmd.step);
 
     const test_exe = b.addTest("tests/tests.zig");
-    test_exe.setBuildMode(.ReleaseSafe);
+    test_exe.setBuildMode(mode);
     test_exe.addPackage(exports.zriscv);
     pkgs.addAllTo(test_exe);
     test_exe.addBuildOption([]const u8, "resource_path", b.pathFromRoot("tests/resources"));
 
     const runner_test = b.addTest("runner/main.zig");
-    runner_test.setBuildMode(.ReleaseSafe);
+    runner_test.setBuildMode(mode);
     runner_test.addPackage(exports.zriscv);
     pkgs.addAllTo(runner_test);
 

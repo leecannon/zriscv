@@ -318,7 +318,7 @@ pub const Cpu = struct {
 
                 const rd = instruction.rd.read();
                 const rs1 = instruction.rs1.read();
-                const shmt = @truncate(u5, instruction.i_specialization.shmt.read());
+                const shmt = instruction.i_specialization.fullShift();
 
                 if (rd != 0) {
                     std.log.debug(

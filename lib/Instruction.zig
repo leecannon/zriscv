@@ -20,10 +20,19 @@ pub const Instruction = extern union {
     backing: u32,
 
     pub const ISpecialization = extern union {
-        shmt: bitjuggle.Bitfield(u32, 20, 5),
-        shift_type: bitjuggle.Bitfield(u32, 25, 7),
+        shmt4_0: bitjuggle.Bitfield(u32, 20, 5),
+        shmt5: bitjuggle.Bitfield(u32, 25, 1),
+        shift_type: bitjuggle.Bitfield(u32, 30, 1),
 
         backing: u32,
+
+        pub fn smallShift(self: ISpecialization) u4 {
+            return @truncate(u4, self.shmt4_0.read());
+        }
+
+        pub fn fullShift(self: ISpecialization) u5 {
+            return @truncate(u5, @as(u64, self.shmt5.read()) << 5 | self.shmt4_0.read());
+        }
     };
 
     pub const UImm = extern union {

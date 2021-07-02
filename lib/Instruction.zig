@@ -69,32 +69,6 @@ pub const Instruction = extern union {
         }
     };
 
-    pub fn decode(self: Instruction) !InstructionType {
-        return switch (self.opcode.read()) {
-            0b1101111 => .JAL,
-            // BRANCH
-            0b1100011 => switch (self.funct3.read()) {
-                0b001 => .BNE,
-                else => |funct3| {
-                    std.log.emerg("unimplemented funct3: BRANCH/{b:0>3}", .{funct3});
-                    return error.UnimplementedOpcode;
-                },
-            },
-            // SYSTEM
-            0b1110011 => switch (self.funct3.read()) {
-                0b010 => .CSRRS,
-                else => |funct3| {
-                    std.log.emerg("unimplemented funct3: SYSTEM/{b:0>3}", .{funct3});
-                    return error.UnimplementedOpcode;
-                },
-            },
-            else => |opcode| {
-                std.log.emerg("unimplemented opcode: {b:0>7}", .{opcode});
-                return error.UnimplementedOpcode;
-            },
-        };
-    }
-
     comptime {
         std.testing.refAllDecls(@This());
     }

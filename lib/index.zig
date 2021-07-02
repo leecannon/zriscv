@@ -28,65 +28,83 @@ pub const Cpu = struct {
         instruction.backing = std.mem.readIntSlice(u32, self.memory[self.registers.pc..], .Little);
     }
 
+    fn decode(self: Instruction) !InstructionType {
+        return switch (self.opcode.read()) {
+            0b1101111 => .JAL,
+            // BRANCH
+            0b1100011 => switch (self.funct3.read()) {
+                0b001 => .BNE,
+                else => |funct3| {
+                    std.log.emerg("unimplemented funct3: BRANCH/{b:0>3}", .{funct3});
+                    return error.UnimplementedOpcode;
+                },
+            },
+            // SYSTEM
+            0b1110011 => switch (self.funct3.read()) {
+                0b010 => .CSRRS,
+                else => |funct3| {
+                    std.log.emerg("unimplemented funct3: SYSTEM/{b:0>3}", .{funct3});
+                    return error.UnimplementedOpcode;
+                },
+            },
+            else => |opcode| {
+                std.log.emerg("unimplemented opcode: {b:0>7}", .{opcode});
+                return error.UnimplementedOpcode;
+            },
+        };
+    }
+
     fn execute(self: *Cpu, instruction: Instruction) !void {
-        var compressed = false;
+        switch (try decode(instruction)) {
+            // I
+            .JAL => {
+                // J-type
+                const imm = instruction.j_imm.read();
+                const rd = instruction.rd.read();
 
-        // This while loop is only used to allow break
-        while (true) {
-            switch (try instruction.decode()) {
-                // I
-                .JAL => {
-                    // J-type
-                    const imm = instruction.j_imm.read();
-                    const rd = instruction.rd.read();
+                std.log.debug("JAL - dest: x{}, offset: 0x{x}", .{ rd, imm });
 
-                    std.log.debug("JAL - dest: x{}, offset: 0x{x}", .{ rd, imm });
+                if (rd != 0) {
+                    self.registers.x[rd] = self.registers.pc + 4;
+                }
 
-                    if (rd != 0) {
-                        self.registers.x[rd] = self.registers.pc + 4;
-                    }
+                self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
+            },
+            .BNE => {
+                // B-type
+                const imm = instruction.b_imm.read();
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
 
+                std.log.debug("BNE - src1: x{}, src2: x{}, offset: 0x{x}", .{ rs1, rs2, imm });
+
+                if (self.registers.x[rs1] != self.registers.x[rs2]) {
                     self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
-                    return;
-                },
-                .BNE => {
-                    // B-type
-                    const imm = instruction.b_imm.read();
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                } else {
+                    self.registers.pc += 4;
+                }
+            },
 
-                    std.log.debug("BNE - src1: x{}, src2: x{}, offset: 0x{x}", .{ rs1, rs2, imm });
+            // Zicsr
+            .CSRRS => {
+                // I-type
+                defer self.registers.pc += 4;
 
-                    if (self.registers.x[rs1] != self.registers.x[rs2]) {
-                        self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
-                        return;
-                    }
-                },
+                const rd = instruction.rd.read();
+                const csr = instruction.csr.read();
+                const rs1 = instruction.rs1.read();
 
-                // Zicsr
-                .CSRRS => {
-                    // I-type
+                std.log.debug("CSRRS - csr: {}, dest: x{}, source: x{}", .{ csr, rd, rs1 });
 
-                    const rd = instruction.rd.read();
-                    const csr = instruction.csr.read();
-                    const rs1 = instruction.rs1.read();
+                if (rd != 0) {
+                    self.registers.x[rd] = self.registers.csr[csr];
+                }
 
-                    std.log.debug("CSRRS - csr: {}, dest: x{}, source: x{}", .{ csr, rd, rs1 });
+                if (rs1 == 0) return;
 
-                    if (rd != 0) {
-                        self.registers.x[rd] = self.registers.csr[csr];
-                    }
-
-                    if (rs1 == 0) break;
-
-                    self.registers.csr[csr] |= self.registers.x[rs1];
-                },
-            }
-
-            break;
+                self.registers.csr[csr] |= self.registers.x[rs1];
+            },
         }
-
-        self.registers.pc += @as(u64, if (compressed) 2 else 4);
     }
 
     fn dump(self: Cpu) void {

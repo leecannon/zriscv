@@ -3,6 +3,8 @@ const exports = @import("deps.zig").exports;
 const pkgs = @import("deps.zig").pkgs;
 
 pub fn build(b: *std.build.Builder) void {
+    if (@hasField(std.build.Builder, "prominent_compile_errors")) b.prominent_compile_errors = true;
+
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 

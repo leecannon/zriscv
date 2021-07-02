@@ -3,15 +3,15 @@ const std = @import("std");
 pub const InstructionType = enum {
     // I
 
-    /// Jump and link
+    /// jump and link
     JAL,
 
-    /// Branch Not Equal
+    /// branch not equal
     BNE,
 
     // Zicsr
 
-    /// Atomic Read and Set Bits in CSR
+    /// atomic read and set bits in csr
     CSRRS,
 };
 

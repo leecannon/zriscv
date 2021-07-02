@@ -63,10 +63,27 @@ pub const Cpu = struct {
                 const rd = instruction.rd.read();
                 const imm = instruction.u_imm.read();
 
-                std.log.debug("AUIPC - dest: x{}, offset: 0x{x}", .{ rd, imm });
-
                 if (rd != 0) {
+                    std.log.debug(
+                        \\AUIPC - dest: x{}, offset: 0x{x}
+                        \\  setting x{} to current pc (0x{x}) + 0x{x}
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        self.registers.pc,
+                        imm,
+                    });
+
                     self.registers.x[rd] = addSignedToUnsignedWrap(self.registers.pc, imm);
+                } else {
+                    std.log.debug(
+                        \\AUIPC - dest: x{}, offset: 0x{x}
+                        \\  nop
+                    , .{
+                        rd,
+                        imm,
+                    });
                 }
 
                 self.registers.pc += 4;
@@ -76,10 +93,31 @@ pub const Cpu = struct {
                 const imm = instruction.j_imm.read();
                 const rd = instruction.rd.read();
 
-                std.log.debug("JAL - dest: x{}, offset: 0x{x}", .{ rd, imm });
-
                 if (rd != 0) {
+                    std.log.debug(
+                        \\JAL - dest: x{}, offset: 0x{x}
+                        \\  setting x{} to current pc (0x{x}) + 0x4
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        self.registers.pc,
+                        self.registers.pc,
+                        imm,
+                    });
+
                     self.registers.x[rd] = self.registers.pc + 4;
+                } else {
+                    std.log.debug(
+                        \\JAL - dest: x{}, offset: 0x{x}
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                    , .{
+                        rd,
+                        imm,
+                        self.registers.pc,
+                        imm,
+                    });
                 }
 
                 self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
@@ -90,11 +128,30 @@ pub const Cpu = struct {
                 const rs1 = instruction.rs1.read();
                 const rs2 = instruction.rs2.read();
 
-                std.log.debug("BNE - src1: x{}, src2: x{}, offset: 0x{x}", .{ rs1, rs2, imm });
-
                 if (self.registers.x[rs1] != self.registers.x[rs2]) {
+                    std.log.debug(
+                        \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  true
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                        self.registers.pc,
+                        imm,
+                    });
+
                     self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
                 } else {
+                    std.log.debug(
+                        \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  false
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                    });
+
                     self.registers.pc += 4;
                 }
             },
@@ -102,21 +159,59 @@ pub const Cpu = struct {
             // Zicsr
             .CSRRS => {
                 // I-type
-                defer self.registers.pc += 4;
 
                 const rd = instruction.rd.read();
                 const csr = instruction.csr.read();
                 const rs1 = instruction.rs1.read();
 
-                std.log.debug("CSRRS - csr: {}, dest: x{}, source: x{}", .{ csr, rd, rs1 });
+                // Parts of these conditions are intentionally superfluous
+                // to better convey the intent
+                if (rs1 != 0 and rd != 0) {
+                    std.log.debug(
+                        \\CSRRS - csr: {}, dest: x{}, source: x{}
+                        \\  read csr {} into x{}
+                        \\  set bits in csr {} using mask in x{}
+                    , .{ csr, rd, rs1, csr, rd, csr, rs1 });
 
-                if (rd != 0) {
                     self.registers.x[rd] = self.registers.csr[csr];
+                    self.registers.csr[csr] |= self.registers.x[rs1];
+                } else if (rs1 != 0) {
+                    std.log.debug(
+                        \\CSRRS - csr: {}, dest: x{}, source: x{}
+                        \\  set bits in csr {} using mask in x{}
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rs1,
+                    });
+
+                    self.registers.csr[csr] |= self.registers.x[rs1];
+                } else if (rd != 0) {
+                    std.log.debug(
+                        \\CSRRS - csr: {}, dest: x{}, source: x{}
+                        \\  read csr {} into x{}
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rd,
+                    });
+
+                    self.registers.x[rd] = self.registers.csr[csr];
+                } else {
+                    std.log.debug(
+                        \\CSRRS - csr: {}, dest: x{}, source: x{}
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                    });
                 }
 
-                if (rs1 == 0) return;
-
-                self.registers.csr[csr] |= self.registers.x[rs1];
+                self.registers.pc += 4;
             },
         }
     }

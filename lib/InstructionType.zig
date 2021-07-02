@@ -1,18 +1,21 @@
 const std = @import("std");
 
 pub const InstructionType = enum {
-    // I
+    // 32I
 
     /// add upper immediate to pc
     AUIPC,
     /// jump and link
     JAL,
-
     // add immediate
     ADDI,
-
     /// branch not equal
     BNE,
+
+    // 64I
+
+    /// add immediate - 32 bit
+    ADDIW,
 
     // Zicsr
 

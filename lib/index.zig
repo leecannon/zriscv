@@ -58,6 +58,14 @@ pub const Cpu = struct {
                     return error.UnimplementedOpcode;
                 },
             },
+            // OP-IMM-32
+            0b0011011 => switch (self.funct3.read()) {
+                0b000 => InstructionType.ADDIW,
+                else => |funct3| {
+                    std.log.emerg("unimplemented funct3: OP-IMM-32/{b:0>3}", .{funct3});
+                    return error.UnimplementedOpcode;
+                },
+            },
             else => |opcode| {
                 std.log.emerg("unimplemented opcode: {b:0>7}", .{opcode});
                 return error.UnimplementedOpcode;
@@ -67,7 +75,8 @@ pub const Cpu = struct {
 
     fn execute(self: *Cpu, instruction: Instruction) !void {
         switch (try decode(instruction)) {
-            // I
+            // 32I
+
             .AUIPC => {
                 // U-type
 
@@ -192,6 +201,58 @@ pub const Cpu = struct {
                 } else {
                     std.log.debug(
                         \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+
+                self.registers.pc += 4;
+            },
+
+            // 64I
+
+            .ADDIW => {
+                // I-type
+
+                const rd = instruction.rd.read();
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
+                if (rd != 0) {
+                    std.log.debug(
+                        \\ADDIW - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  32bit set x{} to x{} + 0x{x}
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+
+                    // const a1 = addSignedToUnsignedIgnoreOverflow(
+                    //     self.registers.x[rs1],
+                    //     imm,
+                    // );
+                    // const a2 = a1 *
+
+                    self.registers.x[rd] = @bitCast(
+                        u64,
+                        @bitCast(
+                            i64,
+                            (addSignedToUnsignedIgnoreOverflow(
+                                self.registers.x[rs1],
+                                imm,
+                            ) & 0xFFFFFFFF) << 32,
+                        ) >> 32,
+                    );
+                } else {
+                    std.log.debug(
+                        \\ADDIW - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
                     , .{
                         rs1,

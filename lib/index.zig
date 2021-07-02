@@ -35,6 +35,7 @@ pub const Cpu = struct {
             // BRANCH
             0b1100011 => switch (self.funct3.read()) {
                 0b001 => InstructionType.BNE,
+                0b101 => InstructionType.BGE,
                 else => |funct3| {
                     std.log.emerg("unimplemented funct3: BRANCH/{b:0>3}", .{funct3});
                     return error.UnimplementedOpcode;
@@ -168,6 +169,40 @@ pub const Cpu = struct {
                 } else {
                     std.log.debug(
                         \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  false
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                    });
+
+                    self.registers.pc += 4;
+                }
+            },
+            .BGE => {
+                // B-type
+
+                const imm = instruction.b_imm.read();
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
+                if (@bitCast(i64, self.registers.x[rs1]) >= @bitCast(i64, self.registers.x[rs2])) {
+                    std.log.debug(
+                        \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  true
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                        self.registers.pc,
+                        imm,
+                    });
+
+                    self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
+                } else {
+                    std.log.debug(
+                        \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
                         \\  false
                     , .{
                         rs1,

@@ -9,6 +9,8 @@ pub const InstructionType = enum {
     JAL,
     /// branch not equal
     BNE,
+    /// branch greater equal
+    BGE,
     /// add immediate
     ADDI,
     /// logical left shift

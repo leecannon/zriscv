@@ -8,7 +8,7 @@ pub const Instruction = extern union {
     rd: bitjuggle.Bitfield(u32, 7, 5),
     rs1: bitjuggle.Bitfield(u32, 15, 5),
     rs2: bitjuggle.Bitfield(u32, 20, 5),
-    csr: bitjuggle.Bitfield(u32, 0, 12),
+    csr: bitjuggle.Bitfield(u32, 20, 12),
 
     j_imm: JImm,
     b_imm: BImm,

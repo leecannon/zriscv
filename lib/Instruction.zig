@@ -15,7 +15,16 @@ pub const Instruction = extern union {
     i_imm: IImm,
     u_imm: UImm,
 
+    i_specialization: ISpecialization,
+
     backing: u32,
+
+    pub const ISpecialization = extern union {
+        shmt: bitjuggle.Bitfield(u32, 20, 5),
+        shift_type: bitjuggle.Bitfield(u32, 25, 7),
+
+        backing: u32,
+    };
 
     pub const UImm = extern union {
         imm31_12: bitjuggle.Bitfield(u32, 12, 19),

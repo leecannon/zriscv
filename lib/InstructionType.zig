@@ -7,10 +7,12 @@ pub const InstructionType = enum {
     AUIPC,
     /// jump and link
     JAL,
-    // add immediate
-    ADDI,
     /// branch not equal
     BNE,
+    /// add immediate
+    ADDI,
+    /// logical left shift
+    SLLI,
 
     // 64I
 

@@ -23,7 +23,7 @@ pub const Cpu = struct {
 
     fn fetch(self: *const Cpu, instruction: *Instruction) !void {
         // This is not 100% compatible with extension C, as the very last 16 bits of memory could be
-        // a compressed instruction, however the below check will fail in that case
+        // a compressed instruction, the below check will fail in that case
         if (self.registers.pc + 3 >= self.memory.len) return error.ExecutionOutOfBounds;
         instruction.backing = std.mem.readIntSlice(u32, self.memory[self.registers.pc..], .Little);
     }
@@ -43,6 +43,7 @@ pub const Cpu = struct {
             // OP-IMM
             0b0010011 => switch (self.funct3.read()) {
                 0b000 => InstructionType.ADDI,
+                0b001 => InstructionType.SLLI,
                 else => |funct3| {
                     std.log.emerg("unimplemented funct3: OP-IMM/{b:0>3}", .{funct3});
                     return error.UnimplementedOpcode;
@@ -206,6 +207,40 @@ pub const Cpu = struct {
                         rs1,
                         rd,
                         imm,
+                    });
+                }
+
+                self.registers.pc += 4;
+            },
+            .SLLI => {
+                // I-type specialization
+
+                const rd = instruction.rd.read();
+                const rs1 = instruction.rs1.read();
+                const shmt = @truncate(u5, instruction.i_specialization.shmt.read());
+
+                if (rd != 0) {
+                    std.log.debug(
+                        \\SLLI - src: x{}, dest: x{}, shmt: {}
+                        \\  set x{} to x{} << {}
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        shmt,
+                    });
+
+                    self.registers.x[rd] = self.registers.x[rs1] << shmt;
+                } else {
+                    std.log.debug(
+                        \\SLLI - src: x{}, dest: x{}, shmt: {}
+                        \\  nop
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
                     });
                 }
 

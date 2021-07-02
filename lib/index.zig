@@ -52,6 +52,7 @@ pub const Cpu = struct {
             0b1110011 => switch (self.funct3.read()) {
                 0b001 => InstructionType.CSRRW,
                 0b010 => InstructionType.CSRRS,
+                0b101 => InstructionType.CSRRWI,
                 else => |funct3| {
                     std.log.emerg("unimplemented funct3: SYSTEM/{b:0>3}", .{funct3});
                     return error.UnimplementedOpcode;
@@ -308,6 +309,48 @@ pub const Cpu = struct {
                         rd,
                         rs1,
                     });
+                }
+
+                self.registers.pc += 4;
+            },
+            .CSRRWI => {
+                // I-type
+
+                const rd = instruction.rd.read();
+                const csr = instruction.csr.read();
+                const rs1 = instruction.rs1.read();
+
+                if (rd != 0) {
+                    std.log.debug(
+                        \\CSRRWI - csr: {}, dest: x{}, imm: 0x{}
+                        \\  atomic
+                        \\  read csr {} into x{}
+                        \\  set csr {} to 0x{}
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rd,
+                        csr,
+                        rs1,
+                    });
+
+                    self.registers.x[rd] = self.registers.csr[csr];
+                    self.registers.csr[csr] = rs1;
+                } else {
+                    std.log.debug(
+                        \\CSRRWI - csr: {}, dest: x{}, imm: 0x{}
+                        \\  set csr {} to 0x{}
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rs1,
+                    });
+
+                    self.registers.csr[csr] = rs1;
                 }
 
                 self.registers.pc += 4;

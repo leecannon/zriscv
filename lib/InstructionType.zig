@@ -5,7 +5,6 @@ pub const InstructionType = enum {
 
     /// add upper immediate to pc
     AUIPC,
-
     /// jump and link
     JAL,
 
@@ -19,9 +18,10 @@ pub const InstructionType = enum {
 
     // atomic read/write csr
     CSRRW,
-
     /// atomic read and set bits in csr
     CSRRS,
+    /// atomic read/write csr - immediate
+    CSRRWI,
 };
 
 comptime {

@@ -9,6 +9,9 @@ pub const InstructionType = enum {
     /// jump and link
     JAL,
 
+    // add immediate
+    ADDI,
+
     /// branch not equal
     BNE,
 

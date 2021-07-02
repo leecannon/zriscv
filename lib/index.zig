@@ -40,6 +40,14 @@ pub const Cpu = struct {
                     return error.UnimplementedOpcode;
                 },
             },
+            // OP-IMM
+            0b0010011 => switch (self.funct3.read()) {
+                0b000 => .ADDI,
+                else => |funct3| {
+                    std.log.emerg("unimplemented funct3: OP-IMM/{b:0>3}", .{funct3});
+                    return error.UnimplementedOpcode;
+                },
+            },
             // SYSTEM
             0b1110011 => switch (self.funct3.read()) {
                 0b010 => .CSRRS,
@@ -60,6 +68,7 @@ pub const Cpu = struct {
             // I
             .AUIPC => {
                 // U-type
+
                 const rd = instruction.rd.read();
                 const imm = instruction.u_imm.read();
 
@@ -90,6 +99,7 @@ pub const Cpu = struct {
             },
             .JAL => {
                 // J-type
+
                 const imm = instruction.j_imm.read();
                 const rd = instruction.rd.read();
 
@@ -124,6 +134,7 @@ pub const Cpu = struct {
             },
             .BNE => {
                 // B-type
+
                 const imm = instruction.b_imm.read();
                 const rs1 = instruction.rs1.read();
                 const rs2 = instruction.rs2.read();
@@ -154,6 +165,40 @@ pub const Cpu = struct {
 
                     self.registers.pc += 4;
                 }
+            },
+            .ADDI => {
+                // I-type
+
+                const rd = instruction.rd.read();
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
+                if (rd != 0) {
+                    std.log.debug(
+                        \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  set x{} to x{} + 0x{x}
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+
+                    self.registers.x[rd] = addSignedToUnsignedIgnoreOverflow(self.registers.x[rs1], imm);
+                } else {
+                    std.log.debug(
+                        \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+
+                self.registers.pc += 4;
             },
 
             // Zicsr
@@ -283,6 +328,16 @@ inline fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {
         unsigned -% @bitCast(u64, -signed)
     else
         unsigned +% @bitCast(u64, signed);
+}
+
+inline fn addSignedToUnsignedIgnoreOverflow(unsigned: u64, signed: i64) u64 {
+    var result = unsigned;
+    if (signed < 0) {
+        _ = @subWithOverflow(u64, unsigned, @bitCast(u64, -signed), &result);
+    } else {
+        _ = @addWithOverflow(u64, unsigned, @bitCast(u64, signed), &result);
+    }
+    return result;
 }
 
 comptime {

@@ -32,7 +32,7 @@ pub const Instruction = extern union {
 
         backing: u32,
 
-        pub fn read(self: JImm) i64 {
+        pub fn read(self: IImm) i64 {
             const shift_amount = 20 + 32;
             return @bitCast(i64, @as(u64, self.imm11_0.read()) << shift_amount) >> shift_amount;
         }

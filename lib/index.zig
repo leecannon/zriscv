@@ -30,11 +30,11 @@ pub const Cpu = struct {
 
     fn decode(self: Instruction) !InstructionType {
         return switch (self.opcode.read()) {
-            0b1101111 => .JAL,
-            0b0010111 => .AUIPC,
+            0b1101111 => InstructionType.JAL,
+            0b0010111 => InstructionType.AUIPC,
             // BRANCH
             0b1100011 => switch (self.funct3.read()) {
-                0b001 => .BNE,
+                0b001 => InstructionType.BNE,
                 else => |funct3| {
                     std.log.emerg("unimplemented funct3: BRANCH/{b:0>3}", .{funct3});
                     return error.UnimplementedOpcode;
@@ -42,7 +42,7 @@ pub const Cpu = struct {
             },
             // OP-IMM
             0b0010011 => switch (self.funct3.read()) {
-                0b000 => .ADDI,
+                0b000 => InstructionType.ADDI,
                 else => |funct3| {
                     std.log.emerg("unimplemented funct3: OP-IMM/{b:0>3}", .{funct3});
                     return error.UnimplementedOpcode;
@@ -50,7 +50,8 @@ pub const Cpu = struct {
             },
             // SYSTEM
             0b1110011 => switch (self.funct3.read()) {
-                0b010 => .CSRRS,
+                0b001 => InstructionType.CSRRW,
+                0b010 => InstructionType.CSRRS,
                 else => |funct3| {
                     std.log.emerg("unimplemented funct3: SYSTEM/{b:0>3}", .{funct3});
                     return error.UnimplementedOpcode;
@@ -202,6 +203,50 @@ pub const Cpu = struct {
             },
 
             // Zicsr
+
+            .CSRRW => {
+                // I-type
+
+                const rd = instruction.rd.read();
+                const csr = instruction.csr.read();
+                const rs1 = instruction.rs1.read();
+
+                if (rd != 0) {
+                    std.log.debug(
+                        \\CSRRW - csr: {}, dest: x{}, source: x{}
+                        \\  atomic
+                        \\  read csr {} into x{}
+                        \\  set csr {} to x{}
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rd,
+                        csr,
+                        rs1,
+                    });
+
+                    const initial_rs1 = self.registers.x[rs1];
+                    self.registers.x[rd] = self.registers.csr[csr];
+                    self.registers.csr[csr] = initial_rs1;
+                } else {
+                    std.log.debug(
+                        \\CSRRW - csr: {}, dest: x{}, source: x{}
+                        \\  set csr {} to x{}
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rs1,
+                    });
+
+                    self.registers.csr[csr] = self.registers.x[rs1];
+                }
+
+                self.registers.pc += 4;
+            },
             .CSRRS => {
                 // I-type
 
@@ -209,17 +254,25 @@ pub const Cpu = struct {
                 const csr = instruction.csr.read();
                 const rs1 = instruction.rs1.read();
 
-                // Parts of these conditions are intentionally superfluous
-                // to better convey the intent
                 if (rs1 != 0 and rd != 0) {
                     std.log.debug(
                         \\CSRRS - csr: {}, dest: x{}, source: x{}
+                        \\  atomic
                         \\  read csr {} into x{}
                         \\  set bits in csr {} using mask in x{}
-                    , .{ csr, rd, rs1, csr, rd, csr, rs1 });
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rd,
+                        csr,
+                        rs1,
+                    });
 
+                    const initial_rs1 = self.registers.x[rs1];
                     self.registers.x[rd] = self.registers.csr[csr];
-                    self.registers.csr[csr] |= self.registers.x[rs1];
+                    self.registers.csr[csr] |= initial_rs1;
                 } else if (rs1 != 0) {
                     std.log.debug(
                         \\CSRRS - csr: {}, dest: x{}, source: x{}
@@ -249,6 +302,7 @@ pub const Cpu = struct {
                 } else {
                     std.log.debug(
                         \\CSRRS - csr: {}, dest: x{}, source: x{}
+                        \\  nop
                     , .{
                         csr,
                         rd,
@@ -299,13 +353,15 @@ pub const Cpu = struct {
             }
 
             if (i == 0) {
-                std.debug.print("csr[{:>4}]: 0x{x:<16} 0b{b:<64}", .{ j, csr, csr });
+                std.debug.print("csr[{:>4}]: 0x{x} 0b{b}", .{ j, csr, csr });
             } else {
-                std.debug.print(" csr[{:>4}]: 0x{x:<16} 0b{b:<64}", .{ j, csr, csr });
+                std.debug.print(" csr[{:>4}]: 0x{x} 0b{b}", .{ j, csr, csr });
             }
 
             i += 1;
         }
+
+        std.debug.print("\n", .{});
     }
 
     const RegisterFile = struct {

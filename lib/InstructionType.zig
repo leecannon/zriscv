@@ -17,6 +17,9 @@ pub const InstructionType = enum {
 
     // Zicsr
 
+    // atomic read/write csr
+    CSRRW,
+
     /// atomic read and set bits in csr
     CSRRS,
 };

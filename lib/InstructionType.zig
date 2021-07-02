@@ -7,6 +7,8 @@ pub const InstructionType = enum {
     AUIPC,
     /// jump and link
     JAL,
+    /// branch equal
+    BEQ,
     /// branch not equal
     BNE,
     /// branch greater equal

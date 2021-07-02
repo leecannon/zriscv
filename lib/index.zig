@@ -34,6 +34,7 @@ pub const Cpu = struct {
             0b0010111 => InstructionType.AUIPC,
             // BRANCH
             0b1100011 => switch (self.funct3.read()) {
+                0b000 => InstructionType.BEQ,
                 0b001 => InstructionType.BNE,
                 0b101 => InstructionType.BGE,
                 else => |funct3| {
@@ -144,6 +145,40 @@ pub const Cpu = struct {
                 }
 
                 self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
+            },
+            .BEQ => {
+                // B-type
+
+                const imm = instruction.b_imm.read();
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
+                if (self.registers.x[rs1] == self.registers.x[rs2]) {
+                    std.log.debug(
+                        \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  true
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                        self.registers.pc,
+                        imm,
+                    });
+
+                    self.registers.pc = addSignedToUnsignedWrap(self.registers.pc, imm);
+                } else {
+                    std.log.debug(
+                        \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  false
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                    });
+
+                    self.registers.pc += 4;
+                }
             },
             .BNE => {
                 // B-type

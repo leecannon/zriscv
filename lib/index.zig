@@ -30,8 +30,9 @@ pub const Cpu = struct {
 
     fn decode(self: Instruction) !InstructionType {
         return switch (self.opcode.read()) {
-            0b1101111 => InstructionType.JAL,
+            0b0110111 => InstructionType.LUI,
             0b0010111 => InstructionType.AUIPC,
+            0b1101111 => InstructionType.JAL,
             // BRANCH
             0b1100011 => switch (self.funct3.read()) {
                 0b000 => InstructionType.BEQ,
@@ -80,6 +81,36 @@ pub const Cpu = struct {
         switch (try decode(instruction)) {
             // 32I
 
+            .LUI => {
+                // U-type
+
+                const rd = instruction.rd.read();
+                const imm = instruction.u_imm.read();
+
+                if (rd != 0) {
+                    std.log.debug(
+                        \\LUI - dest: x{}, value: 0x{x}
+                        \\  setting x{} to 0x{x}
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        imm,
+                    });
+
+                    self.registers.x[rd] = @bitCast(u64, imm);
+                } else {
+                    std.log.debug(
+                        \\LUI - dest: x{}, value: 0x{x}
+                        \\  nop
+                    , .{
+                        rd,
+                        imm,
+                    });
+                }
+
+                self.registers.pc += 4;
+            },
             .AUIPC => {
                 // U-type
 

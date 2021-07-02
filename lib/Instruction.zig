@@ -31,8 +31,11 @@ pub const Instruction = extern union {
 
         backing: u32,
 
-        pub fn read(self: UImm) i32 {
-            return self.imm31_12.read() << 12;
+        pub fn read(self: UImm) i64 {
+            return @bitCast(
+                i64,
+                (@as(u64, self.imm31_12.read()) << 12) << 32,
+            ) >> 32;
         }
     };
 

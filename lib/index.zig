@@ -31,6 +31,7 @@ pub const Cpu = struct {
     fn decode(self: Instruction) !InstructionType {
         return switch (self.opcode.read()) {
             0b1101111 => .JAL,
+            0b0010111 => .AUIPC,
             // BRANCH
             0b1100011 => switch (self.funct3.read()) {
                 0b001 => .BNE,
@@ -57,6 +58,19 @@ pub const Cpu = struct {
     fn execute(self: *Cpu, instruction: Instruction) !void {
         switch (try decode(instruction)) {
             // I
+            .AUIPC => {
+                // U-type
+                const rd = instruction.rd.read();
+                const imm = instruction.u_imm.read();
+
+                std.log.debug("AUIPC - dest: x{}, offset: 0x{x}", .{ rd, imm });
+
+                if (rd != 0) {
+                    self.registers.x[rd] = addSignedToUnsignedWrap(self.registers.pc, imm);
+                }
+
+                self.registers.pc += 4;
+            },
             .JAL => {
                 // J-type
                 const imm = instruction.j_imm.read();

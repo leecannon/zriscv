@@ -3,6 +3,9 @@ const std = @import("std");
 pub const InstructionType = enum {
     // I
 
+    /// add upper immediate to pc
+    AUIPC,
+
     /// jump and link
     JAL,
 

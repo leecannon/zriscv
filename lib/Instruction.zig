@@ -13,8 +13,19 @@ pub const Instruction = extern union {
     j_imm: JImm,
     b_imm: BImm,
     i_imm: IImm,
+    u_imm: UImm,
 
     backing: u32,
+
+    pub const UImm = extern union {
+        imm31_12: bitjuggle.Bitfield(u32, 12, 19),
+
+        backing: u32,
+
+        pub fn read(self: UImm) i32 {
+            return self.imm31_12.read() << 12;
+        }
+    };
 
     pub const IImm = extern union {
         imm11_0: bitjuggle.Bitfield(u32, 0, 12),

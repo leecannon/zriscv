@@ -3,6 +3,9 @@ const bitjuggle = @import("bitjuggle");
 usingnamespace @import("types.zig");
 
 pub const Csr = enum(u12) {
+    /// Supervisor address translation and protection
+    satp = 0x180,
+
     /// Hardware thread ID
     mhartid = 0xF14,
     /// Machine trap-handler base address
@@ -37,6 +40,14 @@ pub const Csr = enum(u12) {
 pub const Mtvec = extern union {
     mode: bitjuggle.Bitfield(u64, 0, 2),
     base: bitjuggle.Bitfield(u64, 2, 62),
+
+    backing: u64,
+};
+
+pub const Satp = extern union {
+    ppn: bitjuggle.Bitfield(u64, 0, 44),
+    asid: bitjuggle.Bitfield(u64, 44, 16),
+    mode: bitjuggle.Bitfield(u64, 60, 4),
 
     backing: u64,
 };

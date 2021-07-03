@@ -15,7 +15,12 @@ mhartid: u64 = 0,
 
 mtvec: Mtvec = .{ .backing = 0 },
 vector_base_address: u64 = 0,
-vector_mode: VectorMode = .direct,
+vector_mode: VectorMode = .Direct,
+
+satp: Satp = .{ .backing = 0 },
+address_translation_mode: AddressTranslationMode = .Bare,
+asid: u16 = 0,
+ppn_address: u64 = 0,
 
 pub fn run(self: *Cpu) !void {
     var instruction: Instruction = undefined;
@@ -634,9 +639,12 @@ fn dump(self: Cpu) void {
     std.debug.print(
         \\privilege: {s:<12} mhartid: {}
         \\vector mode: {s:<10} vector base address: 0x{x}
+        \\address mode: {s:<9} asid: {:<17} ppn address: 0x{x}
     , .{
-        @tagName(self.privilege_level), self.mhartid,
-        @tagName(self.vector_mode),     self.vector_base_address,
+        @tagName(self.privilege_level),          self.mhartid,
+        @tagName(self.vector_mode),              self.vector_base_address,
+        @tagName(self.address_translation_mode), self.asid,
+        self.ppn_address,
     });
 
     std.debug.print("\n", .{});
@@ -646,6 +654,7 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
     return switch (csr) {
         .mhartid => self.mhartid,
         .mtvec => self.mtvec.backing,
+        .satp => self.satp.backing,
     };
 }
 
@@ -655,12 +664,25 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
         .mtvec => {
             const pending_mtvec = Mtvec{ .backing = value };
 
-            std.log.info("{b}", .{value});
-
             self.vector_mode = try VectorMode.getVectorMode(@truncate(u2, pending_mtvec.mode.read()));
             self.vector_base_address = pending_mtvec.base.read() << 2;
 
             self.mtvec = pending_mtvec;
+        },
+        .satp => {
+            const pending_satp = Satp{ .backing = value };
+
+            const address_translation_mode = try AddressTranslationMode.getAddressTranslationMode(@truncate(u4, pending_satp.mode.read()));
+            if (address_translation_mode != .Bare) {
+                std.log.debug("unsupported address_translation_mode given: {s}", .{@tagName(address_translation_mode)});
+                return;
+            }
+
+            self.address_translation_mode = address_translation_mode;
+            self.asid = @truncate(u16, pending_satp.asid.read());
+            self.ppn_address = pending_satp.ppn.read() * 4096;
+
+            self.satp = pending_satp;
         },
     }
 }

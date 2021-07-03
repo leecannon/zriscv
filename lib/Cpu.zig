@@ -25,6 +25,9 @@ ppn_address: u64 = 0,
 medeleg: u64 = 0,
 mideleg: u64 = 0,
 
+mie: u64 = 0,
+mip: u64 = 0,
+
 pub fn run(self: *Cpu) !void {
     var instruction: Instruction = undefined;
 
@@ -645,12 +648,15 @@ fn dump(self: Cpu) void {
         \\address mode: {s:<9} asid: {:<17} ppn address: 0x{x}
         \\medeleg: 0b{b:0>64} 
         \\mideleg: 0b{b:0>64}
+        \\mie: 0b{b:0>64}
+        \\mip: 0b{b:0>64}
     , .{
         @tagName(self.privilege_level),          self.mhartid,
         @tagName(self.vector_mode),              self.vector_base_address,
         @tagName(self.address_translation_mode), self.asid,
         self.ppn_address,                        self.medeleg,
-        self.mideleg,
+        self.mideleg,                            self.mie,
+        self.mip,
     });
 
     std.debug.print("\n", .{});
@@ -663,6 +669,8 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
         .satp => self.satp.backing,
         .medeleg => self.medeleg,
         .mideleg => self.mideleg,
+        .mie => self.mie,
+        .mip => self.mip,
         .pmpcfg0,
         .pmpcfg2,
         .pmpcfg4,
@@ -767,6 +775,8 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
         },
         .medeleg => self.medeleg = value,
         .mideleg => self.mideleg = value,
+        .mip => self.mip = value,
+        .mie => self.mie = value,
         .pmpcfg0,
         .pmpcfg2,
         .pmpcfg4,

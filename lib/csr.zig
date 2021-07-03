@@ -15,8 +15,14 @@ pub const Csr = enum(u12) {
     /// Machine exception delegation register
     medeleg = 0x302,
 
-    /// Machine interrupt delegation register.
+    /// Machine interrupt delegation register
     mideleg = 0x303,
+
+    /// Machine interrupt-enable register
+    mie = 0x304,
+
+    /// Machine interrupt pending
+    mip = 0x344,
 
     /// Physical memory protection configuration
     pmpcfg0 = 0x3A0,

@@ -1,6 +1,40 @@
 const std = @import("std");
 const bitjuggle = @import("bitjuggle");
-const InstructionType = @import("InstructionType.zig").InstructionType;
+
+pub const InstructionType = enum {
+    // 32I
+
+    /// load upper immediate
+    LUI,
+    /// add upper immediate to pc
+    AUIPC,
+    /// jump and link
+    JAL,
+    /// branch equal
+    BEQ,
+    /// branch not equal
+    BNE,
+    /// branch greater equal
+    BGE,
+    /// add immediate
+    ADDI,
+    /// logical left shift
+    SLLI,
+
+    // 64I
+
+    /// add immediate - 32 bit
+    ADDIW,
+
+    // Zicsr
+
+    // atomic read/write csr
+    CSRRW,
+    /// atomic read and set bits in csr
+    CSRRS,
+    /// atomic read/write csr - immediate
+    CSRRWI,
+};
 
 pub const Instruction = extern union {
     opcode: bitjuggle.Bitfield(u32, 0, 7),
@@ -22,7 +56,7 @@ pub const Instruction = extern union {
     pub const ISpecialization = extern union {
         shmt4_0: bitjuggle.Bitfield(u32, 20, 5),
         shmt5: bitjuggle.Bitfield(u32, 25, 1),
-        shift_type: bitjuggle.Bitfield(u32, 30, 1),
+        shift_type: bitjuggle.Bitfield(u32, 26, 6),
 
         backing: u32,
 
@@ -36,7 +70,7 @@ pub const Instruction = extern union {
     };
 
     pub const UImm = extern union {
-        imm31_12: bitjuggle.Bitfield(u32, 12, 19),
+        imm31_12: bitjuggle.Bitfield(u32, 12, 20),
 
         backing: u32,
 
@@ -49,7 +83,7 @@ pub const Instruction = extern union {
     };
 
     pub const IImm = extern union {
-        imm11_0: bitjuggle.Bitfield(u32, 0, 12),
+        imm11_0: bitjuggle.Bitfield(u32, 20, 12),
 
         backing: u32,
 
@@ -60,9 +94,9 @@ pub const Instruction = extern union {
     };
 
     pub const JImm = extern union {
-        imm10_1: bitjuggle.Bitfield(u32, 21, 10),
-        imm11: bitjuggle.Bitfield(u32, 20, 1),
         imm19_12: bitjuggle.Bitfield(u32, 12, 8),
+        imm11: bitjuggle.Bitfield(u32, 20, 1),
+        imm10_1: bitjuggle.Bitfield(u32, 21, 10),
         imm20: bitjuggle.Bitfield(u32, 31, 1),
 
         backing: u32,
@@ -81,9 +115,9 @@ pub const Instruction = extern union {
     };
 
     pub const BImm = extern union {
+        imm11: bitjuggle.Bitfield(u32, 7, 1),
         imm4_1: bitjuggle.Bitfield(u32, 8, 4),
         imm10_5: bitjuggle.Bitfield(u32, 25, 6),
-        imm11: bitjuggle.Bitfield(u32, 7, 1),
         imm12: bitjuggle.Bitfield(u32, 31, 1),
 
         backing: u32,

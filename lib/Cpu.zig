@@ -1,7 +1,8 @@
 const std = @import("std");
 const bitjuggle = @import("bitjuggle");
-const Instruction = @import("Instruction.zig").Instruction;
-const InstructionType = @import("InstructionType.zig").InstructionType;
+usingnamespace @import("types.zig");
+usingnamespace @import("csr.zig");
+usingnamespace @import("instruction.zig");
 
 const Cpu = @This();
 
@@ -11,6 +12,10 @@ pc: usize = 0,
 privilege_level: PrivilegeLevel = .Machine,
 
 mhartid: u64 = 0,
+
+mtvec: Mtvec = .{ .backing = 0 },
+vector_base_address: u64 = 0,
+vector_mode: VectorMode = .direct,
 
 pub fn run(self: *Cpu) !void {
     var instruction: Instruction = undefined;
@@ -417,17 +422,17 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             if (rd != 0) {
                 std.log.debug(
-                    \\CSRRW - csr: {}, dest: x{}, source: x{}
+                    \\CSRRW - csr: {s}, dest: x{}, source: x{}
                     \\  atomic
-                    \\  read csr {} into x{}
-                    \\  set csr {} to x{}
+                    \\  read csr {s} into x{}
+                    \\  set csr {s} to x{}
                 , .{
-                    csr,
+                    @tagName(csr),
                     rd,
                     rs1,
-                    csr,
+                    @tagName(csr),
                     rd,
-                    csr,
+                    @tagName(csr),
                     rs1,
                 });
 
@@ -441,13 +446,13 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 try self.writeCsr(csr, initial_rs1);
             } else {
                 std.log.debug(
-                    \\CSRRW - csr: {}, dest: x{}, source: x{}
-                    \\  set csr {} to x{}
+                    \\CSRRW - csr: {s}, dest: x{}, source: x{}
+                    \\  set csr {s} to x{}
                 , .{
-                    csr,
+                    @tagName(csr),
                     rd,
                     rs1,
-                    csr,
+                    @tagName(csr),
                     rs1,
                 });
 
@@ -470,17 +475,17 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             if (rs1 != 0 and rd != 0) {
                 std.log.debug(
-                    \\CSRRS - csr: {}, dest: x{}, source: x{}
+                    \\CSRRS - csr: {s}, dest: x{}, source: x{}
                     \\  atomic
-                    \\  read csr {} into x{}
-                    \\  set bits in csr {} using mask in x{}
+                    \\  read csr {s} into x{}
+                    \\  set bits in csr {s} using mask in x{}
                 , .{
-                    csr,
+                    @tagName(csr),
                     rd,
                     rs1,
-                    csr,
+                    @tagName(csr),
                     rd,
-                    csr,
+                    @tagName(csr),
                     rs1,
                 });
 
@@ -496,13 +501,13 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 try self.writeCsr(csr, csr_value | initial_rs1);
             } else if (rs1 != 0) {
                 std.log.debug(
-                    \\CSRRS - csr: {}, dest: x{}, source: x{}
-                    \\  set bits in csr {} using mask in x{}
+                    \\CSRRS - csr: {s}, dest: x{}, source: x{}
+                    \\  set bits in csr {s} using mask in x{}
                 , .{
-                    csr,
+                    @tagName(csr),
                     rd,
                     rs1,
-                    csr,
+                    @tagName(csr),
                     rs1,
                 });
 
@@ -514,13 +519,13 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 try self.writeCsr(csr, self.readCsr(csr) | self.x[rs1]);
             } else if (rd != 0) {
                 std.log.debug(
-                    \\CSRRS - csr: {}, dest: x{}, source: x{}
-                    \\  read csr {} into x{}
+                    \\CSRRS - csr: {s}, dest: x{}, source: x{}
+                    \\  read csr {s} into x{}
                 , .{
-                    csr,
+                    @tagName(csr),
                     rd,
                     rs1,
-                    csr,
+                    @tagName(csr),
                     rd,
                 });
 
@@ -532,10 +537,10 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 self.x[rd] = self.readCsr(csr);
             } else {
                 std.log.debug(
-                    \\CSRRS - csr: {}, dest: x{}, source: x{}
+                    \\CSRRS - csr: {s}, dest: x{}, source: x{}
                     \\  nop
                 , .{
-                    csr,
+                    @tagName(csr),
                     rd,
                     rs1,
                 });
@@ -552,17 +557,17 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             if (rd != 0) {
                 std.log.debug(
-                    \\CSRRWI - csr: {}, dest: x{}, imm: 0x{}
+                    \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}
                     \\  atomic
-                    \\  read csr {} into x{}
-                    \\  set csr {} to 0x{}
+                    \\  read csr {s} into x{}
+                    \\  set csr {s} to 0x{}
                 , .{
-                    csr,
+                    @tagName(csr),
                     rd,
                     rs1,
-                    csr,
+                    @tagName(csr),
                     rd,
-                    csr,
+                    @tagName(csr),
                     rs1,
                 });
 
@@ -575,13 +580,13 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 try self.writeCsr(csr, rs1);
             } else {
                 std.log.debug(
-                    \\CSRRWI - csr: {}, dest: x{}, imm: 0x{}
-                    \\  set csr {} to 0x{}
+                    \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}
+                    \\  set csr {s} to 0x{}
                 , .{
-                    csr,
+                    @tagName(csr),
                     rd,
                     rs1,
-                    csr,
+                    @tagName(csr),
                     rs1,
                 });
 
@@ -626,60 +631,39 @@ fn dump(self: Cpu) void {
         });
     }
 
-    std.debug.print("pl: {} mhartid: {}", .{
-        self.privilege_level,
-        self.mhartid,
+    std.debug.print(
+        \\privilege: {s:<12} mhartid: {}
+        \\vector mode: {s:<10} vector base address: 0x{x}
+    , .{
+        @tagName(self.privilege_level), self.mhartid,
+        @tagName(self.vector_mode),     self.vector_base_address,
     });
 
     std.debug.print("\n", .{});
 }
 
-const PrivilegeLevel = enum(u2) {
-    User = 0,
-    Supervisor = 1,
-    Machine = 3,
-};
-
 fn readCsr(self: *const Cpu, csr: Csr) u64 {
     return switch (csr) {
         .mhartid => self.mhartid,
+        .mtvec => self.mtvec.backing,
     };
 }
 
 fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
     switch (csr) {
         .mhartid => self.mhartid = value,
+        .mtvec => {
+            const pending_mtvec = Mtvec{ .backing = value };
+
+            std.log.info("{b}", .{value});
+
+            self.vector_mode = try VectorMode.getVectorMode(@truncate(u2, pending_mtvec.mode.read()));
+            self.vector_base_address = pending_mtvec.base.read() << 2;
+
+            self.mtvec = pending_mtvec;
+        },
     }
 }
-
-const Csr = enum(u12) {
-    mhartid = 0xF14,
-
-    pub fn getCsr(value: u12) !Csr {
-        return std.meta.intToEnum(Csr, value) catch {
-            std.log.emerg("invalid csr 0x{X}", .{value});
-            return error.InvalidCsr;
-        };
-    }
-
-    pub fn canRead(self: Csr, privilege_level: PrivilegeLevel) bool {
-        const csr_value = @enumToInt(self);
-
-        const lowest_privilege_level = bitjuggle.getBits(csr_value, 8, 2);
-        if (@enumToInt(privilege_level) < lowest_privilege_level) return false;
-
-        return true;
-    }
-
-    pub fn canWrite(self: Csr, privilege_level: PrivilegeLevel) bool {
-        const csr_value = @enumToInt(self);
-
-        const lowest_privilege_level = bitjuggle.getBits(csr_value, 8, 2);
-        if (@enumToInt(privilege_level) < lowest_privilege_level) return false;
-
-        return bitjuggle.getBits(csr_value, 10, 2) != @as(u12, 0b11);
-    }
-};
 
 inline fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {
     return if (signed < 0)

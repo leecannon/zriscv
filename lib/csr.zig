@@ -6,6 +6,9 @@ pub const Csr = enum(u12) {
     /// Supervisor address translation and protection
     satp = 0x180,
 
+    /// Supervisor trap handler base address
+    stvec = 0x105,
+
     /// Hardware thread ID
     mhartid = 0xF14,
 
@@ -127,6 +130,13 @@ pub const Csr = enum(u12) {
 };
 
 pub const Mtvec = extern union {
+    mode: bitjuggle.Bitfield(u64, 0, 2),
+    base: bitjuggle.Bitfield(u64, 2, 62),
+
+    backing: u64,
+};
+
+pub const Stvec = extern union {
     mode: bitjuggle.Bitfield(u64, 0, 2),
     base: bitjuggle.Bitfield(u64, 2, 62),
 

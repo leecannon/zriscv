@@ -14,8 +14,12 @@ privilege_level: PrivilegeLevel = .Machine,
 mhartid: u64 = 0,
 
 mtvec: Mtvec = .{ .backing = 0 },
-vector_base_address: u64 = 0,
-vector_mode: VectorMode = .Direct,
+machine_vector_base_address: u64 = 0,
+machine_vector_mode: VectorMode = .Direct,
+
+stvec: Stvec = .{ .backing = 0 },
+supervisor_vector_base_address: u64 = 0,
+supervisor_vector_mode: VectorMode = .Direct,
 
 satp: Satp = .{ .backing = 0 },
 address_translation_mode: AddressTranslationMode = .Bare,
@@ -644,19 +648,21 @@ fn dump(self: Cpu) void {
 
     std.debug.print(
         \\privilege: {s:<12} mhartid: {}
-        \\vector mode: {s:<10} vector base address: 0x{x}
         \\address mode: {s:<9} asid: {:<17} ppn address: 0x{x}
         \\medeleg: 0b{b:0>64} 
         \\mideleg: 0b{b:0>64}
-        \\mie: 0b{b:0>64}
-        \\mip: 0b{b:0>64}
+        \\mie:     0b{b:0>64}
+        \\mip:     0b{b:0>64}
+        \\machine vector mode:    {s}    machine vector base address: 0x{x}
+        \\supervisor vector mode: {s} supervisor vector base address: 0x{x}
     , .{
         @tagName(self.privilege_level),          self.mhartid,
-        @tagName(self.vector_mode),              self.vector_base_address,
         @tagName(self.address_translation_mode), self.asid,
         self.ppn_address,                        self.medeleg,
         self.mideleg,                            self.mie,
-        self.mip,
+        self.mip,                                @tagName(self.machine_vector_mode),
+        self.machine_vector_base_address,        @tagName(self.supervisor_vector_mode),
+        self.supervisor_vector_base_address,
     });
 
     std.debug.print("\n", .{});
@@ -666,6 +672,7 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
     return switch (csr) {
         .mhartid => self.mhartid,
         .mtvec => self.mtvec.backing,
+        .stvec => self.stvec.backing,
         .satp => self.satp.backing,
         .medeleg => self.medeleg,
         .mideleg => self.mideleg,
@@ -753,10 +760,18 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
         .mtvec => {
             const pending_mtvec = Mtvec{ .backing = value };
 
-            self.vector_mode = try VectorMode.getVectorMode(@truncate(u2, pending_mtvec.mode.read()));
-            self.vector_base_address = pending_mtvec.base.read() << 2;
+            self.machine_vector_mode = try VectorMode.getVectorMode(@truncate(u2, pending_mtvec.mode.read()));
+            self.machine_vector_base_address = pending_mtvec.base.read() << 2;
 
             self.mtvec = pending_mtvec;
+        },
+        .stvec => {
+            const pending_stvec = Stvec{ .backing = value };
+
+            self.supervisor_vector_mode = try VectorMode.getVectorMode(@truncate(u2, pending_stvec.mode.read()));
+            self.supervisor_vector_base_address = pending_stvec.base.read() << 2;
+
+            self.stvec = pending_stvec;
         },
         .satp => {
             const pending_satp = Satp{ .backing = value };

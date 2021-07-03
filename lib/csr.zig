@@ -8,8 +8,15 @@ pub const Csr = enum(u12) {
 
     /// Hardware thread ID
     mhartid = 0xF14,
+
     /// Machine trap-handler base address
     mtvec = 0x305,
+
+    /// Machine exception delegation register
+    medeleg = 0x302,
+
+    /// Machine interrupt delegation register.
+    mideleg = 0x303,
 
     /// Physical memory protection configuration
     pmpcfg0 = 0x3A0,

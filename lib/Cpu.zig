@@ -22,6 +22,9 @@ address_translation_mode: AddressTranslationMode = .Bare,
 asid: u16 = 0,
 ppn_address: u64 = 0,
 
+medeleg: u64 = 0,
+mideleg: u64 = 0,
+
 pub fn run(self: *Cpu) !void {
     var instruction: Instruction = undefined;
 
@@ -624,7 +627,7 @@ fn dump(self: Cpu) void {
             continue;
         }
 
-        std.debug.print("x{:0>2}: 0x{x:<16} x{:0>2}: 0x{b} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
+        std.debug.print("x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
             i,
             self.x[i],
             i + 1,
@@ -640,11 +643,14 @@ fn dump(self: Cpu) void {
         \\privilege: {s:<12} mhartid: {}
         \\vector mode: {s:<10} vector base address: 0x{x}
         \\address mode: {s:<9} asid: {:<17} ppn address: 0x{x}
+        \\medeleg: 0b{b:0>64} 
+        \\mideleg: 0b{b:0>64}
     , .{
         @tagName(self.privilege_level),          self.mhartid,
         @tagName(self.vector_mode),              self.vector_base_address,
         @tagName(self.address_translation_mode), self.asid,
-        self.ppn_address,
+        self.ppn_address,                        self.medeleg,
+        self.mideleg,
     });
 
     std.debug.print("\n", .{});
@@ -655,6 +661,8 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
         .mhartid => self.mhartid,
         .mtvec => self.mtvec.backing,
         .satp => self.satp.backing,
+        .medeleg => self.medeleg,
+        .mideleg => self.mideleg,
         .pmpcfg0,
         .pmpcfg2,
         .pmpcfg4,
@@ -757,6 +765,8 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
 
             self.satp = pending_satp;
         },
+        .medeleg => self.medeleg = value,
+        .mideleg => self.mideleg = value,
         .pmpcfg0,
         .pmpcfg2,
         .pmpcfg4,

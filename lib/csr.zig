@@ -11,6 +11,16 @@ pub const Csr = enum(u12) {
     /// Machine trap-handler base address
     mtvec = 0x305,
 
+    /// Physical memory protection configuration
+    pmpcfg0 = 0x3A0,
+    pmpcfg2 = 0x3A2,
+    pmpcfg4 = 0x3A4,
+    pmpcfg6 = 0x3A6,
+    pmpcfg8 = 0x3A8,
+    pmpcfg10 = 0x3AA,
+    pmpcfg12 = 0x3AC,
+    pmpcfg14 = 0x3AE,
+
     /// Physical memory protection address register
     pmpaddr0 = 0x3B0,
     pmpaddr1 = 0x3B1,

@@ -89,34 +89,45 @@ fn fetch(self: *const Cpu, instruction: *Instruction) !void {
 }
 
 fn decode(self: Instruction) !InstructionType {
+    const funct3 = self.funct3.read();
+    const funct7 = self.funct7.read();
+
     return switch (self.opcode.read()) {
         0b0110111 => InstructionType.LUI,
         0b0010111 => InstructionType.AUIPC,
         0b1101111 => InstructionType.JAL,
         // BRANCH
-        0b1100011 => switch (self.funct3.read()) {
+        0b1100011 => switch (funct3) {
             0b000 => InstructionType.BEQ,
             0b001 => InstructionType.BNE,
             0b101 => InstructionType.BGE,
-            else => |funct3| {
+            else => {
                 std.log.emerg("unimplemented funct3: BRANCH/{b:0>3}", .{funct3});
                 return error.UnimplementedOpcode;
             },
         },
         // OP-IMM
-        0b0010011 => switch (self.funct3.read()) {
+        0b0010011 => switch (funct3) {
             0b000 => InstructionType.ADDI,
             0b001 => InstructionType.SLLI,
-            else => |funct3| {
+            else => {
                 std.log.emerg("unimplemented funct3: OP-IMM/{b:0>3}", .{funct3});
                 return error.UnimplementedOpcode;
             },
         },
+        // MISC-MEM
+        0b0110011 => switch (funct3) {
+            0b000 => if (funct7 == 0) InstructionType.ADD else InstructionType.SUB,
+            else => {
+                std.log.emerg("unimplemented funct3: MISC-MEM/{b:0>3}", .{funct3});
+                return error.UnimplementedOpcode;
+            },
+        },
         // SYSTEM
-        0b1110011 => switch (self.funct3.read()) {
-            0b000 => switch (self.funct7.read()) {
+        0b1110011 => switch (funct3) {
+            0b000 => switch (funct7) {
                 0b0011000 => InstructionType.MRET,
-                else => |funct7| {
+                else => {
                     std.log.emerg("unimplemented funct7: SYSTEM/000/{b:0>7}", .{funct7});
                     return error.UnimplementedOpcode;
                 },
@@ -124,15 +135,15 @@ fn decode(self: Instruction) !InstructionType {
             0b001 => InstructionType.CSRRW,
             0b010 => InstructionType.CSRRS,
             0b101 => InstructionType.CSRRWI,
-            else => |funct3| {
+            else => {
                 std.log.emerg("unimplemented funct3: SYSTEM/{b:0>3}", .{funct3});
                 return error.UnimplementedOpcode;
             },
         },
         // OP-IMM-32
-        0b0011011 => switch (self.funct3.read()) {
+        0b0011011 => switch (funct3) {
             0b000 => InstructionType.ADDIW,
-            else => |funct3| {
+            else => {
                 std.log.emerg("unimplemented funct3: OP-IMM-32/{b:0>3}", .{funct3});
                 return error.UnimplementedOpcode;
             },
@@ -409,6 +420,74 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                     rs1,
                     rd,
                     shmt,
+                });
+            }
+
+            self.pc += 4;
+        },
+        .ADD => {
+            // R-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+
+            if (rd != 0) {
+                std.log.debug(
+                    \\ADD - src1: x{}, src2: x{}, dest: x{}
+                    \\  set x{} to x{} + x{}
+                , .{
+                    rs1,
+                    rs2,
+                    rd,
+                    rd,
+                    rs1,
+                    rs2,
+                });
+
+                _ = @addWithOverflow(u64, self.x[rs1], self.x[rs2], &self.x[rd]);
+            } else {
+                std.log.debug(
+                    \\ADD - src1: x{}, src2: x{}, dest: x{}
+                    \\  nop
+                , .{
+                    rs1,
+                    rs2,
+                    rd,
+                });
+            }
+
+            self.pc += 4;
+        },
+        .SUB => {
+            // R-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+
+            if (rd != 0) {
+                std.log.debug(
+                    \\ADD - src1: x{}, src2: x{}, dest: x{}
+                    \\  set x{} to x{} - x{}
+                , .{
+                    rs1,
+                    rs2,
+                    rd,
+                    rd,
+                    rs1,
+                    rs2,
+                });
+
+                _ = @subWithOverflow(u64, self.x[rs1], self.x[rs2], &self.x[rd]);
+            } else {
+                std.log.debug(
+                    \\ADD - src1: x{}, src2: x{}, dest: x{}
+                    \\  nop
+                , .{
+                    rs1,
+                    rs2,
+                    rd,
                 });
             }
 

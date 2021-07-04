@@ -28,6 +28,8 @@ trap_virtual_memory: bool = false,
 timeout_wait: bool = false,
 trap_sret: bool = false,
 
+machine_exception_pc: usize = 0,
+
 mhartid: u64 = 0,
 
 mtvec: Mtvec = .{ .backing = 0 },
@@ -666,6 +668,7 @@ fn dump(self: Cpu) void {
     std.debug.print("privilege: {s} - mhartid: {} - machine interrupts: {} - super interrupts: {}\n", .{ @tagName(self.privilege_level), self.mhartid, self.machine_interrupts_enabled, self.supervisor_interrupts_enabled });
     std.debug.print("super interrupts prior: {} - super previous privilege: {s}\n", .{ self.supervisor_interrupts_enabled_prior, @tagName(self.supervisor_previous_privilege_level) });
     std.debug.print("machine interrupts prior: {} - machine previous privilege: {s}\n", .{ self.machine_interrupts_enabled_prior, @tagName(self.machine_previous_privilege_level) });
+    std.debug.print("machine exception pc: 0x{x}\n", .{self.machine_exception_pc});
     std.debug.print("address mode: {s} - asid: {} - ppn address: 0x{x}\n", .{ @tagName(self.address_translation_mode), self.asid, self.ppn_address });
     std.debug.print("medeleg: 0b{b:0>64}\n", .{self.medeleg});
     std.debug.print("mideleg: 0b{b:0>64}\n", .{self.mideleg});
@@ -691,6 +694,7 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
         .mie => self.mie,
         .mip => self.mip,
         .mstatus => self.mstatus.backing,
+        .miepc => self.machine_exception_pc,
         .pmpcfg0,
         .pmpcfg2,
         .pmpcfg4,
@@ -798,6 +802,9 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
             self.state_dirty = pending_mstatus.sd.read() != 0;
 
             self.mstatus = pending_mstatus;
+        },
+        .miepc => {
+            self.machine_exception_pc = value & ~(@as(u64, 0));
         },
         .mtvec => {
             const pending_mtvec = Mtvec{ .backing = value };

@@ -27,6 +27,9 @@ pub const Csr = enum(u12) {
     /// Machine interrupt-enable register
     mie = 0x304,
 
+    /// Machine exception program counter
+    miepc = 0x341,
+
     /// Machine interrupt pending
     mip = 0x344,
 

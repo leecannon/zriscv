@@ -76,11 +76,7 @@ pub fn run(self: *Cpu) !void {
     var instruction: Instruction = undefined;
 
     while (true) {
-        if (std.builtin.mode == .Debug) {
-            std.debug.print("\n", .{});
-            self.dump();
-            std.debug.print("\n", .{});
-        }
+        self.dump();
 
         try self.fetch(&instruction);
         try self.execute(instruction);
@@ -812,7 +808,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
         // Privilege
         .MRET => {
-            std.debug.print("MRET\n", .{});
+            std.log.debug("MRET\n", .{});
 
             if (self.privilege_level != .Machine) {
                 self.throw(.IllegalInstruction, instruction.backing);
@@ -902,10 +898,12 @@ fn isExceptionDelegated(self: Cpu, exception: ExceptionCode) bool {
 }
 
 fn dump(self: Cpu) void {
+    std.log.debug("", .{});
+
     var i: usize = 0;
     while (i < 32 - 3) : (i += 4) {
         if (i == 0) {
-            std.debug.print(" pc: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
+            std.log.debug(" pc: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}", .{
                 self.pc,
                 i + 1,
                 self.x[i + 1],
@@ -917,7 +915,7 @@ fn dump(self: Cpu) void {
             continue;
         }
 
-        std.debug.print("x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
+        std.log.debug("x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}", .{
             i,
             self.x[i],
             i + 1,
@@ -929,21 +927,23 @@ fn dump(self: Cpu) void {
         });
     }
 
-    std.debug.print("privilege: {s} - mhartid: {} - machine interrupts: {} - super interrupts: {}\n", .{ @tagName(self.privilege_level), self.mhartid, self.machine_interrupts_enabled, self.supervisor_interrupts_enabled });
-    std.debug.print("super interrupts prior: {} - super previous privilege: {s}\n", .{ self.supervisor_interrupts_enabled_prior, @tagName(self.supervisor_previous_privilege_level) });
-    std.debug.print("machine interrupts prior: {} - machine previous privilege: {s}\n", .{ self.machine_interrupts_enabled_prior, @tagName(self.machine_previous_privilege_level) });
-    std.debug.print("mcause: {x} - machine exception pc: 0x{x} - machine trap value {}\n", .{ self.mcause.backing, self.mepc, self.mtval });
-    std.debug.print("scause: {x} - super exception pc: 0x{x} - super trap value {}\n", .{ self.scause.backing, self.sepc, self.stval });
-    std.debug.print("address mode: {s} - asid: {} - ppn address: 0x{x}\n", .{ @tagName(self.address_translation_mode), self.asid, self.ppn_address });
-    std.debug.print("medeleg: 0b{b:0>64}\n", .{self.medeleg});
-    std.debug.print("mideleg: 0b{b:0>64}\n", .{self.mideleg});
-    std.debug.print("mie:     0b{b:0>64}\n", .{self.mie});
-    std.debug.print("mip:     0b{b:0>64}\n", .{self.mip});
-    std.debug.print("machine vector mode:    {s}    machine vector base address: 0x{x}\n", .{ @tagName(self.machine_vector_mode), self.machine_vector_base_address });
-    std.debug.print("super vector mode:      {s} super vector base address: 0x{x}\n", .{ @tagName(self.supervisor_vector_mode), self.supervisor_vector_base_address });
-    std.debug.print("dirty state: {} - floating point: {s} - extension: {s}\n", .{ self.state_dirty, @tagName(self.floating_point_status), @tagName(self.extension_status) });
-    std.debug.print("modify privilege: {} - super user access: {} - execute readable: {}\n", .{ self.modify_privilege, self.supervisor_user_memory_access, self.executable_readable });
-    std.debug.print("trap virtual memory: {} - timeout wait: {} - trap sret: {}\n", .{ self.trap_virtual_memory, self.timeout_wait, self.trap_sret });
+    std.log.debug("privilege: {s} - mhartid: {} - machine interrupts: {} - super interrupts: {}", .{ @tagName(self.privilege_level), self.mhartid, self.machine_interrupts_enabled, self.supervisor_interrupts_enabled });
+    std.log.debug("super interrupts prior: {} - super previous privilege: {s}", .{ self.supervisor_interrupts_enabled_prior, @tagName(self.supervisor_previous_privilege_level) });
+    std.log.debug("machine interrupts prior: {} - machine previous privilege: {s}", .{ self.machine_interrupts_enabled_prior, @tagName(self.machine_previous_privilege_level) });
+    std.log.debug("mcause: {x} - machine exception pc: 0x{x} - machine trap value {}", .{ self.mcause.backing, self.mepc, self.mtval });
+    std.log.debug("scause: {x} - super exception pc: 0x{x} - super trap value {}", .{ self.scause.backing, self.sepc, self.stval });
+    std.log.debug("address mode: {s} - asid: {} - ppn address: 0x{x}", .{ @tagName(self.address_translation_mode), self.asid, self.ppn_address });
+    std.log.debug("medeleg: 0b{b:0>64}", .{self.medeleg});
+    std.log.debug("mideleg: 0b{b:0>64}", .{self.mideleg});
+    std.log.debug("mie:     0b{b:0>64}", .{self.mie});
+    std.log.debug("mip:     0b{b:0>64}", .{self.mip});
+    std.log.debug("machine vector mode:    {s}    machine vector base address: 0x{x}", .{ @tagName(self.machine_vector_mode), self.machine_vector_base_address });
+    std.log.debug("super vector mode:      {s} super vector base address: 0x{x}", .{ @tagName(self.supervisor_vector_mode), self.supervisor_vector_base_address });
+    std.log.debug("dirty state: {} - floating point: {s} - extension: {s}", .{ self.state_dirty, @tagName(self.floating_point_status), @tagName(self.extension_status) });
+    std.log.debug("modify privilege: {} - super user access: {} - execute readable: {}", .{ self.modify_privilege, self.supervisor_user_memory_access, self.executable_readable });
+    std.log.debug("trap virtual memory: {} - timeout wait: {} - trap sret: {}", .{ self.trap_virtual_memory, self.timeout_wait, self.trap_sret });
+
+    std.log.debug("", .{});
 }
 
 fn readCsr(self: *const Cpu, csr: Csr) u64 {

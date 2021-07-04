@@ -12,23 +12,38 @@ pc: usize = 0,
 privilege_level: PrivilegeLevel = .Machine,
 
 mstatus: Mstatus = Mstatus.initial_state,
+/// mstatus:sie
 supervisor_interrupts_enabled: bool = false,
+/// mstatus:spie
 supervisor_interrupts_enabled_prior: bool = false,
+/// mstatus:spp
 supervisor_previous_privilege_level: PrivilegeLevel = .Supervisor,
+/// mstatus:mie
 machine_interrupts_enabled: bool = false,
+/// mstatus:mpie
 machine_interrupts_enabled_prior: bool = false,
+/// mstatus:mpp
 machine_previous_privilege_level: PrivilegeLevel = .Machine,
+/// mstatus:fs
 floating_point_status: ContextStatus = .Initial,
+/// mstatus:xs
 extension_status: ContextStatus = .Initial,
+/// mstatus:ds
 state_dirty: bool = false,
+/// mstatus:mprv
 modify_privilege: bool = false,
+/// mstatus:sum
 supervisor_user_memory_access: bool = false,
+/// mstatus:mxr
 executable_readable: bool = false,
+/// mstatus:tvm
 trap_virtual_memory: bool = false,
+/// mstatus:tw
 timeout_wait: bool = false,
+/// mstatus:tsr
 trap_sret: bool = false,
 
-machine_exception_pc: usize = 0,
+mepc: usize = 0,
 
 mhartid: u64 = 0,
 
@@ -99,6 +114,13 @@ fn decode(self: Instruction) !InstructionType {
         },
         // SYSTEM
         0b1110011 => switch (self.funct3.read()) {
+            0b000 => switch (self.funct7.read()) {
+                0b0011000 => InstructionType.MRET,
+                else => |funct7| {
+                    std.log.emerg("unimplemented funct7: SYSTEM/000/{b:0>7}", .{funct7});
+                    return error.UnimplementedOpcode;
+                },
+            },
             0b001 => InstructionType.CSRRW,
             0b010 => InstructionType.CSRRS,
             0b101 => InstructionType.CSRRWI,
@@ -450,6 +472,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
         .CSRRW => {
             // I-type
 
+            // TODO exception
             const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
@@ -503,6 +526,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
         .CSRRS => {
             // I-type
 
+            // TODO exception
             const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
@@ -585,6 +609,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
         .CSRRWI => {
             // I-type
 
+            // TODO exception
             const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
@@ -634,6 +659,22 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             self.pc += 4;
         },
+
+        // Privilege
+        .MRET => {
+            std.debug.print("MRET\n", .{});
+
+            // TODO exception
+            if (self.privilege_level != .Machine) return error.IncorrectPrivilege;
+
+            if (self.machine_previous_privilege_level != .Machine) self.modify_privilege = false;
+            self.machine_interrupts_enabled = self.machine_interrupts_enabled_prior;
+            self.privilege_level = self.machine_previous_privilege_level;
+            self.machine_interrupts_enabled_prior = true;
+            self.machine_previous_privilege_level = .User;
+
+            self.pc = self.mepc;
+        },
     }
 }
 
@@ -668,7 +709,7 @@ fn dump(self: Cpu) void {
     std.debug.print("privilege: {s} - mhartid: {} - machine interrupts: {} - super interrupts: {}\n", .{ @tagName(self.privilege_level), self.mhartid, self.machine_interrupts_enabled, self.supervisor_interrupts_enabled });
     std.debug.print("super interrupts prior: {} - super previous privilege: {s}\n", .{ self.supervisor_interrupts_enabled_prior, @tagName(self.supervisor_previous_privilege_level) });
     std.debug.print("machine interrupts prior: {} - machine previous privilege: {s}\n", .{ self.machine_interrupts_enabled_prior, @tagName(self.machine_previous_privilege_level) });
-    std.debug.print("machine exception pc: 0x{x}\n", .{self.machine_exception_pc});
+    std.debug.print("machine exception pc: 0x{x}\n", .{self.mepc});
     std.debug.print("address mode: {s} - asid: {} - ppn address: 0x{x}\n", .{ @tagName(self.address_translation_mode), self.asid, self.ppn_address });
     std.debug.print("medeleg: 0b{b:0>64}\n", .{self.medeleg});
     std.debug.print("mideleg: 0b{b:0>64}\n", .{self.mideleg});
@@ -679,8 +720,6 @@ fn dump(self: Cpu) void {
     std.debug.print("dirty state: {} - floating point: {s} - extension: {s}\n", .{ self.state_dirty, @tagName(self.floating_point_status), @tagName(self.extension_status) });
     std.debug.print("modify privilege: {} - super user access: {} - execute readable: {}\n", .{ self.modify_privilege, self.supervisor_user_memory_access, self.executable_readable });
     std.debug.print("trap virtual memory: {} - timeout wait: {} - trap sret: {}\n", .{ self.trap_virtual_memory, self.timeout_wait, self.trap_sret });
-
-    std.debug.print("\n", .{});
 }
 
 fn readCsr(self: *const Cpu, csr: Csr) u64 {
@@ -694,7 +733,7 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
         .mie => self.mie,
         .mip => self.mip,
         .mstatus => self.mstatus.backing,
-        .miepc => self.machine_exception_pc,
+        .mepc => self.mepc,
         .pmpcfg0,
         .pmpcfg2,
         .pmpcfg4,
@@ -803,8 +842,8 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
 
             self.mstatus = pending_mstatus;
         },
-        .miepc => {
-            self.machine_exception_pc = value & ~(@as(u64, 0));
+        .mepc => {
+            self.mepc = value & ~(@as(u64, 0));
         },
         .mtvec => {
             const pending_mtvec = Mtvec{ .backing = value };

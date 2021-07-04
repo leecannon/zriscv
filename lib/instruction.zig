@@ -34,11 +34,15 @@ pub const InstructionType = enum {
     CSRRS,
     /// atomic read/write csr - immediate
     CSRRWI,
+
+    // Privilege
+    MRET,
 };
 
 pub const Instruction = extern union {
     opcode: bitjuggle.Bitfield(u32, 0, 7),
     funct3: bitjuggle.Bitfield(u32, 12, 3),
+    funct7: bitjuggle.Bitfield(u32, 25, 7),
     rd: bitjuggle.Bitfield(u32, 7, 5),
     rs1: bitjuggle.Bitfield(u32, 15, 5),
     rs2: bitjuggle.Bitfield(u32, 20, 5),

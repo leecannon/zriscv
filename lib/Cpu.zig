@@ -11,6 +11,23 @@ x: [32]u64 = [_]u64{0} ** 32,
 pc: usize = 0,
 privilege_level: PrivilegeLevel = .Machine,
 
+mstatus: Mstatus = Mstatus.initial_state,
+supervisor_interrupts_enabled: bool = false,
+supervisor_interrupts_enabled_prior: bool = false,
+supervisor_previous_privilege_level: PrivilegeLevel = .Supervisor,
+machine_interrupts_enabled: bool = false,
+machine_interrupts_enabled_prior: bool = false,
+machine_previous_privilege_level: PrivilegeLevel = .Machine,
+floating_point_status: ContextStatus = .Initial,
+extension_status: ContextStatus = .Initial,
+state_dirty: bool = false,
+modify_privilege: bool = false,
+supervisor_user_memory_access: bool = false,
+executable_readable: bool = false,
+trap_virtual_memory: bool = false,
+timeout_wait: bool = false,
+trap_sret: bool = false,
+
 mhartid: u64 = 0,
 
 mtvec: Mtvec = .{ .backing = 0 },
@@ -646,24 +663,19 @@ fn dump(self: Cpu) void {
         });
     }
 
-    std.debug.print(
-        \\privilege: {s:<12} mhartid: {}
-        \\address mode: {s:<9} asid: {:<17} ppn address: 0x{x}
-        \\medeleg: 0b{b:0>64} 
-        \\mideleg: 0b{b:0>64}
-        \\mie:     0b{b:0>64}
-        \\mip:     0b{b:0>64}
-        \\machine vector mode:    {s}    machine vector base address: 0x{x}
-        \\supervisor vector mode: {s} supervisor vector base address: 0x{x}
-    , .{
-        @tagName(self.privilege_level),          self.mhartid,
-        @tagName(self.address_translation_mode), self.asid,
-        self.ppn_address,                        self.medeleg,
-        self.mideleg,                            self.mie,
-        self.mip,                                @tagName(self.machine_vector_mode),
-        self.machine_vector_base_address,        @tagName(self.supervisor_vector_mode),
-        self.supervisor_vector_base_address,
-    });
+    std.debug.print("privilege: {s} - mhartid: {} - machine interrupts: {} - super interrupts: {}\n", .{ @tagName(self.privilege_level), self.mhartid, self.machine_interrupts_enabled, self.supervisor_interrupts_enabled });
+    std.debug.print("super interrupts prior: {} - super previous privilege: {s}\n", .{ self.supervisor_interrupts_enabled_prior, @tagName(self.supervisor_previous_privilege_level) });
+    std.debug.print("machine interrupts prior: {} - machine previous privilege: {s}\n", .{ self.machine_interrupts_enabled_prior, @tagName(self.machine_previous_privilege_level) });
+    std.debug.print("address mode: {s} - asid: {} - ppn address: 0x{x}\n", .{ @tagName(self.address_translation_mode), self.asid, self.ppn_address });
+    std.debug.print("medeleg: 0b{b:0>64}\n", .{self.medeleg});
+    std.debug.print("mideleg: 0b{b:0>64}\n", .{self.mideleg});
+    std.debug.print("mie:     0b{b:0>64}\n", .{self.mie});
+    std.debug.print("mip:     0b{b:0>64}\n", .{self.mip});
+    std.debug.print("machine vector mode:    {s}    machine vector base address: 0x{x}\n", .{ @tagName(self.machine_vector_mode), self.machine_vector_base_address });
+    std.debug.print("super vector mode:      {s} super vector base address: 0x{x}\n", .{ @tagName(self.supervisor_vector_mode), self.supervisor_vector_base_address });
+    std.debug.print("dirty state: {} - floating point: {s} - extension: {s}\n", .{ self.state_dirty, @tagName(self.floating_point_status), @tagName(self.extension_status) });
+    std.debug.print("modify privilege: {} - super user access: {} - execute readable: {}\n", .{ self.modify_privilege, self.supervisor_user_memory_access, self.executable_readable });
+    std.debug.print("trap virtual memory: {} - timeout wait: {} - trap sret: {}\n", .{ self.trap_virtual_memory, self.timeout_wait, self.trap_sret });
 
     std.debug.print("\n", .{});
 }
@@ -678,6 +690,7 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
         .mideleg => self.mideleg,
         .mie => self.mie,
         .mip => self.mip,
+        .mstatus => self.mstatus.backing,
         .pmpcfg0,
         .pmpcfg2,
         .pmpcfg4,
@@ -757,10 +770,39 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
 fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
     switch (csr) {
         .mhartid => self.mhartid = value,
+        .mstatus => {
+            const pending_mstatus = Mstatus{
+                .backing = self.mstatus.backing & Mstatus.unmodifiable_mask |
+                    value & Mstatus.modifiable_mask,
+            };
+
+            const super_previous_level = try PrivilegeLevel.getPrivilegeLevel(pending_mstatus.spp.read());
+            const machine_previous_level = try PrivilegeLevel.getPrivilegeLevel(pending_mstatus.mpp.read());
+            const floating_point_state = try ContextStatus.getContextStatus(pending_mstatus.fs.read());
+            const extension_state = try ContextStatus.getContextStatus(pending_mstatus.xs.read());
+
+            self.supervisor_interrupts_enabled = pending_mstatus.sie.read() != 0;
+            self.machine_interrupts_enabled = pending_mstatus.mie.read() != 0;
+            self.supervisor_interrupts_enabled_prior = pending_mstatus.spie.read() != 0;
+            self.machine_interrupts_enabled_prior = pending_mstatus.mpie.read() != 0;
+            self.supervisor_previous_privilege_level = super_previous_level;
+            self.machine_previous_privilege_level = machine_previous_level;
+            self.floating_point_status = floating_point_state;
+            self.extension_status = extension_state;
+            self.modify_privilege = pending_mstatus.mprv.read() != 0;
+            self.supervisor_user_memory_access = pending_mstatus.sum.read() != 0;
+            self.executable_readable = pending_mstatus.mxr.read() != 0;
+            self.trap_virtual_memory = pending_mstatus.tvm.read() != 0;
+            self.timeout_wait = pending_mstatus.tw.read() != 0;
+            self.trap_sret = pending_mstatus.tsr.read() != 0;
+            self.state_dirty = pending_mstatus.sd.read() != 0;
+
+            self.mstatus = pending_mstatus;
+        },
         .mtvec => {
             const pending_mtvec = Mtvec{ .backing = value };
 
-            self.machine_vector_mode = try VectorMode.getVectorMode(@truncate(u2, pending_mtvec.mode.read()));
+            self.machine_vector_mode = try VectorMode.getVectorMode(pending_mtvec.mode.read());
             self.machine_vector_base_address = pending_mtvec.base.read() << 2;
 
             self.mtvec = pending_mtvec;
@@ -768,7 +810,7 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
         .stvec => {
             const pending_stvec = Stvec{ .backing = value };
 
-            self.supervisor_vector_mode = try VectorMode.getVectorMode(@truncate(u2, pending_stvec.mode.read()));
+            self.supervisor_vector_mode = try VectorMode.getVectorMode(pending_stvec.mode.read());
             self.supervisor_vector_base_address = pending_stvec.base.read() << 2;
 
             self.stvec = pending_stvec;
@@ -776,14 +818,14 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
         .satp => {
             const pending_satp = Satp{ .backing = value };
 
-            const address_translation_mode = try AddressTranslationMode.getAddressTranslationMode(@truncate(u4, pending_satp.mode.read()));
+            const address_translation_mode = try AddressTranslationMode.getAddressTranslationMode(pending_satp.mode.read());
             if (address_translation_mode != .Bare) {
                 std.log.debug("unsupported address_translation_mode given: {s}", .{@tagName(address_translation_mode)});
                 return;
             }
 
             self.address_translation_mode = address_translation_mode;
-            self.asid = @truncate(u16, pending_satp.asid.read());
+            self.asid = pending_satp.asid.read();
             self.ppn_address = pending_satp.ppn.read() * 4096;
 
             self.satp = pending_satp;

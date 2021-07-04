@@ -12,6 +12,9 @@ pub const Csr = enum(u12) {
     /// Hardware thread ID
     mhartid = 0xF14,
 
+    /// Machine status register
+    mstatus = 0x300,
+
     /// Machine trap-handler base address
     mtvec = 0x305,
 
@@ -127,6 +130,78 @@ pub const Csr = enum(u12) {
 
         return bitjuggle.getBits(csr_value, 10, 2) != @as(u12, 0b11);
     }
+};
+
+pub const Mstatus = extern union {
+    /// supervisor interrupts enabled
+    sie: bitjuggle.Bitfield(u64, 1, 1),
+    /// machine interrupts enabled
+    mie: bitjuggle.Bitfield(u64, 3, 1),
+    /// supervisor interrupts enabled - prior
+    spie: bitjuggle.Bitfield(u64, 5, 1),
+    // user endian
+    ube: bitjuggle.Bitfield(u64, 6, 1),
+    /// machine interrupts enabled - prior
+    mpie: bitjuggle.Bitfield(u64, 7, 1),
+    /// supervisor previous privilege level
+    spp: bitjuggle.Bitfield(u64, 8, 1),
+    /// machine previous privilege level
+    mpp: bitjuggle.Bitfield(u64, 11, 2),
+    /// floating point state
+    fs: bitjuggle.Bitfield(u64, 13, 2),
+    /// extension state
+    xs: bitjuggle.Bitfield(u64, 15, 2),
+    /// modify privilege of loads and stores
+    mprv: bitjuggle.Bitfield(u64, 17, 1),
+    /// supervisor user memory access
+    sum: bitjuggle.Bitfield(u64, 18, 1),
+    /// make executable readable
+    mxr: bitjuggle.Bitfield(u64, 19, 1),
+    /// trap virtual memory
+    tvm: bitjuggle.Bitfield(u64, 20, 1),
+    /// timeout wait
+    tw: bitjuggle.Bitfield(u64, 21, 1),
+    /// trap sret
+    tsr: bitjuggle.Bitfield(u64, 22, 1),
+    /// user X-LEN
+    uxl: bitjuggle.Bitfield(u64, 32, 2),
+    /// supervisor X-LEN
+    sxl: bitjuggle.Bitfield(u64, 34, 2),
+    // supervisor endian
+    sbe: bitjuggle.Bitfield(u64, 36, 1),
+    // machine endian
+    mbe: bitjuggle.Bitfield(u64, 37, 1),
+    /// state dirty
+    sd: bitjuggle.Bitfield(u64, 63, 1),
+
+    backing: u64,
+
+    pub const unmodifiable_mask: u64 = blk: {
+        var unmodifiable = Mstatus{ .backing = 0 };
+
+        unmodifiable.ube.write(1);
+        unmodifiable.uxl.write(std.math.maxInt(u2));
+        unmodifiable.sxl.write(std.math.maxInt(u2));
+        unmodifiable.sbe.write(1);
+        unmodifiable.mbe.write(1);
+
+        break :blk unmodifiable.backing;
+    };
+
+    pub const modifiable_mask = ~unmodifiable_mask;
+
+    pub const initial_state: Mstatus = blk: {
+        var initial = Mstatus{ .backing = 0 };
+
+        initial.mpp.write(@enumToInt(PrivilegeLevel.Machine));
+        initial.spp.write(@enumToInt(PrivilegeLevel.Supervisor));
+        initial.fs.write(@enumToInt(ContextStatus.Initial));
+        initial.xs.write(@enumToInt(ContextStatus.Initial));
+        initial.uxl.write(2);
+        initial.sxl.write(2);
+
+        break :blk initial;
+    };
 };
 
 pub const Mtvec = extern union {

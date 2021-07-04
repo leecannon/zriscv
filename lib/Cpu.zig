@@ -123,6 +123,7 @@ fn decode(self: Instruction) !InstructionType {
                 return error.UnimplementedOpcode;
             },
         },
+        0b001111 => InstructionType.FENCE,
         // SYSTEM
         0b1110011 => switch (funct3) {
             0b000 => switch (funct7) {
@@ -490,6 +491,11 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                     rd,
                 });
             }
+
+            self.pc += 4;
+        },
+        .FENCE => {
+            std.log.debug("FENCE", .{});
 
             self.pc += 4;
         },

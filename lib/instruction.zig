@@ -24,6 +24,8 @@ pub const InstructionType = enum {
     ADD,
     /// sub
     SUB,
+    /// memory fence
+    FENCE,
 
     // 64I
 

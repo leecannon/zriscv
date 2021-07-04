@@ -8,7 +8,9 @@ Requires [Gyro](https://github.com/mattnite/gyro) and git lfs.
 ## What to expect
 This is the first emulator I've made other than CHIP-8, don't expect high quality nor speed.
 
-All that should be expected is mistakes.
+The only thing that should be expected is mistakes.
 
-## Goal
-RV64GC support, single hart.
+## Short term goal
+ - RV64GC 
+ - user, super and machine mode 
+ - single hart (this allows us to ignore memory ordering/synchronization)

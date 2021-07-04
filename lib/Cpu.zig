@@ -116,6 +116,7 @@ fn decode(self: Instruction) !InstructionType {
         0b0010011 => switch (funct3) {
             0b000 => InstructionType.ADDI,
             0b001 => InstructionType.SLLI,
+            0b110 => InstructionType.ORI,
             else => {
                 std.log.emerg("unimplemented funct3: OP-IMM/{b:0>3}", .{funct3});
                 return error.UnimplementedOpcode;
@@ -364,6 +365,40 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
                 self.pc += 4;
             }
+        },
+        .ORI => {
+            // I-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const imm = instruction.i_imm.read();
+
+            if (rd != 0) {
+                std.log.debug(
+                    \\ORI - src: x{}, dest: x{}, imm: 0x{x}
+                    \\  set x{} to x{} | 0x{x}
+                , .{
+                    rs1,
+                    rd,
+                    imm,
+                    rd,
+                    rs1,
+                    imm,
+                });
+
+                self.x[rd] = self.x[rs1] | @bitCast(u64, imm);
+            } else {
+                std.log.debug(
+                    \\ORI - src: x{}, dest: x{}, imm: 0x{x}
+                    \\  nop
+                , .{
+                    rs1,
+                    rd,
+                    imm,
+                });
+            }
+
+            self.pc += 4;
         },
         .ADDI => {
             // I-type

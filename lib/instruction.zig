@@ -16,6 +16,8 @@ pub const InstructionType = enum {
     BNE,
     /// branch greater equal
     BGE,
+    /// or immediate
+    ORI,
     /// add immediate
     ADDI,
     /// logical left shift

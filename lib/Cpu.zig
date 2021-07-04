@@ -43,7 +43,13 @@ timeout_wait: bool = false,
 /// mstatus:tsr
 trap_sret: bool = false,
 
-mepc: usize = 0,
+mepc: u64 = 0,
+mcause: MCause = .{ .backing = 0 },
+mtval: u64 = 0,
+
+sepc: u64 = 0,
+scause: SCause = .{ .backing = 0 },
+stval: u64 = 0,
 
 mhartid: u64 = 0,
 
@@ -127,6 +133,7 @@ fn decode(self: Instruction) !InstructionType {
         // SYSTEM
         0b1110011 => switch (funct3) {
             0b000 => switch (funct7) {
+                0b0000000 => InstructionType.ECALL,
                 0b0011000 => InstructionType.MRET,
                 else => {
                     std.log.emerg("unimplemented funct7: SYSTEM/000/{b:0>7}", .{funct7});
@@ -499,6 +506,14 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             self.pc += 4;
         },
+        .ECALL => {
+            // I-type
+            switch (self.privilege_level) {
+                .User => self.throw(.EnvironmentCallFromUMode, 0),
+                .Supervisor => self.throw(.EnvironmentCallFromSMode, 0),
+                .Machine => self.throw(.EnvironmentCallFromMMode, 0),
+            }
+        },
 
         // 64I
 
@@ -557,7 +572,12 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
         .CSRRW => {
             // I-type
 
-            // TODO exception
+            // TODO: Proper exceptions
+            // const csr = Csr.getCsr(instruction.csr.read()) catch {
+            //     self.throw(.IllegalInstruction, instruction.backing);
+            //     return;
+            // };
+
             const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
@@ -579,8 +599,8 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 });
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    // TODO: Illegal instruction exception
-                    return error.InvalidWriteToCsr;
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
                 }
 
                 const initial_rs1 = self.x[rs1];
@@ -599,8 +619,8 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 });
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    // TODO: Illegal instruction exception
-                    return error.InvalidWriteToCsr;
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
                 }
 
                 try self.writeCsr(csr, self.x[rs1]);
@@ -611,7 +631,12 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
         .CSRRS => {
             // I-type
 
-            // TODO exception
+            // TODO: Proper exceptions
+            // const csr = Csr.getCsr(instruction.csr.read()) catch {
+            //     self.throw(.IllegalInstruction, instruction.backing);
+            //     return;
+            // };
+
             const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
@@ -633,8 +658,8 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 });
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    // TODO: Illegal instruction exception
-                    return error.InvalidWriteToCsr;
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
                 }
 
                 const initial_rs1 = self.x[rs1];
@@ -655,8 +680,8 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 });
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    // TODO: Illegal instruction exception
-                    return error.InvalidWriteToCsr;
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
                 }
 
                 try self.writeCsr(csr, self.readCsr(csr) | self.x[rs1]);
@@ -673,8 +698,8 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 });
 
                 if (!csr.canRead(self.privilege_level)) {
-                    // TODO: Illegal instruction exception
-                    return error.InvalidReadFromCsr;
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
                 }
 
                 self.x[rd] = self.readCsr(csr);
@@ -694,7 +719,12 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
         .CSRRWI => {
             // I-type
 
-            // TODO exception
+            // TODO: Proper exceptions
+            // const csr = Csr.getCsr(instruction.csr.read()) catch {
+            //     self.throw(.IllegalInstruction, instruction.backing);
+            //     return;
+            // };
+
             const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
@@ -716,8 +746,8 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 });
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    // TODO: Illegal instruction exception
-                    return error.InvalidWriteToCsr;
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
                 }
 
                 self.x[rd] = self.readCsr(csr);
@@ -735,8 +765,8 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 });
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    // TODO: Illegal instruction exception
-                    return error.InvalidWriteToCsr;
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
                 }
 
                 try self.writeCsr(csr, rs1);
@@ -749,8 +779,10 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
         .MRET => {
             std.debug.print("MRET\n", .{});
 
-            // TODO exception
-            if (self.privilege_level != .Machine) return error.IncorrectPrivilege;
+            if (self.privilege_level != .Machine) {
+                self.throw(.IllegalInstruction, instruction.backing);
+                return;
+            }
 
             if (self.machine_previous_privilege_level != .Machine) self.modify_privilege = false;
             self.machine_interrupts_enabled = self.machine_interrupts_enabled_prior;
@@ -761,6 +793,77 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             self.pc = self.mepc;
         },
     }
+}
+
+fn throw(self: *Cpu, exception: ExceptionCode, val: u64) void {
+    if (self.privilege_level != .Machine and self.isExceptionDelegated(exception)) {
+        std.log.debug("Exception {s} caught in {s} jumping to {s}", .{
+            @tagName(exception),
+            @tagName(self.privilege_level),
+            @tagName(PrivilegeLevel.Supervisor),
+        });
+
+        self.scause.code.write(@enumToInt(exception));
+        self.scause.interrupt.write(0);
+
+        self.stval = val;
+
+        self.supervisor_previous_privilege_level = self.privilege_level;
+        self.mstatus.spp.write(@truncate(u1, @enumToInt(self.privilege_level)));
+
+        self.supervisor_interrupts_enabled_prior = self.supervisor_interrupts_enabled;
+        self.mstatus.spie.write(@boolToInt(self.supervisor_interrupts_enabled));
+
+        self.supervisor_interrupts_enabled = false;
+        self.mstatus.sie.write(0);
+
+        self.sepc = self.pc;
+        self.pc = self.supervisor_vector_base_address;
+
+        return;
+    }
+
+    std.log.debug("Exception {s} caught in {s} jumping to {s}", .{
+        @tagName(exception),
+        @tagName(self.privilege_level),
+        @tagName(PrivilegeLevel.Machine),
+    });
+
+    self.mcause.code.write(@enumToInt(exception));
+    self.mcause.interrupt.write(0);
+
+    self.mtval = val;
+
+    self.machine_previous_privilege_level = self.privilege_level;
+    self.mstatus.mpp.write(@enumToInt(self.privilege_level));
+
+    self.machine_interrupts_enabled_prior = self.machine_interrupts_enabled;
+    self.mstatus.mpie.write(@boolToInt(self.machine_interrupts_enabled));
+
+    self.machine_interrupts_enabled = false;
+    self.mstatus.mie.write(0);
+
+    self.mepc = self.pc;
+    self.pc = self.machine_vector_base_address;
+}
+
+fn isExceptionDelegated(self: Cpu, exception: ExceptionCode) bool {
+    return switch (exception) {
+        .InstructionAddressMisaligned => bitjuggle.getBit(self.medeleg, 0) != 0,
+        .InstructionAccessFault => bitjuggle.getBit(self.medeleg, 1) != 0,
+        .IllegalInstruction => bitjuggle.getBit(self.medeleg, 2) != 0,
+        .Breakpoint => bitjuggle.getBit(self.medeleg, 3) != 0,
+        .LoadAddressMisaligned => bitjuggle.getBit(self.medeleg, 4) != 0,
+        .LoadAccessFault => bitjuggle.getBit(self.medeleg, 5) != 0,
+        .Store_AMOAddressMisaligned => bitjuggle.getBit(self.medeleg, 6) != 0,
+        .Store_AMOAccessFault => bitjuggle.getBit(self.medeleg, 7) != 0,
+        .EnvironmentCallFromUMode => bitjuggle.getBit(self.medeleg, 8) != 0,
+        .EnvironmentCallFromSMode => bitjuggle.getBit(self.medeleg, 9) != 0,
+        .EnvironmentCallFromMMode => bitjuggle.getBit(self.medeleg, 11) != 0,
+        .InstructionPageFault => bitjuggle.getBit(self.medeleg, 12) != 0,
+        .LoadPageFault => bitjuggle.getBit(self.medeleg, 13) != 0,
+        .Store_AMOPageFault => bitjuggle.getBit(self.medeleg, 15) != 0,
+    };
 }
 
 fn dump(self: Cpu) void {
@@ -794,7 +897,8 @@ fn dump(self: Cpu) void {
     std.debug.print("privilege: {s} - mhartid: {} - machine interrupts: {} - super interrupts: {}\n", .{ @tagName(self.privilege_level), self.mhartid, self.machine_interrupts_enabled, self.supervisor_interrupts_enabled });
     std.debug.print("super interrupts prior: {} - super previous privilege: {s}\n", .{ self.supervisor_interrupts_enabled_prior, @tagName(self.supervisor_previous_privilege_level) });
     std.debug.print("machine interrupts prior: {} - machine previous privilege: {s}\n", .{ self.machine_interrupts_enabled_prior, @tagName(self.machine_previous_privilege_level) });
-    std.debug.print("machine exception pc: 0x{x}\n", .{self.mepc});
+    std.debug.print("mcause: {x} - machine exception pc: 0x{x} - machine trap value {}\n", .{ self.mcause.backing, self.mepc, self.mtval });
+    std.debug.print("scause: {x} - super exception pc: 0x{x} - super trap value {}\n", .{ self.scause.backing, self.sepc, self.stval });
     std.debug.print("address mode: {s} - asid: {} - ppn address: 0x{x}\n", .{ @tagName(self.address_translation_mode), self.asid, self.ppn_address });
     std.debug.print("medeleg: 0b{b:0>64}\n", .{self.medeleg});
     std.debug.print("mideleg: 0b{b:0>64}\n", .{self.mideleg});
@@ -819,6 +923,11 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
         .mip => self.mip,
         .mstatus => self.mstatus.backing,
         .mepc => self.mepc,
+        .mcause => self.mcause.backing,
+        .mtval => self.mtval,
+        .sepc => self.sepc,
+        .scause => self.scause.backing,
+        .stval => self.stval,
         .pmpcfg0,
         .pmpcfg2,
         .pmpcfg4,
@@ -898,6 +1007,11 @@ fn readCsr(self: *const Cpu, csr: Csr) u64 {
 fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
     switch (csr) {
         .mhartid => self.mhartid = value,
+        .mcause => self.mcause.backing = value,
+        .mtval => self.mtval = value,
+        .scause => self.scause.backing = value,
+        .stval => self.stval = value,
+        .sepc => self.sepc = value & ~(@as(u64, 0)),
         .mstatus => {
             const pending_mstatus = Mstatus{
                 .backing = self.mstatus.backing & Mstatus.unmodifiable_mask |
@@ -927,9 +1041,7 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
 
             self.mstatus = pending_mstatus;
         },
-        .mepc => {
-            self.mepc = value & ~(@as(u64, 0));
-        },
+        .mepc => self.mepc = value & ~(@as(u64, 0)),
         .mtvec => {
             const pending_mtvec = Mtvec{ .backing = value };
 

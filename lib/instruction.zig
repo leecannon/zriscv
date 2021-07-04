@@ -26,6 +26,8 @@ pub const InstructionType = enum {
     SUB,
     /// memory fence
     FENCE,
+    /// environment call
+    ECALL,
 
     // 64I
 

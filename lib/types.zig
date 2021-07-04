@@ -13,6 +13,23 @@ pub const PrivilegeLevel = enum(u2) {
     }
 };
 
+pub const ExceptionCode = enum(u63) {
+    InstructionAddressMisaligned = 0,
+    InstructionAccessFault = 1,
+    IllegalInstruction = 2,
+    Breakpoint = 3,
+    LoadAddressMisaligned = 4,
+    LoadAccessFault = 5,
+    Store_AMOAddressMisaligned = 6,
+    Store_AMOAccessFault = 7,
+    EnvironmentCallFromUMode = 8,
+    EnvironmentCallFromSMode = 9,
+    EnvironmentCallFromMMode = 11,
+    InstructionPageFault = 12,
+    LoadPageFault = 13,
+    Store_AMOPageFault = 15,
+};
+
 pub const ContextStatus = enum(u2) {
     Off = 0,
     Initial = 1,

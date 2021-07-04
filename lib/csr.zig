@@ -9,6 +9,15 @@ pub const Csr = enum(u12) {
     /// Supervisor trap handler base address
     stvec = 0x105,
 
+    /// Supervisor exception program counter
+    sepc = 0x141,
+
+    /// Supervisor trap cause
+    scause = 0x142,
+
+    /// Supervisor bad address or instruction
+    stval = 0x143,
+
     /// Hardware thread ID
     mhartid = 0xF14,
 
@@ -29,6 +38,12 @@ pub const Csr = enum(u12) {
 
     /// Machine exception program counter
     mepc = 0x341,
+
+    /// Machine trap cause
+    mcause = 0x342,
+
+    /// Machine bad address or instruction
+    mtval = 0x343,
 
     /// Machine interrupt pending
     mip = 0x344,
@@ -207,6 +222,13 @@ pub const Mstatus = extern union {
     };
 };
 
+pub const MCause = extern union {
+    code: bitjuggle.Bitfield(u64, 0, 63),
+    interrupt: bitjuggle.Bitfield(u64, 63, 1),
+
+    backing: u64,
+};
+
 pub const Mtvec = extern union {
     mode: bitjuggle.Bitfield(u64, 0, 2),
     base: bitjuggle.Bitfield(u64, 2, 62),
@@ -217,6 +239,13 @@ pub const Mtvec = extern union {
 pub const Stvec = extern union {
     mode: bitjuggle.Bitfield(u64, 0, 2),
     base: bitjuggle.Bitfield(u64, 2, 62),
+
+    backing: u64,
+};
+
+pub const SCause = extern union {
+    code: bitjuggle.Bitfield(u64, 0, 63),
+    interrupt: bitjuggle.Bitfield(u64, 63, 1),
 
     backing: u64,
 };

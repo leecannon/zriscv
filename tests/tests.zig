@@ -25,12 +25,14 @@ fn runTest(file_name: []const u8) !void {
 
     var context = TestContext{ .file_name = file_name, .reset_event = reset_event };
 
-    var runner_thread = try std.Thread.spawn(executeTest, &context);
-    defer runner_thread.wait();
+    var runner_thread = try std.Thread.spawn(.{}, executeTest, .{&context});
 
     if (reset_event.timedWait(std.time.ns_per_s * 2) == .timed_out) {
+        runner_thread.detach();
         return error.TestTimedOut;
     }
+
+    defer runner_thread.join();
 
     if (context.the_error) |err| return err;
 }

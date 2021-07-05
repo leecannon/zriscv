@@ -10,6 +10,64 @@ test "rv64ui_p_addi" {
     try runTest("rv64ui_p_addi.bin");
 }
 
+test "rv64ui_p_lui" {
+    try runTest("rv64ui_p_lui.bin");
+}
+
+test "rv64ui_p_auipc" {
+    try runTest("rv64ui_p_auipc.bin");
+}
+
+test "rv64ui_p_jal" {
+    try runTest("rv64ui_p_jal.bin");
+}
+
+test "rv64ui_p_beq" {
+    try runTest("rv64ui_p_beq.bin");
+}
+
+test "rv64ui_p_bne" {
+    try runTest("rv64ui_p_bne.bin");
+}
+
+test "rv64ui_p_bge" {
+    try runTest("rv64ui_p_bge.bin");
+}
+
+test "rv64ui_p_ori" {
+    try runTest("rv64ui_p_ori.bin");
+}
+
+test "rv64ui_p_addi" {
+    try runTest("rv64ui_p_addi.bin");
+}
+
+test "rv64ui_p_slli" {
+    try runTest("rv64ui_p_slli.bin");
+}
+
+test "rv64ui_p_srli" {
+    try runTest("rv64ui_p_srli.bin");
+}
+
+test "rv64ui_p_srai" {
+    try runTest("rv64ui_p_srai.bin");
+}
+
+test "rv64ui_p_add" {
+    try runTest("rv64ui_p_add.bin");
+}
+
+test "rv64ui_p_sub" {
+    try runTest("rv64ui_p_sub.bin");
+}
+
+test "rv64ui_p_addiw" {
+    try runTest("rv64ui_p_addiw.bin");
+}
+
+// rv64ui_p_addiw
+
 const TestContext = struct {
     file_name: []const u8,
     the_error: ?anyerror = null,

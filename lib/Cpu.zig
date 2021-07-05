@@ -113,6 +113,7 @@ fn decode(self: Instruction) !InstructionType {
             0b000 => InstructionType.ADDI,
             0b001 => InstructionType.SLLI,
             0b110 => InstructionType.ORI,
+            0b101 => if (funct7 == 0) InstructionType.SRLI else InstructionType.SRAI,
             else => {
                 std.log.emerg("unimplemented funct3: OP-IMM/{b:0>3}", .{funct3});
                 return error.UnimplementedOpcode;
@@ -464,6 +465,74 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             self.pc += 4;
         },
+        .SRLI => {
+            // I-type specialization
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const shmt = instruction.i_specialization.fullShift();
+
+            if (rd != 0) {
+                std.log.debug(
+                    \\SRLI - src: x{}, dest: x{}, shmt: {}
+                    \\  set x{} to x{} >> {}
+                , .{
+                    rs1,
+                    rd,
+                    shmt,
+                    rd,
+                    rs1,
+                    shmt,
+                });
+
+                self.x[rd] = self.x[rs1] >> shmt;
+            } else {
+                std.log.debug(
+                    \\SRLI - src: x{}, dest: x{}, shmt: {}
+                    \\  nop
+                , .{
+                    rs1,
+                    rd,
+                    shmt,
+                });
+            }
+
+            self.pc += 4;
+        },
+        .SRAI => {
+            // I-type specialization
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const shmt = instruction.i_specialization.fullShift();
+
+            if (rd != 0) {
+                std.log.debug(
+                    \\SRAI - src: x{}, dest: x{}, shmt: {}
+                    \\  set x{} to x{} >> arithmetic {}
+                , .{
+                    rs1,
+                    rd,
+                    shmt,
+                    rd,
+                    rs1,
+                    shmt,
+                });
+
+                self.x[rd] = @bitCast(u64, @bitCast(i64, self.x[rs1]) >> shmt);
+            } else {
+                std.log.debug(
+                    \\SRAI - src: x{}, dest: x{}, shmt: {}
+                    \\  nop
+                , .{
+                    rs1,
+                    rd,
+                    shmt,
+                });
+            }
+
+            self.pc += 4;
+        },
         .ADD => {
             // R-type
 
@@ -539,6 +608,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
         },
         .ECALL => {
             // I-type
+            std.log.debug("ECALL", .{});
             switch (self.privilege_level) {
                 .User => self.throw(.EnvironmentCallFromUMode, 0),
                 .Supervisor => self.throw(.EnvironmentCallFromSMode, 0),

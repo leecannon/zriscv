@@ -22,6 +22,10 @@ pub const InstructionType = enum {
     ADDI,
     /// logical left shift
     SLLI,
+    /// logical right shift
+    SRLI,
+    /// arithmetic right shift
+    SRAI,
     /// add
     ADD,
     /// sub

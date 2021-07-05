@@ -73,21 +73,21 @@ mie: u64 = 0,
 mip: u64 = 0,
 
 pub fn run(self: *Cpu) !void {
-    var instruction: Instruction = undefined;
-
     while (true) {
-        self.dump();
-
-        try self.fetch(&instruction);
-        try self.execute(instruction);
+        try self.step();
     }
 }
 
-fn fetch(self: *const Cpu, instruction: *Instruction) !void {
+pub fn step(self: *Cpu) !void {
+    self.dump();
+    try self.execute(try self.fetch());
+}
+
+fn fetch(self: Cpu) !Instruction {
     // This is not 100% compatible with extension C, as the very last 16 bits of memory could be
     // a compressed instruction, the below check will fail in that case
     if (self.pc + 3 >= self.memory.len) return error.ExecutionOutOfBounds;
-    instruction.backing = std.mem.readIntSlice(u32, self.memory[self.pc..], .Little);
+    return Instruction{ .backing = std.mem.readIntSlice(u32, self.memory[self.pc..], .Little) };
 }
 
 fn decode(self: Instruction) !InstructionType {

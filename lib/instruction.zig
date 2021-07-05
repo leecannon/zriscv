@@ -78,12 +78,12 @@ pub const Instruction = extern union {
 
         backing: u32,
 
-        pub fn smallShift(self: ISpecialization) u4 {
-            return @truncate(u4, self.shmt4_0.read());
+        pub fn smallShift(self: ISpecialization) u5 {
+            return @truncate(u5, self.shmt4_0.read());
         }
 
-        pub fn fullShift(self: ISpecialization) u5 {
-            return @truncate(u5, @as(u64, self.shmt5.read()) << 5 | self.shmt4_0.read());
+        pub fn fullShift(self: ISpecialization) u6 {
+            return @truncate(u6, @as(u64, self.shmt5.read()) << 5 | self.shmt4_0.read());
         }
     };
 

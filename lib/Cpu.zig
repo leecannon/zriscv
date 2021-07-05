@@ -72,15 +72,16 @@ mideleg: u64 = 0,
 mie: u64 = 0,
 mip: u64 = 0,
 
-pub fn run(self: *Cpu) !void {
+/// `writer` is allowed to be null
+pub fn run(self: *Cpu, writer: anytype) !void {
     while (true) {
-        try self.step();
+        try self.step(writer);
     }
 }
 
-pub fn step(self: *Cpu) !void {
-    self.dump();
-    try self.execute(try self.fetch());
+/// `writer` is allowed to be null
+pub fn step(self: *Cpu, writer: anytype) !void {
+    try self.execute(try self.fetch(), writer);
 }
 
 fn fetch(self: Cpu) !Instruction {
@@ -91,10 +92,11 @@ fn fetch(self: Cpu) !Instruction {
 }
 
 fn decode(self: Instruction) !InstructionType {
+    const opcode = self.opcode.read();
     const funct3 = self.funct3.read();
     const funct7 = self.funct7.read();
 
-    return switch (self.opcode.read()) {
+    return switch (opcode) {
         0b0110111 => InstructionType.LUI,
         0b0010111 => InstructionType.AUIPC,
         0b1101111 => InstructionType.JAL,
@@ -104,7 +106,7 @@ fn decode(self: Instruction) !InstructionType {
             0b001 => InstructionType.BNE,
             0b101 => InstructionType.BGE,
             else => {
-                std.log.emerg("unimplemented funct3: BRANCH/{b:0>3}", .{funct3});
+                std.log.emerg("unimplemented BRANCH {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                 return error.UnimplementedOpcode;
             },
         },
@@ -115,7 +117,7 @@ fn decode(self: Instruction) !InstructionType {
             0b110 => InstructionType.ORI,
             0b101 => if (funct7 == 0) InstructionType.SRLI else InstructionType.SRAI,
             else => {
-                std.log.emerg("unimplemented funct3: OP-IMM/{b:0>3}", .{funct3});
+                std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                 return error.UnimplementedOpcode;
             },
         },
@@ -124,7 +126,7 @@ fn decode(self: Instruction) !InstructionType {
             0b000 => if (funct7 == 0) InstructionType.ADD else InstructionType.SUB,
             0b111 => InstructionType.AND,
             else => {
-                std.log.emerg("unimplemented funct3: OP/{b:0>3}", .{funct3});
+                std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                 return error.UnimplementedOpcode;
             },
         },
@@ -135,7 +137,7 @@ fn decode(self: Instruction) !InstructionType {
                 0b0000000 => InstructionType.ECALL,
                 0b0011000 => InstructionType.MRET,
                 else => {
-                    std.log.emerg("unimplemented funct7: SYSTEM/000/{b:0>7}", .{funct7});
+                    std.log.emerg("unimplemented SYSTEM {b:0>7}/000/{b:0>7}", .{ opcode, funct7 });
                     return error.UnimplementedOpcode;
                 },
             },
@@ -144,7 +146,7 @@ fn decode(self: Instruction) !InstructionType {
             0b011 => InstructionType.CSRRC,
             0b101 => InstructionType.CSRRWI,
             else => {
-                std.log.emerg("unimplemented funct3: SYSTEM/{b:0>3}", .{funct3});
+                std.log.emerg("unimplemented SYSTEM {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                 return error.UnimplementedOpcode;
             },
         },
@@ -152,18 +154,21 @@ fn decode(self: Instruction) !InstructionType {
         0b0011011 => switch (funct3) {
             0b000 => InstructionType.ADDIW,
             else => {
-                std.log.emerg("unimplemented funct3: OP-IMM-32/{b:0>3}", .{funct3});
+                std.log.emerg("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                 return error.UnimplementedOpcode;
             },
         },
-        else => |opcode| {
-            std.log.emerg("unimplemented opcode: {b:0>7}", .{opcode});
+        else => {
+            std.log.emerg("unimplemented opcode {b:0>7}", .{opcode});
             return error.UnimplementedOpcode;
         },
     };
 }
 
-fn execute(self: *Cpu, instruction: Instruction) !void {
+/// `writer` is allowed to be null
+fn execute(self: *Cpu, instruction: Instruction, writer: anytype) !void {
+    const has_writer = comptime std.meta.trait.hasFn("print")(@TypeOf(writer));
+
     switch (try decode(instruction)) {
         // 32I
 
@@ -174,25 +179,31 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const imm = instruction.u_imm.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\LUI - dest: x{}, value: 0x{x}
-                    \\  setting x{} to 0x{x}
-                , .{
-                    rd,
-                    imm,
-                    rd,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\LUI - dest: x{}, value: 0x{x}
+                        \\  setting x{} to 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        imm,
+                    });
+                }
 
                 self.x[rd] = @bitCast(u64, imm);
             } else {
-                std.log.debug(
-                    \\LUI - dest: x{}, value: 0x{x}
-                    \\  nop
-                , .{
-                    rd,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\LUI - dest: x{}, value: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -204,26 +215,31 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const imm = instruction.u_imm.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\AUIPC - dest: x{}, offset: 0x{x}
-                    \\  setting x{} to current pc (0x{x}) + 0x{x}
-                , .{
-                    rd,
-                    imm,
-                    rd,
-                    self.pc,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\AUIPC - dest: x{}, offset: 0x{x}
+                        \\  setting x{} to current pc (0x{x}) + 0x{x}
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        self.pc,
+                        imm,
+                    });
+                }
 
                 self.x[rd] = addSignedToUnsignedWrap(self.pc, imm);
             } else {
-                std.log.debug(
-                    \\AUIPC - dest: x{}, offset: 0x{x}
-                    \\  nop
-                , .{
-                    rd,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\AUIPC - dest: x{}, offset: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -235,30 +251,36 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rd = instruction.rd.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\JAL - dest: x{}, offset: 0x{x}
-                    \\  setting x{} to current pc (0x{x}) + 0x4
-                    \\  setting pc to current pc (0x{x}) + 0x{x}
-                , .{
-                    rd,
-                    imm,
-                    rd,
-                    self.pc,
-                    self.pc,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\JAL - dest: x{}, offset: 0x{x}
+                        \\  setting x{} to current pc (0x{x}) + 0x4
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        self.pc,
+                        self.pc,
+                        imm,
+                    });
+                }
 
                 self.x[rd] = self.pc + 4;
             } else {
-                std.log.debug(
-                    \\JAL - dest: x{}, offset: 0x{x}
-                    \\  setting pc to current pc (0x{x}) + 0x{x}
-                , .{
-                    rd,
-                    imm,
-                    self.pc,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\JAL - dest: x{}, offset: 0x{x}
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                        self.pc,
+                        imm,
+                    });
+                }
             }
 
             self.pc = addSignedToUnsignedWrap(self.pc, imm);
@@ -271,28 +293,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs2 = instruction.rs2.read();
 
             if (self.x[rs1] == self.x[rs2]) {
-                std.log.debug(
-                    \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
-                    \\  true
-                    \\  setting pc to current pc (0x{x}) + 0x{x}
-                , .{
-                    rs1,
-                    rs2,
-                    imm,
-                    self.pc,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  true
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                        self.pc,
+                        imm,
+                    });
+                }
 
                 self.pc = addSignedToUnsignedWrap(self.pc, imm);
             } else {
-                std.log.debug(
-                    \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
-                    \\  false
-                , .{
-                    rs1,
-                    rs2,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  false
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                    });
+                }
 
                 self.pc += 4;
             }
@@ -305,28 +333,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs2 = instruction.rs2.read();
 
             if (self.x[rs1] != self.x[rs2]) {
-                std.log.debug(
-                    \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
-                    \\  true
-                    \\  setting pc to current pc (0x{x}) + 0x{x}
-                , .{
-                    rs1,
-                    rs2,
-                    imm,
-                    self.pc,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  true
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                        self.pc,
+                        imm,
+                    });
+                }
 
                 self.pc = addSignedToUnsignedWrap(self.pc, imm);
             } else {
-                std.log.debug(
-                    \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
-                    \\  false
-                , .{
-                    rs1,
-                    rs2,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  false
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                    });
+                }
 
                 self.pc += 4;
             }
@@ -339,28 +373,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs2 = instruction.rs2.read();
 
             if (@bitCast(i64, self.x[rs1]) >= @bitCast(i64, self.x[rs2])) {
-                std.log.debug(
-                    \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
-                    \\  true
-                    \\  setting pc to current pc (0x{x}) + 0x{x}
-                , .{
-                    rs1,
-                    rs2,
-                    imm,
-                    self.pc,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  true
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                        self.pc,
+                        imm,
+                    });
+                }
 
                 self.pc = addSignedToUnsignedWrap(self.pc, imm);
             } else {
-                std.log.debug(
-                    \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
-                    \\  false
-                , .{
-                    rs1,
-                    rs2,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  false
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                    });
+                }
 
                 self.pc += 4;
             }
@@ -373,28 +413,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const imm = instruction.i_imm.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\ORI - src: x{}, dest: x{}, imm: 0x{x}
-                    \\  set x{} to x{} | 0x{x}
-                , .{
-                    rs1,
-                    rd,
-                    imm,
-                    rd,
-                    rs1,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ORI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  set x{} to x{} | 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
 
                 self.x[rd] = self.x[rs1] | @bitCast(u64, imm);
             } else {
-                std.log.debug(
-                    \\ORI - src: x{}, dest: x{}, imm: 0x{x}
-                    \\  nop
-                , .{
-                    rs1,
-                    rd,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ORI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -407,28 +453,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const imm = instruction.i_imm.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
-                    \\  set x{} to x{} + 0x{x}
-                , .{
-                    rs1,
-                    rd,
-                    imm,
-                    rd,
-                    rs1,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  set x{} to x{} + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
 
                 self.x[rd] = addSignedToUnsignedIgnoreOverflow(self.x[rs1], imm);
             } else {
-                std.log.debug(
-                    \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
-                    \\  nop
-                , .{
-                    rs1,
-                    rd,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -441,28 +493,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const shmt = instruction.i_specialization.fullShift();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\SLLI - src: x{}, dest: x{}, shmt: {}
-                    \\  set x{} to x{} << {}
-                , .{
-                    rs1,
-                    rd,
-                    shmt,
-                    rd,
-                    rs1,
-                    shmt,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\SLLI - src: x{}, dest: x{}, shmt: {}
+                        \\  set x{} to x{} << {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        shmt,
+                    });
+                }
 
                 self.x[rd] = self.x[rs1] << shmt;
             } else {
-                std.log.debug(
-                    \\SLLI - src: x{}, dest: x{}, shmt: {}
-                    \\  nop
-                , .{
-                    rs1,
-                    rd,
-                    shmt,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\SLLI - src: x{}, dest: x{}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -475,28 +533,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const shmt = instruction.i_specialization.fullShift();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\SRLI - src: x{}, dest: x{}, shmt: {}
-                    \\  set x{} to x{} >> {}
-                , .{
-                    rs1,
-                    rd,
-                    shmt,
-                    rd,
-                    rs1,
-                    shmt,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\SRLI - src: x{}, dest: x{}, shmt: {}
+                        \\  set x{} to x{} >> {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        shmt,
+                    });
+                }
 
                 self.x[rd] = self.x[rs1] >> shmt;
             } else {
-                std.log.debug(
-                    \\SRLI - src: x{}, dest: x{}, shmt: {}
-                    \\  nop
-                , .{
-                    rs1,
-                    rd,
-                    shmt,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\SRLI - src: x{}, dest: x{}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -509,28 +573,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const shmt = instruction.i_specialization.fullShift();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\SRAI - src: x{}, dest: x{}, shmt: {}
-                    \\  set x{} to x{} >> arithmetic {}
-                , .{
-                    rs1,
-                    rd,
-                    shmt,
-                    rd,
-                    rs1,
-                    shmt,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\SRAI - src: x{}, dest: x{}, shmt: {}
+                        \\  set x{} to x{} >> arithmetic {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        shmt,
+                    });
+                }
 
                 self.x[rd] = @bitCast(u64, @bitCast(i64, self.x[rs1]) >> shmt);
             } else {
-                std.log.debug(
-                    \\SRAI - src: x{}, dest: x{}, shmt: {}
-                    \\  nop
-                , .{
-                    rs1,
-                    rd,
-                    shmt,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\SRAI - src: x{}, dest: x{}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -543,28 +613,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\ADD - src1: x{}, src2: x{}, dest: x{}
-                    \\  set x{} to x{} + x{}
-                , .{
-                    rs1,
-                    rs2,
-                    rd,
-                    rd,
-                    rs1,
-                    rs2,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ADD - src1: x{}, src2: x{}, dest: x{}
+                        \\  set x{} to x{} + x{}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
 
                 _ = @addWithOverflow(u64, self.x[rs1], self.x[rs2], &self.x[rd]);
             } else {
-                std.log.debug(
-                    \\ADD - src1: x{}, src2: x{}, dest: x{}
-                    \\  nop
-                , .{
-                    rs1,
-                    rs2,
-                    rd,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ADD - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -577,28 +653,34 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\ADD - src1: x{}, src2: x{}, dest: x{}
-                    \\  set x{} to x{} - x{}
-                , .{
-                    rs1,
-                    rs2,
-                    rd,
-                    rd,
-                    rs1,
-                    rs2,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ADD - src1: x{}, src2: x{}, dest: x{}
+                        \\  set x{} to x{} - x{}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
 
                 _ = @subWithOverflow(u64, self.x[rs1], self.x[rs2], &self.x[rd]);
             } else {
-                std.log.debug(
-                    \\ADD - src1: x{}, src2: x{}, dest: x{}
-                    \\  nop
-                , .{
-                    rs1,
-                    rs2,
-                    rd,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ADD - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -611,44 +693,55 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\AND - src1: x{}, src2: x{}, dest: x{}
-                    \\  set x{} to x{} & x{}
-                , .{
-                    rs1,
-                    rs2,
-                    rd,
-                    rd,
-                    rs1,
-                    rs2,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\AND - src1: x{}, src2: x{}, dest: x{}
+                        \\  set x{} to x{} & x{}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
 
                 self.x[rd] = self.x[rs1] & self.x[rs2];
             } else {
-                std.log.debug(
-                    \\AND - src1: x{}, src2: x{}, dest: x{}
-                    \\  nop
-                , .{
-                    rs1,
-                    rs2,
-                    rd,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\AND - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
             }
 
             self.pc += 4;
         },
         .FENCE => {
-            std.log.debug("FENCE", .{});
+            if (has_writer) {
+                try writer.print("FENCE\n", .{});
+            }
 
             self.pc += 4;
         },
         .ECALL => {
             // I-type
-            std.log.debug("ECALL", .{});
+            if (has_writer) {
+                try writer.print("ECALL\n", .{});
+            }
+
             switch (self.privilege_level) {
-                .User => self.throw(.EnvironmentCallFromUMode, 0),
-                .Supervisor => self.throw(.EnvironmentCallFromSMode, 0),
-                .Machine => self.throw(.EnvironmentCallFromMMode, 0),
+                .User => try self.throw(.EnvironmentCallFromUMode, 0, writer),
+                .Supervisor => try self.throw(.EnvironmentCallFromSMode, 0, writer),
+                .Machine => try self.throw(.EnvironmentCallFromMMode, 0, writer),
             }
         },
 
@@ -662,23 +755,20 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const imm = instruction.i_imm.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\ADDIW - src: x{}, dest: x{}, imm: 0x{x}
-                    \\  32bit set x{} to x{} + 0x{x}
-                , .{
-                    rs1,
-                    rd,
-                    imm,
-                    rd,
-                    rs1,
-                    imm,
-                });
-
-                // const a1 = addSignedToUnsignedIgnoreOverflow(
-                //     self.x[rs1],
-                //     imm,
-                // );
-                // const a2 = a1 *
+                if (has_writer) {
+                    try writer.print(
+                        \\ADDIW - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  32bit set x{} to x{} + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
 
                 self.x[rd] = @bitCast(
                     u64,
@@ -691,14 +781,17 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                     ) >> 32,
                 );
             } else {
-                std.log.debug(
-                    \\ADDIW - src: x{}, dest: x{}, imm: 0x{x}
-                    \\  nop
-                , .{
-                    rs1,
-                    rd,
-                    imm,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\ADDIW - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -711,7 +804,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             // TODO: Proper exceptions
             // const csr = Csr.getCsr(instruction.csr.read()) catch {
-            //     self.throw(.IllegalInstruction, instruction.backing);
+            //     try self.throw(.IllegalInstruction, instruction.backing, writer);
             //     return;
             // };
 
@@ -720,22 +813,25 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs1 = instruction.rs1.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\CSRRW - csr: {s}, dest: x{}, source: x{}
-                    \\  read csr {s} into x{}
-                    \\  set csr {s} to x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rd,
-                    @tagName(csr),
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRW - csr: {s}, dest: x{}, source: x{}
+                        \\  read csr {s} into x{}
+                        \\  set csr {s} to x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rd,
+                        @tagName(csr),
+                        rs1,
+                    });
+                }
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
@@ -745,19 +841,22 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 try self.writeCsr(csr, initial_rs1);
                 self.x[rd] = initial_csr;
             } else {
-                std.log.debug(
-                    \\CSRRW - csr: {s}, dest: x{}, source: x{}
-                    \\  set csr {s} to x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRW - csr: {s}, dest: x{}, source: x{}
+                        \\  set csr {s} to x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rs1,
+                    });
+                }
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
@@ -771,7 +870,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             // TODO: Proper exceptions
             // const csr = Csr.getCsr(instruction.csr.read()) catch {
-            //     self.throw(.IllegalInstruction, instruction.backing);
+            //     try self.throw(.IllegalInstruction, instruction.backing, writer);
             //     return;
             // };
 
@@ -780,22 +879,25 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs1 = instruction.rs1.read();
 
             if (rs1 != 0 and rd != 0) {
-                std.log.debug(
-                    \\CSRRS - csr: {s}, dest: x{}, source: x{}
-                    \\  read csr {s} into x{}
-                    \\  set bits in csr {s} using mask in x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rd,
-                    @tagName(csr),
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRS - csr: {s}, dest: x{}, source: x{}
+                        \\  read csr {s} into x{}
+                        \\  set bits in csr {s} using mask in x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rd,
+                        @tagName(csr),
+                        rs1,
+                    });
+                }
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
@@ -805,50 +907,59 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 try self.writeCsr(csr, initial_csr_value | initial_rs1);
                 self.x[rd] = initial_csr_value;
             } else if (rs1 != 0) {
-                std.log.debug(
-                    \\CSRRS - csr: {s}, dest: x{}, source: x{}
-                    \\  set bits in csr {s} using mask in x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRS - csr: {s}, dest: x{}, source: x{}
+                        \\  set bits in csr {s} using mask in x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rs1,
+                    });
+                }
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
                 try self.writeCsr(csr, self.readCsr(csr) | self.x[rs1]);
             } else if (rd != 0) {
-                std.log.debug(
-                    \\CSRRS - csr: {s}, dest: x{}, source: x{}
-                    \\  read csr {s} into x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rd,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRS - csr: {s}, dest: x{}, source: x{}
+                        \\  read csr {s} into x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rd,
+                    });
+                }
 
                 if (!csr.canRead(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
                 self.x[rd] = self.readCsr(csr);
             } else {
-                std.log.debug(
-                    \\CSRRS - csr: {s}, dest: x{}, source: x{}
-                    \\  nop
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRS - csr: {s}, dest: x{}, source: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -858,7 +969,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             // TODO: Proper exceptions
             // const csr = Csr.getCsr(instruction.csr.read()) catch {
-            //     self.throw(.IllegalInstruction, instruction.backing);
+            //     try self.throw(.IllegalInstruction, instruction.backing, writer);
             //     return;
             // };
 
@@ -867,22 +978,25 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs1 = instruction.rs1.read();
 
             if (rs1 != 0 and rd != 0) {
-                std.log.debug(
-                    \\CSRRC - csr: {s}, dest: x{}, source: x{}
-                    \\  read csr {s} into x{}
-                    \\  clear bits in csr {s} using mask in x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rd,
-                    @tagName(csr),
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRC - csr: {s}, dest: x{}, source: x{}
+                        \\  read csr {s} into x{}
+                        \\  clear bits in csr {s} using mask in x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rd,
+                        @tagName(csr),
+                        rs1,
+                    });
+                }
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
@@ -892,50 +1006,59 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 try self.writeCsr(csr, initial_csr_value & ~initial_rs1);
                 self.x[rd] = initial_csr_value;
             } else if (rs1 != 0) {
-                std.log.debug(
-                    \\CSRRC - csr: {s}, dest: x{}, source: x{}
-                    \\  clear bits in csr {s} using mask in x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRC - csr: {s}, dest: x{}, source: x{}
+                        \\  clear bits in csr {s} using mask in x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rs1,
+                    });
+                }
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
                 try self.writeCsr(csr, self.readCsr(csr) & ~self.x[rs1]);
             } else if (rd != 0) {
-                std.log.debug(
-                    \\CSRRC - csr: {s}, dest: x{}, source: x{}
-                    \\  read csr {s} into x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rd,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRC - csr: {s}, dest: x{}, source: x{}
+                        \\  read csr {s} into x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rd,
+                    });
+                }
 
                 if (!csr.canRead(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
                 self.x[rd] = self.readCsr(csr);
             } else {
-                std.log.debug(
-                    \\CSRRC - csr: {s}, dest: x{}, source: x{}
-                    \\  nop
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRC - csr: {s}, dest: x{}, source: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                    });
+                }
             }
 
             self.pc += 4;
@@ -945,7 +1068,7 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             // TODO: Proper exceptions
             // const csr = Csr.getCsr(instruction.csr.read()) catch {
-            //     self.throw(.IllegalInstruction, instruction.backing);
+            //     try self.throw(.IllegalInstruction, instruction.backing, writer);
             //     return;
             // };
 
@@ -954,22 +1077,25 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             const rs1 = instruction.rs1.read();
 
             if (rd != 0) {
-                std.log.debug(
-                    \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}
-                    \\  read csr {s} into x{}
-                    \\  set csr {s} to 0x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rd,
-                    @tagName(csr),
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}
+                        \\  read csr {s} into x{}
+                        \\  set csr {s} to 0x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rd,
+                        @tagName(csr),
+                        rs1,
+                    });
+                }
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
@@ -978,19 +1104,22 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 try self.writeCsr(csr, rs1);
                 self.x[rd] = initial_csr_value;
             } else {
-                std.log.debug(
-                    \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}
-                    \\  set csr {s} to 0x{}
-                , .{
-                    @tagName(csr),
-                    rd,
-                    rs1,
-                    @tagName(csr),
-                    rs1,
-                });
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}
+                        \\  set csr {s} to 0x{}
+                        \\
+                    , .{
+                        @tagName(csr),
+                        rd,
+                        rs1,
+                        @tagName(csr),
+                        rs1,
+                    });
+                }
 
                 if (!csr.canWrite(self.privilege_level)) {
-                    self.throw(.IllegalInstruction, instruction.backing);
+                    try self.throw(.IllegalInstruction, instruction.backing, writer);
                     return;
                 }
 
@@ -1002,10 +1131,12 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
         // Privilege
         .MRET => {
-            std.log.debug("MRET\n", .{});
+            if (has_writer) {
+                try writer.print("MRET\n", .{});
+            }
 
             if (self.privilege_level != .Machine) {
-                self.throw(.IllegalInstruction, instruction.backing);
+                try self.throw(.IllegalInstruction, instruction.backing, writer);
                 return;
             }
 
@@ -1020,13 +1151,18 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
     }
 }
 
-fn throw(self: *Cpu, exception: ExceptionCode, val: u64) void {
+/// `writer` is allowed to be null
+fn throw(self: *Cpu, exception: ExceptionCode, val: u64, writer: anytype) !void {
+    const has_writer = comptime std.meta.trait.hasFn("print")(@TypeOf(writer));
+
     if (self.privilege_level != .Machine and self.isExceptionDelegated(exception)) {
-        std.log.debug("Exception {s} caught in {s} jumping to {s}", .{
-            @tagName(exception),
-            @tagName(self.privilege_level),
-            @tagName(PrivilegeLevel.Supervisor),
-        });
+        if (has_writer) {
+            try writer.print("Exception {s} caught in {s} jumping to {s}\n", .{
+                @tagName(exception),
+                @tagName(self.privilege_level),
+                @tagName(PrivilegeLevel.Supervisor),
+            });
+        }
 
         self.scause.code.write(@enumToInt(exception));
         self.scause.interrupt.write(0);
@@ -1049,11 +1185,13 @@ fn throw(self: *Cpu, exception: ExceptionCode, val: u64) void {
         return;
     }
 
-    std.log.debug("Exception {s} caught in {s} jumping to {s}", .{
-        @tagName(exception),
-        @tagName(self.privilege_level),
-        @tagName(PrivilegeLevel.Machine),
-    });
+    if (has_writer) {
+        try writer.print("Exception {s} caught in {s} jumping to {s}\n", .{
+            @tagName(exception),
+            @tagName(self.privilege_level),
+            @tagName(PrivilegeLevel.Machine),
+        });
+    }
 
     self.mcause.code.write(@enumToInt(exception));
     self.mcause.interrupt.write(0);
@@ -1093,13 +1231,13 @@ fn isExceptionDelegated(self: Cpu, exception: ExceptionCode) bool {
     };
 }
 
-fn dump(self: Cpu) void {
-    std.log.debug("", .{});
+pub fn dump(self: Cpu, writer: anytype) !void {
+    try writer.writeAll("");
 
     var i: usize = 0;
     while (i < 32 - 3) : (i += 4) {
         if (i == 0) {
-            std.log.debug(" pc: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}", .{
+            try writer.print(" pc: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
                 self.pc,
                 i + 1,
                 self.x[i + 1],
@@ -1111,7 +1249,7 @@ fn dump(self: Cpu) void {
             continue;
         }
 
-        std.log.debug("x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}", .{
+        try writer.print("x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
             i,
             self.x[i],
             i + 1,
@@ -1123,23 +1261,21 @@ fn dump(self: Cpu) void {
         });
     }
 
-    std.log.debug("privilege: {s} - mhartid: {} - machine interrupts: {} - super interrupts: {}", .{ @tagName(self.privilege_level), self.mhartid, self.machine_interrupts_enabled, self.supervisor_interrupts_enabled });
-    std.log.debug("super interrupts prior: {} - super previous privilege: {s}", .{ self.supervisor_interrupts_enabled_prior, @tagName(self.supervisor_previous_privilege_level) });
-    std.log.debug("machine interrupts prior: {} - machine previous privilege: {s}", .{ self.machine_interrupts_enabled_prior, @tagName(self.machine_previous_privilege_level) });
-    std.log.debug("mcause: {x} - machine exception pc: 0x{x} - machine trap value {}", .{ self.mcause.backing, self.mepc, self.mtval });
-    std.log.debug("scause: {x} - super exception pc: 0x{x} - super trap value {}", .{ self.scause.backing, self.sepc, self.stval });
-    std.log.debug("address mode: {s} - asid: {} - ppn address: 0x{x}", .{ @tagName(self.address_translation_mode), self.asid, self.ppn_address });
-    std.log.debug("medeleg: 0b{b:0>64}", .{self.medeleg});
-    std.log.debug("mideleg: 0b{b:0>64}", .{self.mideleg});
-    std.log.debug("mie:     0b{b:0>64}", .{self.mie});
-    std.log.debug("mip:     0b{b:0>64}", .{self.mip});
-    std.log.debug("machine vector mode:    {s}    machine vector base address: 0x{x}", .{ @tagName(self.machine_vector_mode), self.machine_vector_base_address });
-    std.log.debug("super vector mode:      {s} super vector base address: 0x{x}", .{ @tagName(self.supervisor_vector_mode), self.supervisor_vector_base_address });
-    std.log.debug("dirty state: {} - floating point: {s} - extension: {s}", .{ self.state_dirty, @tagName(self.floating_point_status), @tagName(self.extension_status) });
-    std.log.debug("modify privilege: {} - super user access: {} - execute readable: {}", .{ self.modify_privilege, self.supervisor_user_memory_access, self.executable_readable });
-    std.log.debug("trap virtual memory: {} - timeout wait: {} - trap sret: {}", .{ self.trap_virtual_memory, self.timeout_wait, self.trap_sret });
-
-    std.log.debug("", .{});
+    try writer.print("privilege: {s} - mhartid: {} - machine interrupts: {} - super interrupts: {}\n", .{ @tagName(self.privilege_level), self.mhartid, self.machine_interrupts_enabled, self.supervisor_interrupts_enabled });
+    try writer.print("super interrupts prior: {} - super previous privilege: {s}\n", .{ self.supervisor_interrupts_enabled_prior, @tagName(self.supervisor_previous_privilege_level) });
+    try writer.print("machine interrupts prior: {} - machine previous privilege: {s}\n", .{ self.machine_interrupts_enabled_prior, @tagName(self.machine_previous_privilege_level) });
+    try writer.print("mcause: {x} - machine exception pc: 0x{x} - machine trap value {}\n", .{ self.mcause.backing, self.mepc, self.mtval });
+    try writer.print("scause: {x} - super exception pc: 0x{x} - super trap value {}\n", .{ self.scause.backing, self.sepc, self.stval });
+    try writer.print("address mode: {s} - asid: {} - ppn address: 0x{x}\n", .{ @tagName(self.address_translation_mode), self.asid, self.ppn_address });
+    try writer.print("medeleg: 0b{b:0>64}\n", .{self.medeleg});
+    try writer.print("mideleg: 0b{b:0>64}\n", .{self.mideleg});
+    try writer.print("mie:     0b{b:0>64}\n", .{self.mie});
+    try writer.print("mip:     0b{b:0>64}\n", .{self.mip});
+    try writer.print("machine vector mode:    {s}    machine vector base address: 0x{x}\n", .{ @tagName(self.machine_vector_mode), self.machine_vector_base_address });
+    try writer.print("super vector mode:      {s} super vector base address: 0x{x}\n", .{ @tagName(self.supervisor_vector_mode), self.supervisor_vector_base_address });
+    try writer.print("dirty state: {} - floating point: {s} - extension: {s}\n", .{ self.state_dirty, @tagName(self.floating_point_status), @tagName(self.extension_status) });
+    try writer.print("modify privilege: {} - super user access: {} - execute readable: {}\n", .{ self.modify_privilege, self.supervisor_user_memory_access, self.executable_readable });
+    try writer.print("trap virtual memory: {} - timeout wait: {} - trap sret: {}\n", .{ self.trap_virtual_memory, self.timeout_wait, self.trap_sret });
 }
 
 fn readCsr(self: *const Cpu, csr: Csr) u64 {
@@ -1242,7 +1378,7 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
         .mtval => self.mtval = value,
         .scause => self.scause.backing = value,
         .stval => self.stval = value,
-        .sepc => self.sepc = value & ~(@as(u64, 0)),
+        .sepc => self.sepc = value & ~@as(u64, 0),
         .mstatus => {
             const pending_mstatus = Mstatus{
                 .backing = self.mstatus.backing & Mstatus.unmodifiable_mask |
@@ -1272,7 +1408,7 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
 
             self.mstatus = pending_mstatus;
         },
-        .mepc => self.mepc = value & ~(@as(u64, 0)),
+        .mepc => self.mepc = value & ~@as(u64, 0),
         .mtvec => {
             const pending_mtvec = Mtvec{ .backing = value };
 
@@ -1294,8 +1430,8 @@ fn writeCsr(self: *Cpu, csr: Csr, value: u64) !void {
 
             const address_translation_mode = try AddressTranslationMode.getAddressTranslationMode(pending_satp.mode.read());
             if (address_translation_mode != .Bare) {
-                std.log.debug("unsupported address_translation_mode given: {s}", .{@tagName(address_translation_mode)});
-                return;
+                std.log.emerg("unsupported address_translation_mode given: {s}", .{@tagName(address_translation_mode)});
+                return error.UnsupportedAddressTranslationMode;
             }
 
             self.address_translation_mode = address_translation_mode;

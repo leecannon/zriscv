@@ -911,6 +911,7 @@ fn throw(self: *Cpu, exception: ExceptionCode, val: u64) void {
 
         self.supervisor_previous_privilege_level = self.privilege_level;
         self.mstatus.spp.write(@truncate(u1, @enumToInt(self.privilege_level)));
+        self.privilege_level = .Supervisor;
 
         self.supervisor_interrupts_enabled_prior = self.supervisor_interrupts_enabled;
         self.mstatus.spie.write(@boolToInt(self.supervisor_interrupts_enabled));
@@ -937,6 +938,7 @@ fn throw(self: *Cpu, exception: ExceptionCode, val: u64) void {
 
     self.machine_previous_privilege_level = self.privilege_level;
     self.mstatus.mpp.write(@enumToInt(self.privilege_level));
+    self.privilege_level = .Machine;
 
     self.machine_interrupts_enabled_prior = self.machine_interrupts_enabled;
     self.mstatus.mpie.write(@boolToInt(self.machine_interrupts_enabled));

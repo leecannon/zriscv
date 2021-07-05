@@ -119,11 +119,12 @@ fn decode(self: Instruction) !InstructionType {
                 return error.UnimplementedOpcode;
             },
         },
-        // MISC-MEM
+        // OP
         0b0110011 => switch (funct3) {
             0b000 => if (funct7 == 0) InstructionType.ADD else InstructionType.SUB,
+            0b111 => InstructionType.AND,
             else => {
-                std.log.emerg("unimplemented funct3: MISC-MEM/{b:0>3}", .{funct3});
+                std.log.emerg("unimplemented funct3: OP/{b:0>3}", .{funct3});
                 return error.UnimplementedOpcode;
             },
         },
@@ -602,6 +603,40 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             self.pc += 4;
         },
+        .AND => {
+            // R-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+
+            if (rd != 0) {
+                std.log.debug(
+                    \\AND - src1: x{}, src2: x{}, dest: x{}
+                    \\  set x{} to x{} & x{}
+                , .{
+                    rs1,
+                    rs2,
+                    rd,
+                    rd,
+                    rs1,
+                    rs2,
+                });
+
+                self.x[rd] = self.x[rs1] & self.x[rs2];
+            } else {
+                std.log.debug(
+                    \\AND - src1: x{}, src2: x{}, dest: x{}
+                    \\  nop
+                , .{
+                    rs1,
+                    rs2,
+                    rd,
+                });
+            }
+
+            self.pc += 4;
+        },
         .FENCE => {
             std.log.debug("FENCE", .{});
 
@@ -687,7 +722,6 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             if (rd != 0) {
                 std.log.debug(
                     \\CSRRW - csr: {s}, dest: x{}, source: x{}
-                    \\  atomic
                     \\  read csr {s} into x{}
                     \\  set csr {s} to x{}
                 , .{
@@ -748,7 +782,6 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             if (rs1 != 0 and rd != 0) {
                 std.log.debug(
                     \\CSRRS - csr: {s}, dest: x{}, source: x{}
-                    \\  atomic
                     \\  read csr {s} into x{}
                     \\  set bits in csr {s} using mask in x{}
                 , .{
@@ -836,7 +869,6 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             if (rs1 != 0 and rd != 0) {
                 std.log.debug(
                     \\CSRRC - csr: {s}, dest: x{}, source: x{}
-                    \\  atomic
                     \\  read csr {s} into x{}
                     \\  clear bits in csr {s} using mask in x{}
                 , .{
@@ -924,7 +956,6 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
             if (rd != 0) {
                 std.log.debug(
                     \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}
-                    \\  atomic
                     \\  read csr {s} into x{}
                     \\  set csr {s} to 0x{}
                 , .{

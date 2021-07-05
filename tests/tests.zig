@@ -62,11 +62,13 @@ test "rv64ui_p_sub" {
     try runTest("rv64ui_p_sub.bin");
 }
 
+test "rv64ui_p_and" {
+    try runTest("rv64ui_p_and.bin");
+}
+
 test "rv64ui_p_addiw" {
     try runTest("rv64ui_p_addiw.bin");
 }
-
-// rv64ui_p_addiw
 
 const TestContext = struct {
     file_name: []const u8,

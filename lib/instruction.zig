@@ -30,6 +30,8 @@ pub const InstructionType = enum {
     ADD,
     /// sub
     SUB,
+    /// and
+    AND,
     /// memory fence
     FENCE,
     /// environment call

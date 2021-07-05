@@ -70,6 +70,10 @@ test "rv64ui_p_addiw" {
     try runTest("rv64ui_p_addiw.bin");
 }
 
+test "rv64mi_p_scall" {
+    try runTest("rv64mi_p_scall.bin");
+}
+
 const TestContext = struct {
     file_name: []const u8,
     the_error: ?anyerror = null,

@@ -46,6 +46,8 @@ pub const InstructionType = enum {
     CSRRW,
     /// atomic read and set bits in csr
     CSRRS,
+    /// atomic read and clear bits in csr
+    CSRRC,
     /// atomic read/write csr - immediate
     CSRRWI,
 

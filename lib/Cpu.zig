@@ -140,6 +140,7 @@ fn decode(self: Instruction) !InstructionType {
             },
             0b001 => InstructionType.CSRRW,
             0b010 => InstructionType.CSRRS,
+            0b011 => InstructionType.CSRRC,
             0b101 => InstructionType.CSRRWI,
             else => {
                 std.log.emerg("unimplemented funct3: SYSTEM/{b:0>3}", .{funct3});
@@ -705,8 +706,10 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 }
 
                 const initial_rs1 = self.x[rs1];
-                self.x[rd] = self.readCsr(csr);
+                const initial_csr = self.readCsr(csr);
+
                 try self.writeCsr(csr, initial_rs1);
+                self.x[rd] = initial_csr;
             } else {
                 std.log.debug(
                     \\CSRRW - csr: {s}, dest: x{}, source: x{}
@@ -764,10 +767,10 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                 }
 
                 const initial_rs1 = self.x[rs1];
-                const csr_value = self.readCsr(csr);
+                const initial_csr_value = self.readCsr(csr);
 
-                self.x[rd] = csr_value;
-                try self.writeCsr(csr, csr_value | initial_rs1);
+                try self.writeCsr(csr, initial_csr_value | initial_rs1);
+                self.x[rd] = initial_csr_value;
             } else if (rs1 != 0) {
                 std.log.debug(
                     \\CSRRS - csr: {s}, dest: x{}, source: x{}
@@ -817,6 +820,94 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
 
             self.pc += 4;
         },
+        .CSRRC => {
+            // I-type
+
+            // TODO: Proper exceptions
+            // const csr = Csr.getCsr(instruction.csr.read()) catch {
+            //     self.throw(.IllegalInstruction, instruction.backing);
+            //     return;
+            // };
+
+            const csr = try Csr.getCsr(instruction.csr.read());
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+
+            if (rs1 != 0 and rd != 0) {
+                std.log.debug(
+                    \\CSRRC - csr: {s}, dest: x{}, source: x{}
+                    \\  atomic
+                    \\  read csr {s} into x{}
+                    \\  clear bits in csr {s} using mask in x{}
+                , .{
+                    @tagName(csr),
+                    rd,
+                    rs1,
+                    @tagName(csr),
+                    rd,
+                    @tagName(csr),
+                    rs1,
+                });
+
+                if (!csr.canWrite(self.privilege_level)) {
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
+                }
+
+                const initial_rs1 = self.x[rs1];
+                const initial_csr_value = self.readCsr(csr);
+
+                try self.writeCsr(csr, initial_csr_value & ~initial_rs1);
+                self.x[rd] = initial_csr_value;
+            } else if (rs1 != 0) {
+                std.log.debug(
+                    \\CSRRC - csr: {s}, dest: x{}, source: x{}
+                    \\  clear bits in csr {s} using mask in x{}
+                , .{
+                    @tagName(csr),
+                    rd,
+                    rs1,
+                    @tagName(csr),
+                    rs1,
+                });
+
+                if (!csr.canWrite(self.privilege_level)) {
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
+                }
+
+                try self.writeCsr(csr, self.readCsr(csr) & ~self.x[rs1]);
+            } else if (rd != 0) {
+                std.log.debug(
+                    \\CSRRC - csr: {s}, dest: x{}, source: x{}
+                    \\  read csr {s} into x{}
+                , .{
+                    @tagName(csr),
+                    rd,
+                    rs1,
+                    @tagName(csr),
+                    rd,
+                });
+
+                if (!csr.canRead(self.privilege_level)) {
+                    self.throw(.IllegalInstruction, instruction.backing);
+                    return;
+                }
+
+                self.x[rd] = self.readCsr(csr);
+            } else {
+                std.log.debug(
+                    \\CSRRC - csr: {s}, dest: x{}, source: x{}
+                    \\  nop
+                , .{
+                    @tagName(csr),
+                    rd,
+                    rs1,
+                });
+            }
+
+            self.pc += 4;
+        },
         .CSRRWI => {
             // I-type
 
@@ -851,8 +942,10 @@ fn execute(self: *Cpu, instruction: Instruction) !void {
                     return;
                 }
 
-                self.x[rd] = self.readCsr(csr);
+                const initial_csr_value = self.readCsr(csr);
+
                 try self.writeCsr(csr, rs1);
+                self.x[rd] = initial_csr_value;
             } else {
                 std.log.debug(
                     \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}

@@ -111,10 +111,10 @@ fn executeTest(context: *TestContext) !void {
     };
     defer std.testing.allocator.free(file_contents);
 
-    var cpu = zriscv.Cpu{ .memory = file_contents };
-    cpu.run(null) catch |err| switch (err) {
+    var cpu_state = zriscv.CpuState{ .memory = file_contents };
+    zriscv.Cpu(.{}).run(&cpu_state) catch |err| switch (err) {
         error.ExecutionOutOfBounds => {
-            if (cpu.x[10] != 0) {
+            if (cpu_state.x[10] != 0) {
                 context.the_error = err;
             }
         },

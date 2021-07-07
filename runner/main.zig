@@ -9,6 +9,9 @@ const stdin = std.io.getStdIn();
 const stdin_reader = stdin.reader();
 const stdout_writer = std.io.getStdOut().writer();
 
+const NoOutputCpu = zriscv.Cpu(.{});
+const OutputCpu = zriscv.Cpu(.{ .writer_type = @TypeOf(stdout_writer) });
+
 pub fn main() !void {
     defer _ = gpa.deinit();
 
@@ -23,7 +26,7 @@ pub fn main() !void {
     };
     defer allocator.free(file_contents);
 
-    var cpu = zriscv.Cpu{ .memory = file_contents };
+    var cpu_state = zriscv.CpuState{ .memory = file_contents };
 
     // set stdin to raw mode
     const previous_terminal_settings = blk: {
@@ -78,7 +81,7 @@ pub fn main() !void {
                 continue;
             };
 
-            if (addr >= cpu.memory.len) {
+            if (addr >= cpu_state.memory.len) {
                 try stdout_writer.print("breakpoint address 0x{x} exceeds cpu memory\n", .{addr});
                 continue;
             }
@@ -91,8 +94,8 @@ pub fn main() !void {
         if (input == 'r') {
             try stdout_writer.writeByte('\n');
             if (opt_break_point) |break_point| {
-                while (cpu.pc != break_point) {
-                    cpu.step(null) catch |err| {
+                while (cpu_state.pc != break_point) {
+                    NoOutputCpu.step(&cpu_state) catch |err| {
                         try stdout_writer.print("error: {s}\n", .{@errorName(err)});
                         continue :outer;
                     };
@@ -101,7 +104,7 @@ pub fn main() !void {
                 try stdout_writer.writeAll("hit breakpoint\n");
             } else {
                 while (true) {
-                    cpu.step(null) catch |err| {
+                    NoOutputCpu.run(&cpu_state) catch |err| {
                         try stdout_writer.print("error: {s}\n", .{@errorName(err)});
                         continue :outer;
                     };
@@ -112,8 +115,8 @@ pub fn main() !void {
         if (input == 'e') {
             try stdout_writer.writeByte('\n');
             if (opt_break_point) |break_point| {
-                while (cpu.pc != break_point) {
-                    cpu.step(stdout_writer) catch |err| {
+                while (cpu_state.pc != break_point) {
+                    OutputCpu.step(&cpu_state, stdout_writer) catch |err| {
                         try stdout_writer.print("error: {s}\n", .{@errorName(err)});
                         continue :outer;
                     };
@@ -122,7 +125,7 @@ pub fn main() !void {
                 try stdout_writer.writeAll("hit breakpoint\n");
             } else {
                 while (true) {
-                    cpu.step(stdout_writer) catch |err| {
+                    OutputCpu.run(&cpu_state, stdout_writer) catch |err| {
                         try stdout_writer.print("error: {s}\n", .{@errorName(err)});
                         continue :outer;
                     };
@@ -132,21 +135,21 @@ pub fn main() !void {
         }
         if (input == 'n') {
             try stdout_writer.writeByte('\n');
-            cpu.step(null) catch |err| {
+            NoOutputCpu.step(&cpu_state) catch |err| {
                 try stdout_writer.print("error: {s}\n", .{@errorName(err)});
             };
             continue;
         }
         if (input == 's') {
             try stdout_writer.writeByte('\n');
-            cpu.step(stdout_writer) catch |err| {
+            OutputCpu.step(&cpu_state, stdout_writer) catch |err| {
                 try stdout_writer.print("error: {s}\n", .{@errorName(err)});
             };
             continue;
         }
         if (input == 'd') {
             try stdout_writer.writeByte('\n');
-            try cpu.dump(stdout_writer);
+            try cpu_state.dump(stdout_writer);
             continue;
         }
         if (input == 'q') {

@@ -75,6 +75,80 @@ pub const Instruction = extern union {
 
     backing: u32,
 
+    pub fn decode(instruction: Instruction) !InstructionType {
+        const opcode = instruction.opcode.read();
+        const funct3 = instruction.funct3.read();
+        const funct7 = instruction.funct7.read();
+
+        return switch (opcode) {
+            0b0110111 => InstructionType.LUI,
+            0b0010111 => InstructionType.AUIPC,
+            0b1101111 => InstructionType.JAL,
+            // BRANCH
+            0b1100011 => switch (funct3) {
+                0b000 => InstructionType.BEQ,
+                0b001 => InstructionType.BNE,
+                0b101 => InstructionType.BGE,
+                else => {
+                    std.log.emerg("unimplemented BRANCH {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                    return error.UnimplementedOpcode;
+                },
+            },
+            // OP-IMM
+            0b0010011 => switch (funct3) {
+                0b000 => InstructionType.ADDI,
+                0b001 => InstructionType.SLLI,
+                0b110 => InstructionType.ORI,
+                0b101 => if (funct7 == 0) InstructionType.SRLI else InstructionType.SRAI,
+                else => {
+                    std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                    return error.UnimplementedOpcode;
+                },
+            },
+            // OP
+            0b0110011 => switch (funct3) {
+                0b000 => if (funct7 == 0) InstructionType.ADD else InstructionType.SUB,
+                0b111 => InstructionType.AND,
+                else => {
+                    std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                    return error.UnimplementedOpcode;
+                },
+            },
+            0b001111 => InstructionType.FENCE,
+            // SYSTEM
+            0b1110011 => switch (funct3) {
+                0b000 => switch (funct7) {
+                    0b0000000 => InstructionType.ECALL,
+                    0b0011000 => InstructionType.MRET,
+                    else => {
+                        std.log.emerg("unimplemented SYSTEM {b:0>7}/000/{b:0>7}", .{ opcode, funct7 });
+                        return error.UnimplementedOpcode;
+                    },
+                },
+                0b001 => InstructionType.CSRRW,
+                0b010 => InstructionType.CSRRS,
+                0b011 => InstructionType.CSRRC,
+                0b101 => InstructionType.CSRRWI,
+                else => {
+                    std.log.emerg("unimplemented SYSTEM {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                    return error.UnimplementedOpcode;
+                },
+            },
+            // OP-IMM-32
+            0b0011011 => switch (funct3) {
+                0b000 => InstructionType.ADDIW,
+                else => {
+                    std.log.emerg("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                    return error.UnimplementedOpcode;
+                },
+            },
+            else => {
+                std.log.emerg("unimplemented opcode {b:0>7}", .{opcode});
+                return error.UnimplementedOpcode;
+            },
+        };
+    }
+
     pub const ISpecialization = extern union {
         shmt4_0: bitjuggle.Bitfield(u32, 20, 5),
         shmt5: bitjuggle.Bitfield(u32, 25, 1),

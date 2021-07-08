@@ -169,6 +169,52 @@ fn execute(
 
             state.pc = addSignedToUnsignedWrap(state.pc, imm);
         },
+        .JALR => {
+            // I-type
+
+            const imm = instruction.i_imm.read();
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+
+            const rs1_inital = state.x[rs1];
+
+            if (rd != 0) {
+                if (has_writer) {
+                    try writer.print(
+                        \\JALR - dest: x{}, base: x{}, offset: 0x{x}
+                        \\  setting x{} to current pc (0x{x}) + 0x4
+                        \\  setting pc to x{} + 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        rs1,
+                        imm,
+                        rd,
+                        state.pc,
+                        rs1,
+                        imm,
+                    });
+                }
+
+                state.x[rd] = state.pc + 4;
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\JALR - dest: x{}, base: x{}, offset: 0x{x}
+                        \\  setting pc to x{} + 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        rs1,
+                        imm,
+                        rs1,
+                        imm,
+                    });
+                }
+            }
+
+            state.pc = addSignedToUnsignedWrap(rs1_inital, imm) & ~@as(u64, 1);
+        },
         .BEQ => {
             // B-type
 

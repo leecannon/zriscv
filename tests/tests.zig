@@ -14,6 +14,10 @@ test "rv64ui_p_jal" {
     try runTest("rv64ui_p_jal.bin");
 }
 
+test "rv64ui_p_jalr" {
+    try runTest("rv64ui_p_jalr.bin");
+}
+
 test "rv64ui_p_beq" {
     try runTest("rv64ui_p_beq.bin");
 }

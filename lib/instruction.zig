@@ -10,6 +10,8 @@ pub const InstructionType = enum {
     AUIPC,
     /// jump and link
     JAL,
+    /// jumpa and link register
+    JALR,
     /// branch equal
     BEQ,
     /// branch not equal
@@ -84,6 +86,7 @@ pub const Instruction = extern union {
             0b0110111 => InstructionType.LUI,
             0b0010111 => InstructionType.AUIPC,
             0b1101111 => InstructionType.JAL,
+            0b1100111 => InstructionType.JALR,
             // BRANCH
             0b1100011 => switch (funct3) {
                 0b000 => InstructionType.BEQ,

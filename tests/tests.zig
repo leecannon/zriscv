@@ -62,6 +62,10 @@ test "rv64ui_p_ori" {
     try runTest("rv64ui_p_ori.bin");
 }
 
+test "rv64ui_p_andi" {
+    try runTest("rv64ui_p_andi.bin");
+}
+
 test "rv64ui_p_slli" {
     try runTest("rv64ui_p_slli.bin");
 }

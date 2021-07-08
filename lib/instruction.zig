@@ -34,6 +34,8 @@ pub const InstructionType = enum {
     XORI,
     /// or immediate
     ORI,
+    /// and immediate
+    ANDI,
     /// logical left shift
     SLLI,
     /// logical right shift
@@ -120,11 +122,8 @@ pub const Instruction = extern union {
                 0b001 => InstructionType.SLLI,
                 0b100 => InstructionType.XORI,
                 0b110 => InstructionType.ORI,
+                0b111 => InstructionType.ANDI,
                 0b101 => if (funct7 == 0) InstructionType.SRLI else InstructionType.SRAI,
-                else => {
-                    std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}", .{ opcode, funct3 });
-                    return error.UnimplementedOpcode;
-                },
             },
             // OP
             0b0110011 => switch (funct3) {

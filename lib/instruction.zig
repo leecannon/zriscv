@@ -28,6 +28,10 @@ pub const InstructionType = enum {
     ORI,
     /// add immediate
     ADDI,
+    /// set less than immediate - signed
+    SLTI,
+    /// set less than immediate - unsigned
+    SLTIU,
     /// logical left shift
     SLLI,
     /// logical right shift
@@ -109,6 +113,8 @@ pub const Instruction = extern union {
             // OP-IMM
             0b0010011 => switch (funct3) {
                 0b000 => InstructionType.ADDI,
+                0b010 => InstructionType.SLTI,
+                0b011 => InstructionType.SLTIU,
                 0b001 => InstructionType.SLLI,
                 0b110 => InstructionType.ORI,
                 0b101 => if (funct7 == 0) InstructionType.SRLI else InstructionType.SRAI,

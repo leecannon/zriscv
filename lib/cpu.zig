@@ -535,6 +535,86 @@ fn execute(
 
             state.pc += 4;
         },
+        .SLTI => {
+            // I-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const imm = instruction.i_imm.read();
+
+            if (rd != 0) {
+                if (has_writer) {
+                    try writer.print(
+                        \\SLTI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  set x{} to x{} < 0x{x} ? 1 : 0
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
+
+                state.x[rd] = @boolToInt(@bitCast(i64, state.x[rs1]) < imm);
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\SLTI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
+        .SLTIU => {
+            // I-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const imm = instruction.i_imm.read();
+
+            if (rd != 0) {
+                if (has_writer) {
+                    try writer.print(
+                        \\SLTIU - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  set x{} to x{} < 0x{x} ? 1 : 0
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
+
+                state.x[rd] = @boolToInt(state.x[rs1] < @bitCast(u64, imm));
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\SLTIU - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
         .SLLI => {
             // I-type specialization
 

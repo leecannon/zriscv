@@ -30,16 +30,23 @@ pub fn main() !u8 {
     };
     defer args.deinit();
 
-    if (args.positionals().len < 1) {
-        try stderr_writer.writeAll("no file path provided\n");
-        return 1;
-    }
-    if (args.positionals().len > 1) {
-        try stderr_writer.writeAll("multiple files are not supported\n");
-        return 1;
+    if (args.flag("--help")) {
+        try clap.help(stdout_writer, &params);
+        return 0;
     }
 
-    const file_path = args.positionals()[0];
+    const file_path = blk: {
+        if (args.positionals().len < 1) {
+            try stderr_writer.writeAll("no file path provided\n");
+            return 1;
+        }
+        if (args.positionals().len > 1) {
+            try stderr_writer.writeAll("multiple files are not supported\n");
+            return 1;
+        }
+
+        break :blk args.positionals()[0];
+    };
 
     const file_contents = blk: {
         var file = std.fs.cwd().openFile(file_path, .{}) catch |err| switch (err) {

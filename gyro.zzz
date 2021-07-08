@@ -4,6 +4,12 @@ pkgs:
     root: lib/index.zig
     deps:
       leecannon/bitjuggle: ^0.3.0
-
 deps:
   leecannon/bitjuggle: ^0.3.0
+  clap:
+    root: clap.zig
+    src:
+      github:
+        user: Hejsil
+        repo: zig-clap
+        ref: zig-master

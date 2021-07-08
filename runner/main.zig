@@ -1,5 +1,6 @@
 const std = @import("std");
 const zriscv = @import("zriscv");
+const clap = @import("clap");
 const resource_path: []const u8 = @import("build_options").resource_path;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -8,18 +9,46 @@ const allocator = &gpa.allocator;
 const stdin = std.io.getStdIn();
 const stdin_reader = stdin.reader();
 const stdout_writer = std.io.getStdOut().writer();
+const stderr_writer = std.io.getStdErr().writer();
 
 const NoOutputCpu = zriscv.Cpu(.{});
 const OutputCpu = zriscv.Cpu(.{ .writer_type = @TypeOf(stdout_writer) });
 
-pub fn main() !void {
+pub fn main() !u8 {
     defer _ = gpa.deinit();
 
-    const file_contents = blk: {
-        var resource_dir = try std.fs.openDirAbsolute(resource_path, .{});
-        defer resource_dir.close();
+    const params = comptime [_]clap.Param(clap.Help){
+        clap.parseParam("-h, --help    Display this help and exit.") catch unreachable,
+        clap.parseParam("<FILE>") catch unreachable,
+    };
 
-        var file = try resource_dir.openFile("rv64ui_p_blt.bin", .{});
+    var diag = clap.Diagnostic{};
+    var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
+        // Report useful error and exit
+        diag.report(stderr_writer, err) catch {};
+        return err;
+    };
+    defer args.deinit();
+
+    if (args.positionals().len < 1) {
+        try stderr_writer.writeAll("no file path provided\n");
+        return 1;
+    }
+    if (args.positionals().len > 1) {
+        try stderr_writer.writeAll("multiple files are not supported\n");
+        return 1;
+    }
+
+    const file_path = args.positionals()[0];
+
+    const file_contents = blk: {
+        var file = std.fs.cwd().openFile(file_path, .{}) catch |err| switch (err) {
+            error.FileNotFound => {
+                try stderr_writer.print("file not found: {s}\n", .{file_path});
+                return 1;
+            },
+            else => |e| return e,
+        };
         defer file.close();
 
         break :blk try file.readToEndAlloc(allocator, std.math.maxInt(usize));
@@ -49,7 +78,7 @@ pub fn main() !void {
     outer: while (true) {
         try stdout_writer.writeAll("> ");
 
-        const input = stdin_reader.readByte() catch return;
+        const input = stdin_reader.readByte() catch return 0;
 
         if (input == '?' or input == 'h' or input == '\n') {
             try stdout_writer.writeAll(
@@ -67,7 +96,7 @@ pub fn main() !void {
             continue;
         }
         if (input == 'b') {
-            const hex_str = (try stdin_reader.readUntilDelimiterOrEofAlloc(allocator, '\n', std.math.maxInt(usize))) orelse return;
+            const hex_str = (try stdin_reader.readUntilDelimiterOrEofAlloc(allocator, '\n', std.math.maxInt(usize))) orelse return 1;
             defer allocator.free(hex_str);
 
             if (std.mem.eql(u8, hex_str, "\n")) {
@@ -153,7 +182,7 @@ pub fn main() !void {
             continue;
         }
         if (input == 'q') {
-            return;
+            return 0;
         }
 
         try stdout_writer.writeAll("invalid option\n");

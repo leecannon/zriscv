@@ -7,6 +7,8 @@ usingnamespace @import("instruction.zig");
 const CpuState = @import("CpuState.zig");
 
 pub const CpuOptions = struct {
+    unrecognised_instruction_is_fatal: bool = true,
+    unrecognised_csr_is_fatal: bool = true,
     writer_type: type = void,
 };
 
@@ -50,10 +52,16 @@ fn execute(
     writer: anytype,
     comptime options: CpuOptions,
 ) !void {
-    _ = options;
     const has_writer = comptime isWriter(@TypeOf(writer));
 
-    switch (try instruction.decode()) {
+    const instruction_type = if (comptime options.unrecognised_instruction_is_fatal) try instruction.decode() else blk: {
+        break :blk instruction.decode() catch {
+            try throw(state, .IllegalInstruction, instruction.backing, writer);
+            return;
+        };
+    };
+
+    switch (instruction_type) {
         // 32I
 
         .LUI => {
@@ -103,6 +111,7 @@ fn execute(
                     try writer.print(
                         \\AUIPC - dest: x{}, offset: 0x{x}
                         \\  setting x{} to current pc (0x{x}) + 0x{x}
+                        \\
                     , .{
                         rd,
                         imm,
@@ -1012,13 +1021,13 @@ fn execute(
         .CSRRW => {
             // I-type
 
-            // TODO: Proper exceptions
-            // const csr = Csr.getCsr(instruction.csr.read()) catch {
-            //     try throw(state, .IllegalInstruction, instruction.backing, writer);
-            //     return;
-            // };
+            const csr = if (comptime options.unrecognised_csr_is_fatal) try Csr.getCsr(instruction.csr.read()) else blk: {
+                break :blk Csr.getCsr(instruction.csr.read()) catch {
+                    try throw(state, .IllegalInstruction, instruction.backing, writer);
+                    return;
+                };
+            };
 
-            const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
 
@@ -1078,13 +1087,13 @@ fn execute(
         .CSRRS => {
             // I-type
 
-            // TODO: Proper exceptions
-            // const csr = Csr.getCsr(instruction.csr.read()) catch {
-            //     try throw(state, .IllegalInstruction, instruction.backing, writer);
-            //     return;
-            // };
+            const csr = if (comptime options.unrecognised_csr_is_fatal) try Csr.getCsr(instruction.csr.read()) else blk: {
+                break :blk Csr.getCsr(instruction.csr.read()) catch {
+                    try throw(state, .IllegalInstruction, instruction.backing, writer);
+                    return;
+                };
+            };
 
-            const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
 
@@ -1177,13 +1186,13 @@ fn execute(
         .CSRRC => {
             // I-type
 
-            // TODO: Proper exceptions
-            // const csr = Csr.getCsr(instruction.csr.read()) catch {
-            //     try throw(state, .IllegalInstruction, instruction.backing, writer);
-            //     return;
-            // };
+            const csr = if (comptime options.unrecognised_csr_is_fatal) try Csr.getCsr(instruction.csr.read()) else blk: {
+                break :blk Csr.getCsr(instruction.csr.read()) catch {
+                    try throw(state, .IllegalInstruction, instruction.backing, writer);
+                    return;
+                };
+            };
 
-            const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
 
@@ -1276,13 +1285,13 @@ fn execute(
         .CSRRWI => {
             // I-type
 
-            // TODO: Proper exceptions
-            // const csr = Csr.getCsr(instruction.csr.read()) catch {
-            //     try throw(state, .IllegalInstruction, instruction.backing, writer);
-            //     return;
-            // };
+            const csr = if (comptime options.unrecognised_csr_is_fatal) try Csr.getCsr(instruction.csr.read()) else blk: {
+                break :blk Csr.getCsr(instruction.csr.read()) catch {
+                    try throw(state, .IllegalInstruction, instruction.backing, writer);
+                    return;
+                };
+            };
 
-            const csr = try Csr.getCsr(instruction.csr.read());
             const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
 

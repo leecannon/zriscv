@@ -22,6 +22,8 @@ pub const InstructionType = enum {
     BGE,
     /// branch less than - unsigned
     BLTU,
+    /// branch greater equal - unsigned
+    BGEU,
     /// or immediate
     ORI,
     /// add immediate
@@ -98,6 +100,7 @@ pub const Instruction = extern union {
                 0b100 => InstructionType.BLT,
                 0b101 => InstructionType.BGE,
                 0b110 => InstructionType.BLTU,
+                0b111 => InstructionType.BGEU,
                 else => {
                     std.log.emerg("unimplemented BRANCH {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;

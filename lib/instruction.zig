@@ -24,14 +24,16 @@ pub const InstructionType = enum {
     BLTU,
     /// branch greater equal - unsigned
     BGEU,
-    /// or immediate
-    ORI,
     /// add immediate
     ADDI,
     /// set less than immediate - signed
     SLTI,
     /// set less than immediate - unsigned
     SLTIU,
+    /// xor immediate
+    XORI,
+    /// or immediate
+    ORI,
     /// logical left shift
     SLLI,
     /// logical right shift
@@ -116,6 +118,7 @@ pub const Instruction = extern union {
                 0b010 => InstructionType.SLTI,
                 0b011 => InstructionType.SLTIU,
                 0b001 => InstructionType.SLLI,
+                0b100 => InstructionType.XORI,
                 0b110 => InstructionType.ORI,
                 0b101 => if (funct7 == 0) InstructionType.SRLI else InstructionType.SRAI,
                 else => {

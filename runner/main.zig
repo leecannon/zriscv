@@ -35,14 +35,22 @@ pub fn main() !u8 {
         return 0;
     }
 
+    const test_file = "tests/resources/rv64ui_p_add.bin";
+
     const file_path = blk: {
         if (args.positionals().len < 1) {
-            try stderr_writer.writeAll("no file path provided\n");
-            return 1;
+            // try stderr_writer.writeAll("no file path provided\n");
+            // return 1;
+
+            // TODO: Uncomment arg file_path
+            break :blk test_file;
         }
         if (args.positionals().len > 1) {
-            try stderr_writer.writeAll("multiple files are not supported\n");
-            return 1;
+            // try stderr_writer.writeAll("multiple files are not supported\n");
+            // return 1;
+
+            // TODO: Uncomment arg file_path
+            break :blk test_file;
         }
 
         break :blk args.positionals()[0];

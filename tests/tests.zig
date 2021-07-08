@@ -54,12 +54,12 @@ test "rv64ui_p_sltiu" {
     try runTest("rv64ui_p_sltiu.bin");
 }
 
-test "rv64ui_p_ori" {
-    try runTest("rv64ui_p_ori.bin");
+test "rv64ui_p_xori" {
+    try runTest("rv64ui_p_xori.bin");
 }
 
-test "rv64ui_p_addi" {
-    try runTest("rv64ui_p_addi.bin");
+test "rv64ui_p_ori" {
+    try runTest("rv64ui_p_ori.bin");
 }
 
 test "rv64ui_p_slli" {

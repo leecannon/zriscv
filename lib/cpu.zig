@@ -455,46 +455,6 @@ fn execute(
                 state.pc += 4;
             }
         },
-        .ORI => {
-            // I-type
-
-            const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const imm = instruction.i_imm.read();
-
-            if (rd != 0) {
-                if (has_writer) {
-                    try writer.print(
-                        \\ORI - src: x{}, dest: x{}, imm: 0x{x}
-                        \\  set x{} to x{} | 0x{x}
-                        \\
-                    , .{
-                        rs1,
-                        rd,
-                        imm,
-                        rd,
-                        rs1,
-                        imm,
-                    });
-                }
-
-                state.x[rd] = state.x[rs1] | @bitCast(u64, imm);
-            } else {
-                if (has_writer) {
-                    try writer.print(
-                        \\ORI - src: x{}, dest: x{}, imm: 0x{x}
-                        \\  nop
-                        \\
-                    , .{
-                        rs1,
-                        rd,
-                        imm,
-                    });
-                }
-            }
-
-            state.pc += 4;
-        },
         .ADDI => {
             // I-type
 
@@ -603,6 +563,86 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\SLTIU - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
+        .XORI => {
+            // I-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const imm = instruction.i_imm.read();
+
+            if (rd != 0) {
+                if (has_writer) {
+                    try writer.print(
+                        \\XORI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  set x{} to x{} ^ 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
+
+                state.x[rd] = state.x[rs1] ^ @bitCast(u64, imm);
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\XORI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
+        .ORI => {
+            // I-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const imm = instruction.i_imm.read();
+
+            if (rd != 0) {
+                if (has_writer) {
+                    try writer.print(
+                        \\ORI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\  set x{} to x{} | 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
+
+                state.x[rd] = state.x[rs1] | @bitCast(u64, imm);
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\ORI - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{

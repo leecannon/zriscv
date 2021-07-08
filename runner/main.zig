@@ -114,7 +114,7 @@ pub fn main() !u8 {
             const hex_str = (try stdin_reader.readUntilDelimiterOrEofAlloc(allocator, '\n', std.math.maxInt(usize))) orelse return 1;
             defer allocator.free(hex_str);
 
-            if (std.mem.eql(u8, hex_str, "\n")) {
+            if (std.mem.eql(u8, hex_str, "")) {
                 opt_break_point = null;
                 try stdout_writer.writeAll("cleared breakpoint\n");
                 continue;

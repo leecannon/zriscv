@@ -26,6 +26,10 @@ test "rv64ui_p_bne" {
     try runTest("rv64ui_p_bne.bin");
 }
 
+test "rv64ui_p_blt" {
+    try runTest("rv64ui_p_blt.bin");
+}
+
 test "rv64ui_p_bge" {
     try runTest("rv64ui_p_bge.bin");
 }

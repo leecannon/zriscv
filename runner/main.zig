@@ -19,7 +19,7 @@ pub fn main() !void {
         var resource_dir = try std.fs.openDirAbsolute(resource_path, .{});
         defer resource_dir.close();
 
-        var file = try resource_dir.openFile("rv64ui_p_jalr.bin", .{});
+        var file = try resource_dir.openFile("rv64ui_p_blt.bin", .{});
         defer file.close();
 
         break :blk try file.readToEndAlloc(allocator, std.math.maxInt(usize));

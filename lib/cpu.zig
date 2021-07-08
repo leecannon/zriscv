@@ -295,6 +295,46 @@ fn execute(
                 state.pc += 4;
             }
         },
+        .BLT => {
+            // B-type
+
+            const imm = instruction.b_imm.read();
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+
+            if (@bitCast(i64, state.x[rs1]) < @bitCast(i64, state.x[rs2])) {
+                if (has_writer) {
+                    try writer.print(
+                        \\BLT - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  true
+                        \\  setting pc to current pc (0x{x}) + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                        state.pc,
+                        imm,
+                    });
+                }
+
+                state.pc = addSignedToUnsignedWrap(state.pc, imm);
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\BLT - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\  false
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        imm,
+                    });
+                }
+
+                state.pc += 4;
+            }
+        },
         .BGE => {
             // B-type
 

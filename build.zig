@@ -15,9 +15,6 @@ pub fn build(b: *std.build.Builder) void {
     pkgs.addAllTo(runner);
     runner.install();
 
-    // TODO: This is temporary
-    runner.addBuildOption([]const u8, "resource_path", b.pathFromRoot("tests/resources"));
-
     const run_cmd = runner.run();
     run_cmd.step.dependOn(b.getInstallStep());
     if (b.args) |args| {
@@ -36,9 +33,6 @@ pub fn build(b: *std.build.Builder) void {
     runner_test.setBuildMode(mode);
     runner_test.addPackage(exports.zriscv);
     pkgs.addAllTo(runner_test);
-
-    // TODO: This is temporary
-    runner_test.addBuildOption([]const u8, "resource_path", b.pathFromRoot("tests/resources"));
 
     const test_step = b.step("test", "Run the tests");
     test_step.dependOn(&test_exe.step);

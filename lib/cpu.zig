@@ -1340,6 +1340,7 @@ fn execute(
         },
 
         // Privilege
+
         .MRET => {
             if (has_writer) {
                 try writer.print("MRET\n", .{});

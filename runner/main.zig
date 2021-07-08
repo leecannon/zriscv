@@ -1,7 +1,6 @@
 const std = @import("std");
 const zriscv = @import("zriscv");
 const clap = @import("clap");
-const resource_path: []const u8 = @import("build_options").resource_path;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const allocator = &gpa.allocator;
@@ -35,22 +34,14 @@ pub fn main() !u8 {
         return 0;
     }
 
-    const test_file = "tests/resources/rv64ui_p_add.bin";
-
     const file_path = blk: {
         if (args.positionals().len < 1) {
-            // try stderr_writer.writeAll("no file path provided\n");
-            // return 1;
-
-            // TODO: Uncomment arg file_path
-            break :blk test_file;
+            try stderr_writer.writeAll("no file path provided\n");
+            return 1;
         }
         if (args.positionals().len > 1) {
-            // try stderr_writer.writeAll("multiple files are not supported\n");
-            // return 1;
-
-            // TODO: Uncomment arg file_path
-            break :blk test_file;
+            try stderr_writer.writeAll("multiple files are not supported\n");
+            return 1;
         }
 
         break :blk args.positionals()[0];

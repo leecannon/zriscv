@@ -107,8 +107,6 @@ pub const Instruction = extern union {
 
     pub fn decode(instruction: Instruction) !InstructionType {
         const opcode = instruction.opcode.read();
-        const funct3 = instruction.funct3.read();
-        const funct7 = instruction.funct7.read();
 
         return switch (opcode) {
             0b0110111 => InstructionType.LUI,
@@ -116,20 +114,20 @@ pub const Instruction = extern union {
             0b1101111 => InstructionType.JAL,
             0b1100111 => InstructionType.JALR,
             // BRANCH
-            0b1100011 => switch (funct3) {
+            0b1100011 => switch (instruction.funct3.read()) {
                 0b000 => InstructionType.BEQ,
                 0b001 => InstructionType.BNE,
                 0b100 => InstructionType.BLT,
                 0b101 => InstructionType.BGE,
                 0b110 => InstructionType.BLTU,
                 0b111 => InstructionType.BGEU,
-                else => {
+                else => |funct3| {
                     std.log.emerg("unimplemented BRANCH {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;
                 },
             },
             // OP-IMM
-            0b0010011 => switch (funct3) {
+            0b0010011 => switch (instruction.funct3.read()) {
                 0b000 => InstructionType.ADDI,
                 0b010 => InstructionType.SLTI,
                 0b011 => InstructionType.SLTIU,
@@ -137,26 +135,26 @@ pub const Instruction = extern union {
                 0b100 => InstructionType.XORI,
                 0b110 => InstructionType.ORI,
                 0b111 => InstructionType.ANDI,
-                0b101 => if (funct7 == 0) InstructionType.SRLI else InstructionType.SRAI,
+                0b101 => if (instruction.funct7.read() == 0) InstructionType.SRLI else InstructionType.SRAI,
             },
             // OP
-            0b0110011 => switch (funct3) {
-                0b000 => if (funct7 == 0) InstructionType.ADD else InstructionType.SUB,
+            0b0110011 => switch (instruction.funct3.read()) {
+                0b000 => if (instruction.funct7.read() == 0) InstructionType.ADD else InstructionType.SUB,
                 0b110 => InstructionType.OR,
                 0b111 => InstructionType.AND,
                 0b001 => InstructionType.SLL,
                 0b010 => InstructionType.SLT,
                 0b011 => InstructionType.SLTU,
                 0b100 => InstructionType.XOR,
-                0b101 => if (funct7 == 0) InstructionType.SRL else InstructionType.SRA,
+                0b101 => if (instruction.funct7.read() == 0) InstructionType.SRL else InstructionType.SRA,
             },
             0b001111 => InstructionType.FENCE,
             // SYSTEM
-            0b1110011 => switch (funct3) {
-                0b000 => switch (funct7) {
+            0b1110011 => switch (instruction.funct3.read()) {
+                0b000 => switch (instruction.funct7.read()) {
                     0b0000000 => InstructionType.ECALL,
                     0b0011000 => InstructionType.MRET,
-                    else => {
+                    else => |funct7| {
                         std.log.emerg("unimplemented SYSTEM {b:0>7}/000/{b:0>7}", .{ opcode, funct7 });
                         return error.UnimplementedOpcode;
                     },
@@ -165,15 +163,15 @@ pub const Instruction = extern union {
                 0b010 => InstructionType.CSRRS,
                 0b011 => InstructionType.CSRRC,
                 0b101 => InstructionType.CSRRWI,
-                else => {
+                else => |funct3| {
                     std.log.emerg("unimplemented SYSTEM {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;
                 },
             },
             // OP-IMM-32
-            0b0011011 => switch (funct3) {
+            0b0011011 => switch (instruction.funct3.read()) {
                 0b000 => InstructionType.ADDIW,
-                else => {
+                else => |funct3| {
                     std.log.emerg("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;
                 },

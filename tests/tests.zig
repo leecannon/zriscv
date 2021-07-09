@@ -110,6 +110,10 @@ test "rv64ui_p_sra" {
     try runTest("rv64ui_p_sra.bin");
 }
 
+test "rv64ui_p_or" {
+    try runTest("rv64ui_p_or.bin");
+}
+
 test "rv64ui_p_and" {
     try runTest("rv64ui_p_and.bin");
 }

@@ -58,6 +58,8 @@ pub const InstructionType = enum {
     SRL,
     /// shift right arithmetic
     SRA,
+    /// or
+    OR,
     /// and
     AND,
     /// memory fence
@@ -140,16 +142,13 @@ pub const Instruction = extern union {
             // OP
             0b0110011 => switch (funct3) {
                 0b000 => if (funct7 == 0) InstructionType.ADD else InstructionType.SUB,
+                0b110 => InstructionType.OR,
                 0b111 => InstructionType.AND,
                 0b001 => InstructionType.SLL,
                 0b010 => InstructionType.SLT,
                 0b011 => InstructionType.SLTU,
                 0b100 => InstructionType.XOR,
                 0b101 => if (funct7 == 0) InstructionType.SRL else InstructionType.SRA,
-                else => {
-                    std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}", .{ opcode, funct3 });
-                    return error.UnimplementedOpcode;
-                },
             },
             0b001111 => InstructionType.FENCE,
             // SYSTEM

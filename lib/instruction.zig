@@ -48,6 +48,8 @@ pub const InstructionType = enum {
     SUB,
     /// shift logical left
     SLL,
+    /// set less than - signed
+    SLT,
     /// and
     AND,
     /// memory fence
@@ -132,6 +134,7 @@ pub const Instruction = extern union {
                 0b000 => if (funct7 == 0) InstructionType.ADD else InstructionType.SUB,
                 0b111 => InstructionType.AND,
                 0b001 => InstructionType.SLL,
+                0b010 => InstructionType.SLT,
                 else => {
                     std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;

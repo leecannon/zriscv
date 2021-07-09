@@ -944,6 +944,46 @@ fn execute(
 
             state.pc += 4;
         },
+        .SLT => {
+            // R-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+
+            if (rd != 0) {
+                if (has_writer) {
+                    try writer.print(
+                        \\SLT - src1: x{}, src2: x{}, dest: x{}
+                        \\  set x{} to x{} < x{} ? 1 : 0
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                state.x[rd] = @boolToInt(@bitCast(i64, state.x[rs1]) < @bitCast(i64, state.x[rs2]));
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\SLT - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
         .AND => {
             // R-type
 

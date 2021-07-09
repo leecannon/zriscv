@@ -98,6 +98,14 @@ test "rv64ui_p_sltu" {
     try runTest("rv64ui_p_sltu.bin");
 }
 
+test "rv64ui_p_xor" {
+    try runTest("rv64ui_p_xor.bin");
+}
+
+test "rv64ui_p_srl" {
+    try runTest("rv64ui_p_srl.bin");
+}
+
 test "rv64ui_p_and" {
     try runTest("rv64ui_p_and.bin");
 }

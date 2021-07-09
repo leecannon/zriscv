@@ -71,8 +71,6 @@ mie: u64 = 0,
 mip: u64 = 0,
 
 pub fn dump(self: CpuState, writer: anytype) !void {
-    try writer.writeAll("");
-
     var i: usize = 0;
     while (i < 32 - 3) : (i += 4) {
         if (i == 0) {

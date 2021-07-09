@@ -86,6 +86,10 @@ test "rv64ui_p_sub" {
     try runTest("rv64ui_p_sub.bin");
 }
 
+test "rv64ui_p_sll" {
+    try runTest("rv64ui_p_sll.bin");
+}
+
 test "rv64ui_p_and" {
     try runTest("rv64ui_p_and.bin");
 }

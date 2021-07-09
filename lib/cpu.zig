@@ -904,6 +904,46 @@ fn execute(
 
             state.pc += 4;
         },
+        .SLL => {
+            // R-type
+
+            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+
+            if (rd != 0) {
+                if (has_writer) {
+                    try writer.print(
+                        \\SLL - src1: x{}, src2: x{}, dest: x{}
+                        \\  set x{} to x{} << x{}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                state.x[rd] = state.x[rs1] << @truncate(u6, state.x[rs2]);
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\SLL - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
         .AND => {
             // R-type
 

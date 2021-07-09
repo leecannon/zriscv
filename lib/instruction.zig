@@ -56,6 +56,8 @@ pub const InstructionType = enum {
     XOR,
     /// shift right logical
     SRL,
+    /// shift right arithmetic
+    SRA,
     /// and
     AND,
     /// memory fence
@@ -143,7 +145,7 @@ pub const Instruction = extern union {
                 0b010 => InstructionType.SLT,
                 0b011 => InstructionType.SLTU,
                 0b100 => InstructionType.XOR,
-                0b101 => InstructionType.SRL,
+                0b101 => if (funct7 == 0) InstructionType.SRL else InstructionType.SRA,
                 else => {
                     std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;

@@ -68,9 +68,10 @@ fn execute(
             // U-type
 
             const rd = instruction.rd.read();
-            const imm = instruction.u_imm.read();
 
             if (rd != 0) {
+                const imm = instruction.u_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\LUI - dest: x{}, value: 0x{x}
@@ -87,6 +88,8 @@ fn execute(
                 state.x[rd] = @bitCast(u64, imm);
             } else {
                 if (has_writer) {
+                    const imm = instruction.u_imm.read();
+
                     try writer.print(
                         \\LUI - dest: x{}, value: 0x{x}
                         \\  nop
@@ -104,9 +107,10 @@ fn execute(
             // U-type
 
             const rd = instruction.rd.read();
-            const imm = instruction.u_imm.read();
 
             if (rd != 0) {
+                const imm = instruction.u_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\AUIPC - dest: x{}, offset: 0x{x}
@@ -124,6 +128,8 @@ fn execute(
                 state.x[rd] = addSignedToUnsignedWrap(state.pc, imm);
             } else {
                 if (has_writer) {
+                    const imm = instruction.u_imm.read();
+
                     try writer.print(
                         \\AUIPC - dest: x{}, offset: 0x{x}
                         \\  nop
@@ -140,8 +146,8 @@ fn execute(
         .JAL => {
             // J-type
 
-            const imm = instruction.j_imm.read();
             const rd = instruction.rd.read();
+            const imm = instruction.j_imm.read();
 
             if (rd != 0) {
                 if (has_writer) {
@@ -182,8 +188,8 @@ fn execute(
             // I-type
 
             const imm = instruction.i_imm.read();
-            const rd = instruction.rd.read();
             const rs1 = instruction.rs1.read();
+            const rd = instruction.rd.read();
 
             const rs1_inital = state.x[rs1];
 
@@ -227,11 +233,12 @@ fn execute(
         .BEQ => {
             // B-type
 
-            const imm = instruction.b_imm.read();
             const rs1 = instruction.rs1.read();
             const rs2 = instruction.rs2.read();
 
             if (state.x[rs1] == state.x[rs2]) {
+                const imm = instruction.b_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
@@ -250,6 +257,8 @@ fn execute(
                 state.pc = addSignedToUnsignedWrap(state.pc, imm);
             } else {
                 if (has_writer) {
+                    const imm = instruction.b_imm.read();
+
                     try writer.print(
                         \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
                         \\  false
@@ -267,11 +276,12 @@ fn execute(
         .BNE => {
             // B-type
 
-            const imm = instruction.b_imm.read();
             const rs1 = instruction.rs1.read();
             const rs2 = instruction.rs2.read();
 
             if (state.x[rs1] != state.x[rs2]) {
+                const imm = instruction.b_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
@@ -290,6 +300,8 @@ fn execute(
                 state.pc = addSignedToUnsignedWrap(state.pc, imm);
             } else {
                 if (has_writer) {
+                    const imm = instruction.b_imm.read();
+
                     try writer.print(
                         \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
                         \\  false
@@ -307,11 +319,12 @@ fn execute(
         .BLT => {
             // B-type
 
-            const imm = instruction.b_imm.read();
             const rs1 = instruction.rs1.read();
             const rs2 = instruction.rs2.read();
 
             if (@bitCast(i64, state.x[rs1]) < @bitCast(i64, state.x[rs2])) {
+                const imm = instruction.b_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\BLT - src1: x{}, src2: x{}, offset: 0x{x}
@@ -330,6 +343,8 @@ fn execute(
                 state.pc = addSignedToUnsignedWrap(state.pc, imm);
             } else {
                 if (has_writer) {
+                    const imm = instruction.b_imm.read();
+
                     try writer.print(
                         \\BLT - src1: x{}, src2: x{}, offset: 0x{x}
                         \\  false
@@ -347,11 +362,12 @@ fn execute(
         .BGE => {
             // B-type
 
-            const imm = instruction.b_imm.read();
             const rs1 = instruction.rs1.read();
             const rs2 = instruction.rs2.read();
 
             if (@bitCast(i64, state.x[rs1]) >= @bitCast(i64, state.x[rs2])) {
+                const imm = instruction.b_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
@@ -370,6 +386,8 @@ fn execute(
                 state.pc = addSignedToUnsignedWrap(state.pc, imm);
             } else {
                 if (has_writer) {
+                    const imm = instruction.b_imm.read();
+
                     try writer.print(
                         \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
                         \\  false
@@ -387,11 +405,12 @@ fn execute(
         .BLTU => {
             // B-type
 
-            const imm = instruction.b_imm.read();
             const rs1 = instruction.rs1.read();
             const rs2 = instruction.rs2.read();
 
             if (state.x[rs1] < state.x[rs2]) {
+                const imm = instruction.b_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\BLTU - src1: x{}, src2: x{}, offset: 0x{x}
@@ -410,6 +429,8 @@ fn execute(
                 state.pc = addSignedToUnsignedWrap(state.pc, imm);
             } else {
                 if (has_writer) {
+                    const imm = instruction.b_imm.read();
+
                     try writer.print(
                         \\BLTU - src1: x{}, src2: x{}, offset: 0x{x}
                         \\  false
@@ -427,11 +448,12 @@ fn execute(
         .BGEU => {
             // B-type
 
-            const imm = instruction.b_imm.read();
             const rs1 = instruction.rs1.read();
             const rs2 = instruction.rs2.read();
 
             if (state.x[rs1] >= state.x[rs2]) {
+                const imm = instruction.b_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\BGEU - src1: x{}, src2: x{}, offset: 0x{x}
@@ -450,6 +472,8 @@ fn execute(
                 state.pc = addSignedToUnsignedWrap(state.pc, imm);
             } else {
                 if (has_writer) {
+                    const imm = instruction.b_imm.read();
+
                     try writer.print(
                         \\BGEU - src1: x{}, src2: x{}, offset: 0x{x}
                         \\  false
@@ -468,10 +492,11 @@ fn execute(
             // I-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const imm = instruction.i_imm.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
@@ -490,6 +515,9 @@ fn execute(
                 state.x[rd] = addSignedToUnsignedIgnoreOverflow(state.x[rs1], imm);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
                     try writer.print(
                         \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
@@ -508,10 +536,11 @@ fn execute(
             // I-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const imm = instruction.i_imm.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\SLTI - src: x{}, dest: x{}, imm: 0x{x}
@@ -530,6 +559,9 @@ fn execute(
                 state.x[rd] = @boolToInt(@bitCast(i64, state.x[rs1]) < imm);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
                     try writer.print(
                         \\SLTI - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
@@ -548,10 +580,11 @@ fn execute(
             // I-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const imm = instruction.i_imm.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\SLTIU - src: x{}, dest: x{}, imm: 0x{x}
@@ -570,6 +603,9 @@ fn execute(
                 state.x[rd] = @boolToInt(state.x[rs1] < @bitCast(u64, imm));
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
                     try writer.print(
                         \\SLTIU - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
@@ -588,10 +624,11 @@ fn execute(
             // I-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const imm = instruction.i_imm.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\XORI - src: x{}, dest: x{}, imm: 0x{x}
@@ -610,6 +647,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] ^ @bitCast(u64, imm);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
                     try writer.print(
                         \\XORI - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
@@ -628,10 +668,11 @@ fn execute(
             // I-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const imm = instruction.i_imm.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\ORI - src: x{}, dest: x{}, imm: 0x{x}
@@ -650,6 +691,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] | @bitCast(u64, imm);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
                     try writer.print(
                         \\ORI - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
@@ -668,10 +712,11 @@ fn execute(
             // I-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const imm = instruction.i_imm.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\ANDI - src: x{}, dest: x{}, imm: 0x{x}
@@ -690,6 +735,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] & @bitCast(u64, imm);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
                     try writer.print(
                         \\ANDI - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
@@ -708,10 +756,11 @@ fn execute(
             // I-type specialization
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const shmt = instruction.i_specialization.fullShift();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const shmt = instruction.i_specialization.fullShift();
+
                 if (has_writer) {
                     try writer.print(
                         \\SLLI - src: x{}, dest: x{}, shmt: {}
@@ -730,6 +779,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] << shmt;
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const shmt = instruction.i_specialization.fullShift();
+
                     try writer.print(
                         \\SLLI - src: x{}, dest: x{}, shmt: {}
                         \\  nop
@@ -748,10 +800,11 @@ fn execute(
             // I-type specialization
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const shmt = instruction.i_specialization.fullShift();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const shmt = instruction.i_specialization.fullShift();
+
                 if (has_writer) {
                     try writer.print(
                         \\SRLI - src: x{}, dest: x{}, shmt: {}
@@ -770,6 +823,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] >> shmt;
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const shmt = instruction.i_specialization.fullShift();
+
                     try writer.print(
                         \\SRLI - src: x{}, dest: x{}, shmt: {}
                         \\  nop
@@ -788,10 +844,11 @@ fn execute(
             // I-type specialization
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const shmt = instruction.i_specialization.fullShift();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const shmt = instruction.i_specialization.fullShift();
+
                 if (has_writer) {
                     try writer.print(
                         \\SRAI - src: x{}, dest: x{}, shmt: {}
@@ -810,6 +867,9 @@ fn execute(
                 state.x[rd] = @bitCast(u64, @bitCast(i64, state.x[rs1]) >> shmt);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const shmt = instruction.i_specialization.fullShift();
+
                     try writer.print(
                         \\SRAI - src: x{}, dest: x{}, shmt: {}
                         \\  nop
@@ -828,10 +888,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\ADD - src1: x{}, src2: x{}, dest: x{}
@@ -850,6 +911,9 @@ fn execute(
                 _ = @addWithOverflow(u64, state.x[rs1], state.x[rs2], &state.x[rd]);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\ADD - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -868,10 +932,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\ADD - src1: x{}, src2: x{}, dest: x{}
@@ -890,6 +955,9 @@ fn execute(
                 _ = @subWithOverflow(u64, state.x[rs1], state.x[rs2], &state.x[rd]);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\ADD - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -908,10 +976,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\SLL - src1: x{}, src2: x{}, dest: x{}
@@ -930,6 +999,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] << @truncate(u6, state.x[rs2]);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\SLL - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -948,10 +1020,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\SLT - src1: x{}, src2: x{}, dest: x{}
@@ -970,6 +1043,9 @@ fn execute(
                 state.x[rd] = @boolToInt(@bitCast(i64, state.x[rs1]) < @bitCast(i64, state.x[rs2]));
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\SLT - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -988,10 +1064,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\SLT - src1: x{}, src2: x{}, dest: x{}
@@ -1010,6 +1087,9 @@ fn execute(
                 state.x[rd] = @boolToInt(state.x[rs1] < state.x[rs2]);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\SLT - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -1028,10 +1108,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\XOR - src1: x{}, src2: x{}, dest: x{}
@@ -1050,6 +1131,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] ^ state.x[rs2];
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\XOR - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -1068,10 +1152,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\SRL - src1: x{}, src2: x{}, dest: x{}
@@ -1090,6 +1175,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] >> @truncate(u6, state.x[rs2]);
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\SRL - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -1108,10 +1196,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\SRA - src1: x{}, src2: x{}, dest: x{}
@@ -1130,6 +1219,9 @@ fn execute(
                 state.x[rd] = @bitCast(u64, @bitCast(i64, state.x[rs1]) >> @truncate(u6, state.x[rs2]));
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\SRA - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -1148,10 +1240,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\AND - src1: x{}, src2: x{}, dest: x{}
@@ -1170,6 +1263,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] & state.x[rs2];
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\AND - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -1188,10 +1284,11 @@ fn execute(
             // R-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\OR - src1: x{}, src2: x{}, dest: x{}
@@ -1210,6 +1307,9 @@ fn execute(
                 state.x[rd] = state.x[rs1] | state.x[rs2];
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
                     try writer.print(
                         \\OR - src1: x{}, src2: x{}, dest: x{}
                         \\  nop
@@ -1250,10 +1350,11 @@ fn execute(
             // I-type
 
             const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
-            const imm = instruction.i_imm.read();
 
             if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
                 if (has_writer) {
                     try writer.print(
                         \\ADDIW - src: x{}, dest: x{}, imm: 0x{x}
@@ -1281,6 +1382,9 @@ fn execute(
                 );
             } else {
                 if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
                     try writer.print(
                         \\ADDIW - src: x{}, dest: x{}, imm: 0x{x}
                         \\  nop

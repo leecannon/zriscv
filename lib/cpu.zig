@@ -1948,6 +1948,17 @@ inline fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {
         unsigned +% @bitCast(u64, signed);
 }
 
+test "addSignedToUnsignedWrap" {
+    try std.testing.expectEqual(
+        @as(u64, 0),
+        addSignedToUnsignedWrap(@as(u64, std.math.maxInt(u64)), 1),
+    );
+    try std.testing.expectEqual(
+        @as(u64, std.math.maxInt(u64)),
+        addSignedToUnsignedWrap(0, -1),
+    );
+}
+
 inline fn addSignedToUnsignedIgnoreOverflow(unsigned: u64, signed: i64) u64 {
     var result = unsigned;
     if (signed < 0) {
@@ -1956,6 +1967,17 @@ inline fn addSignedToUnsignedIgnoreOverflow(unsigned: u64, signed: i64) u64 {
         _ = @addWithOverflow(u64, unsigned, @bitCast(u64, signed), &result);
     }
     return result;
+}
+
+test "addSignedToUnsignedIgnoreOverflow" {
+    try std.testing.expectEqual(
+        @as(u64, 42),
+        addSignedToUnsignedIgnoreOverflow(@as(u64, std.math.maxInt(u64)), 43),
+    );
+    try std.testing.expectEqual(
+        @as(u64, std.math.maxInt(u64)),
+        addSignedToUnsignedIgnoreOverflow(5, -6),
+    );
 }
 
 comptime {

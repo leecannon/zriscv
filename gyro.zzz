@@ -1,9 +1,3 @@
-pkgs:
-  zriscv:
-    version: 0.1.0
-    root: lib/index.zig
-    deps:
-      leecannon/bitjuggle: ^0.3.0
 deps:
   leecannon/bitjuggle: ^0.3.0
   clap:

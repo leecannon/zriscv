@@ -12,6 +12,7 @@ pub const CpuOptions = struct {
     unrecognised_instruction_is_fatal: bool = true,
     unrecognised_csr_is_fatal: bool = true,
     ebreak_is_fatal: bool = false,
+    execution_out_of_bounds_is_fatal: bool = true,
 };
 
 pub fn Cpu(comptime options: CpuOptions) type {
@@ -24,7 +25,23 @@ pub fn Cpu(comptime options: CpuOptions) type {
             }
 
             pub fn step(state: *CpuState, writer: options.writer_type) !void {
-                try execute(try fetch(state, options), state, writer, options);
+                // This is not 100% compatible with extension C, as the very last 16 bits of memory could be a compressed instruction
+                const instruction: Instruction = blk: {
+                    if (options.execution_out_of_bounds_is_fatal) {
+                        break :blk Instruction{ .backing = try loadMemory(state, 32, state.pc) };
+                    } else {
+                        const backing = loadMemory(state, 32, state.pc) catch |err| switch (err) {
+                            error.ExecutionOutOfBounds => {
+                                try throw(state, .InstructionAccessFault, 0, writer);
+                                return;
+                            },
+                            else => |e| return e,
+                        };
+                        break :blk Instruction{ .backing = backing };
+                    }
+                };
+
+                try execute(instruction, state, writer, options);
             }
         } else struct {
             pub fn run(state: *CpuState) !void {
@@ -34,18 +51,61 @@ pub fn Cpu(comptime options: CpuOptions) type {
             }
 
             pub fn step(state: *CpuState) !void {
-                try execute(try fetch(state, options), state, {}, options);
+                const instruction: Instruction = blk: {
+                    if (options.execution_out_of_bounds_is_fatal) {
+                        break :blk Instruction{ .backing = try loadMemory(state, 32, state.pc) };
+                    } else {
+                        const backing = loadMemory(state, 32, state.pc) catch |err| switch (err) {
+                            error.ExecutionOutOfBounds => {
+                                try throw(state, .InstructionAccessFault, 0, {});
+                                return;
+                            },
+                            else => |e| return e,
+                        };
+                        break :blk Instruction{ .backing = backing };
+                    }
+                };
+
+                try execute(instruction, state, {}, options);
             }
         };
     };
 }
 
-fn fetch(state: *const CpuState, comptime options: CpuOptions) !Instruction {
-    _ = options;
-    // This is not 100% compatible with extension C, as the very last 16 bits of memory could be
-    // a compressed instruction, the below check will fail in that case
-    if (state.pc + 3 >= state.memory.len) return error.ExecutionOutOfBounds;
-    return Instruction{ .backing = std.mem.readIntSlice(u32, state.memory[state.pc..], .Little) };
+fn loadMemory(state: *CpuState, comptime number_of_bits: comptime_int, address: u64) !std.meta.Int(.unsigned, number_of_bits) {
+    const MemoryType = std.meta.Int(.unsigned, number_of_bits);
+
+    if (address + @sizeOf(MemoryType) >= state.memory.len) {
+        return error.ExecutionOutOfBounds;
+    }
+
+    switch (state.address_translation_mode) {
+        .Bare => {
+            return std.mem.readIntSlice(MemoryType, state.memory[address..], .Little);
+        },
+        else => {
+            std.log.emerg("Unimplemented address translation mode", .{});
+            return error.Unimplemented;
+        },
+    }
+}
+
+fn storeMemory(state: *CpuState, comptime number_of_bits: comptime_int, address: u64, value: std.meta.Int(.unsigned, number_of_bits)) !void {
+    const MemoryType = std.meta.Int(.unsigned, number_of_bits);
+
+    if (address + @sizeOf(MemoryType) >= state.memory.len) {
+        return error.ExecutionOutOfBounds;
+    }
+
+    switch (state.address_translation_mode) {
+        .Bare => {
+            std.mem.writeIntSlice(MemoryType, state.memory[address..], value, .Little);
+        },
+        else => {
+            std.log.emerg("Unimplemented address translation mode", .{});
+            return error.Unimplemented;
+        },
+    }
 }
 
 fn execute(

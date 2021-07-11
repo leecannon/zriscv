@@ -85,6 +85,10 @@ pub const InstructionType = enum {
     SUBW,
     /// shift logical left - 32 bit
     SLLW,
+    /// shift right logical - 32 bit
+    SRLW,
+    /// shift right arithmetic - 32 bit
+    SRAW,
 
     // Zicsr
 
@@ -197,6 +201,7 @@ pub const Instruction = extern union {
             0b0111011 => switch (instruction.funct3.read()) {
                 0b000 => if (instruction.funct7.read() == 0) InstructionType.ADDW else InstructionType.SUBW,
                 0b001 => InstructionType.SLLW,
+                0b101 => if (instruction.funct7.read() == 0) InstructionType.SRLW else InstructionType.SRAW,
                 else => |funct3| {
                     std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;

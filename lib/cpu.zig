@@ -870,7 +870,7 @@ fn execute(
             if (has_writer) {
                 try writer.print(
                     \\SB - base: x{}, src: x{}, imm: 0x{x}
-                    \\  store 1 byte sign extended from x{} into memory x{} + 0x{x}
+                    \\  store 1 byte from x{} into memory x{} + 0x{x}
                     \\
                 , .{
                     rs1,
@@ -888,6 +888,44 @@ fn execute(
                 try storeMemory(state, 8, address, @truncate(u8, state.x[rs2]));
             } else {
                 storeMemory(state, 8, address, @truncate(u8, state.x[rs2])) catch |err| switch (err) {
+                    StoreError.ExecutionOutOfBounds => {
+                        try throw(state, .@"Store/AMOAccessFault", 0, writer);
+                        return;
+                    },
+                    else => |e| return e,
+                };
+            }
+
+            state.pc += 4;
+        },
+        .SH => {
+            // S-type
+
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+            const imm = instruction.s_imm.read();
+
+            if (has_writer) {
+                try writer.print(
+                    \\SH - base: x{}, src: x{}, imm: 0x{x}
+                    \\  store 2 bytes from x{} into memory x{} + 0x{x}
+                    \\
+                , .{
+                    rs1,
+                    rs2,
+                    imm,
+                    rs2,
+                    rs1,
+                    imm,
+                });
+            }
+
+            const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+
+            if (options.execution_out_of_bounds_is_fatal) {
+                try storeMemory(state, 16, address, @truncate(u16, state.x[rs2]));
+            } else {
+                storeMemory(state, 16, address, @truncate(u16, state.x[rs2])) catch |err| switch (err) {
                     StoreError.ExecutionOutOfBounds => {
                         try throw(state, .@"Store/AMOAccessFault", 0, writer);
                         return;

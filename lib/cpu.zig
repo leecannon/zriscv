@@ -72,11 +72,16 @@ pub fn Cpu(comptime options: CpuOptions) type {
     };
 }
 
-fn loadMemory(state: *CpuState, comptime number_of_bits: comptime_int, address: u64) !std.meta.Int(.unsigned, number_of_bits) {
+const LoadError = error{
+    ExecutionOutOfBounds,
+    Unimplemented,
+};
+
+fn loadMemory(state: *CpuState, comptime number_of_bits: comptime_int, address: u64) LoadError!std.meta.Int(.unsigned, number_of_bits) {
     const MemoryType = std.meta.Int(.unsigned, number_of_bits);
 
     if (address + @sizeOf(MemoryType) >= state.memory.len) {
-        return error.ExecutionOutOfBounds;
+        return LoadError.ExecutionOutOfBounds;
     }
 
     switch (state.address_translation_mode) {
@@ -85,16 +90,26 @@ fn loadMemory(state: *CpuState, comptime number_of_bits: comptime_int, address: 
         },
         else => {
             std.log.emerg("Unimplemented address translation mode", .{});
-            return error.Unimplemented;
+            return LoadError.Unimplemented;
         },
     }
 }
 
-fn storeMemory(state: *CpuState, comptime number_of_bits: comptime_int, address: u64, value: std.meta.Int(.unsigned, number_of_bits)) !void {
+const StoreError = error{
+    ExecutionOutOfBounds,
+    Unimplemented,
+};
+
+fn storeMemory(
+    state: *CpuState,
+    comptime number_of_bits: comptime_int,
+    address: u64,
+    value: std.meta.Int(.unsigned, number_of_bits),
+) StoreError!void {
     const MemoryType = std.meta.Int(.unsigned, number_of_bits);
 
     if (address + @sizeOf(MemoryType) >= state.memory.len) {
-        return error.ExecutionOutOfBounds;
+        return StoreError.ExecutionOutOfBounds;
     }
 
     switch (state.address_translation_mode) {
@@ -103,7 +118,7 @@ fn storeMemory(state: *CpuState, comptime number_of_bits: comptime_int, address:
         },
         else => {
             std.log.emerg("Unimplemented address translation mode", .{});
-            return error.Unimplemented;
+            return StoreError.Unimplemented;
         },
     }
 }
@@ -551,6 +566,64 @@ fn execute(
 
                 state.pc += 4;
             }
+        },
+        .LB => {
+            // I-type
+
+            const rd = instruction.rd.read();
+
+            if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\LB - base: x{}, dest: x{}, imm: 0x{x}
+                        \\  load 1 byte into x{} from memory x{} + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
+
+                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+
+                const memory = if (options.execution_out_of_bounds_is_fatal)
+                    try loadMemory(state, 8, address)
+                else blk: {
+                    break :blk loadMemory(state, 8, address) catch |err| switch (err) {
+                        LoadError.ExecutionOutOfBounds => {
+                            try throw(state, .LoadAccessFault, 0, writer);
+                            return;
+                        },
+                        else => |e| return e,
+                    };
+                };
+
+                state.x[rd] = signExtend8bit(memory);
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\LB - base: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            state.pc += 4;
         },
         .ADDI => {
             // I-type
@@ -2404,6 +2477,14 @@ test "addSignedToUnsignedIgnoreOverflow" {
 
 inline fn signExtend32bit(value: u64) u64 {
     return @bitCast(u64, @bitCast(i64, value << 32) >> 32);
+}
+
+inline fn signExtend16bit(value: u64) u64 {
+    return @bitCast(u64, @bitCast(i64, value << 48) >> 48);
+}
+
+inline fn signExtend8bit(value: u64) u64 {
+    return @bitCast(u64, @bitCast(i64, value << 56) >> 56);
 }
 
 comptime {

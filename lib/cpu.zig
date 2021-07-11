@@ -107,6 +107,7 @@ fn storeMemory(
     value: std.meta.Int(.unsigned, number_of_bits),
 ) StoreError!void {
     const MemoryType = std.meta.Int(.unsigned, number_of_bits);
+    const number_of_bytes = @divExact(@typeInfo(MemoryType).Int.bits, 8);
 
     if (address + @sizeOf(MemoryType) >= state.memory.len) {
         return StoreError.ExecutionOutOfBounds;
@@ -114,7 +115,9 @@ fn storeMemory(
 
     switch (state.address_translation_mode) {
         .Bare => {
-            std.mem.writeIntSlice(MemoryType, state.memory[address..], value, .Little);
+            var result: [number_of_bytes]u8 = undefined;
+            std.mem.writeInt(MemoryType, &result, value, .Little);
+            std.mem.copy(u8, state.memory[address..], &result);
         },
         else => {
             std.log.emerg("Unimplemented address translation mode", .{});
@@ -853,6 +856,44 @@ fn execute(
                         imm,
                     });
                 }
+            }
+
+            state.pc += 4;
+        },
+        .SB => {
+            // S-type
+
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+            const imm = instruction.s_imm.read();
+
+            if (has_writer) {
+                try writer.print(
+                    \\SB - base: x{}, src: x{}, imm: 0x{x}
+                    \\  store 1 byte sign extended from x{} into memory x{} + 0x{x}
+                    \\
+                , .{
+                    rs1,
+                    rs2,
+                    imm,
+                    rs2,
+                    rs1,
+                    imm,
+                });
+            }
+
+            const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+
+            if (options.execution_out_of_bounds_is_fatal) {
+                try storeMemory(state, 8, address, @truncate(u8, state.x[rs2]));
+            } else {
+                storeMemory(state, 8, address, @truncate(u8, state.x[rs2])) catch |err| switch (err) {
+                    StoreError.ExecutionOutOfBounds => {
+                        try throw(state, .@"Store/AMOAccessFault", 0, writer);
+                        return;
+                    },
+                    else => |e| return e,
+                };
             }
 
             state.pc += 4;
@@ -2671,8 +2712,8 @@ fn isExceptionDelegated(state: *const CpuState, exception: ExceptionCode) bool {
         .Breakpoint => bitjuggle.getBit(state.medeleg, 3) != 0,
         .LoadAddressMisaligned => bitjuggle.getBit(state.medeleg, 4) != 0,
         .LoadAccessFault => bitjuggle.getBit(state.medeleg, 5) != 0,
-        .Store_AMOAddressMisaligned => bitjuggle.getBit(state.medeleg, 6) != 0,
-        .Store_AMOAccessFault => bitjuggle.getBit(state.medeleg, 7) != 0,
+        .@"Store/AMOAddressMisaligned" => bitjuggle.getBit(state.medeleg, 6) != 0,
+        .@"Store/AMOAccessFault" => bitjuggle.getBit(state.medeleg, 7) != 0,
         .EnvironmentCallFromUMode => bitjuggle.getBit(state.medeleg, 8) != 0,
         .EnvironmentCallFromSMode => bitjuggle.getBit(state.medeleg, 9) != 0,
         .EnvironmentCallFromMMode => bitjuggle.getBit(state.medeleg, 11) != 0,

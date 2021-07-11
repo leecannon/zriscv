@@ -34,6 +34,8 @@ pub const InstructionType = enum {
     LBU,
     /// load 16 bits - zero extended
     LHU,
+    /// store 8 bits
+    SB,
     /// add immediate
     ADDI,
     /// set less than immediate - signed
@@ -132,6 +134,7 @@ pub const Instruction = extern union {
     b_imm: BImm,
     i_imm: IImm,
     u_imm: UImm,
+    s_imm: SImm,
 
     i_specialization: ISpecialization,
 
@@ -141,6 +144,16 @@ pub const Instruction = extern union {
         const opcode = instruction.opcode.read();
 
         return switch (opcode) {
+            // STORE
+            0b0100011 => switch (instruction.funct3.read()) {
+                0b000 => InstructionType.SB,
+                else => |funct3| {
+                    if (unimplemented_is_fatal) {
+                        std.log.emerg("unimplemented STORE {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                    }
+                    return error.UnimplementedOpcode;
+                },
+            },
             // LOAD
             0b0000011 => switch (instruction.funct3.read()) {
                 0b000 => InstructionType.LB,
@@ -269,6 +282,21 @@ pub const Instruction = extern union {
 
         pub fn fullShift(self: ISpecialization) u6 {
             return @truncate(u6, @as(u64, self.shmt5.read()) << 5 | self.shmt4_0.read());
+        }
+    };
+
+    pub const SImm = extern union {
+        imm4_0: bitjuggle.Bitfield(u32, 7, 5),
+        imm11_5: bitjuggle.Bitfield(u32, 25, 7),
+
+        backing: u32,
+
+        pub fn read(self: SImm) i64 {
+            const shift_amount = 20 + 32;
+            return @bitCast(
+                i64,
+                (@as(u64, self.imm11_5.read()) << 5 | @as(u64, self.imm4_0.read())) << shift_amount,
+            ) >> shift_amount;
         }
     };
 

@@ -1627,6 +1627,50 @@ fn execute(
 
             state.pc += 4;
         },
+        .SLLW => {
+            // R-type
+
+            const rd = instruction.rd.read();
+
+            if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const rs2 = instruction.rs2.read();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLLW - src1: x{}, src2: x{}, dest: x{}
+                        \\  32 bit set x{} to x{} << x{}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                state.x[rd] = signExtend32bit(@truncate(u32, state.x[rs1]) << @truncate(u5, state.x[rs2]));
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const rs2 = instruction.rs2.read();
+
+                    try writer.print(
+                        \\SLLW - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
 
         // Zicsr
 

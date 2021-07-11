@@ -7,9 +7,11 @@ usingnamespace @import("instruction.zig");
 const CpuState = @import("CpuState.zig");
 
 pub const CpuOptions = struct {
+    writer_type: type = void,
+
     unrecognised_instruction_is_fatal: bool = true,
     unrecognised_csr_is_fatal: bool = true,
-    writer_type: type = void,
+    ebreak_is_fatal: bool = false,
 };
 
 pub fn Cpu(comptime options: CpuOptions) type {
@@ -1342,6 +1344,16 @@ fn execute(
                 .Supervisor => try throw(state, .EnvironmentCallFromSMode, 0, writer),
                 .Machine => try throw(state, .EnvironmentCallFromMMode, 0, writer),
             }
+        },
+        .EBREAK => {
+            // I-type
+            if (has_writer) {
+                try writer.print("EBREAK\n", .{});
+            }
+
+            if (options.ebreak_is_fatal) return error.EBreak;
+
+            try throw(state, .Breakpoint, 0, writer);
         },
 
         // 64I

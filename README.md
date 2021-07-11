@@ -10,7 +10,23 @@ This is the first emulator I've made other than CHIP-8, don't expect high qualit
 
 The only thing that should be expected is mistakes.
 
-## Short term goal
+The focus is on correctness not performance, i'm expecting practically every execution path to be littered with potential optimiztion opportunities.
+
+## Goal
  - RV64GC 
  - user, super and machine mode 
  - single hart (this allows us to ignore memory ordering/synchronization)
+
+## Progress
+- [ ] RV64I (64-bit Base Integer)
+- [ ] M (Multiplication and Division)
+- [ ] A (Atomic)
+- [ ] F (Single-Precision Floating-Point)
+- [ ] D (Double-Precision Floating-Point)
+- [ ] Zicsr (Control and Status Register)
+- [ ] Zifencei (Instruction-Fetch Fence)
+- [ ] C (Compressed Instructions)
+- [ ] Counters
+- [ ] Machine-Level ISA
+- [ ] Supervisor-Level ISA
+- [ ] CSRs

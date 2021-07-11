@@ -66,6 +66,8 @@ pub const InstructionType = enum {
     FENCE,
     /// environment call
     ECALL,
+    /// environment break
+    EBREAK,
 
     // 64I
 
@@ -153,6 +155,7 @@ pub const Instruction = extern union {
             0b1110011 => switch (instruction.funct3.read()) {
                 0b000 => switch (instruction.funct7.read()) {
                     0b0000000 => InstructionType.ECALL,
+                    0b0000001 => InstructionType.EBREAK,
                     0b0011000 => InstructionType.MRET,
                     else => |funct7| {
                         std.log.emerg("unimplemented SYSTEM {b:0>7}/000/{b:0>7}", .{ opcode, funct7 });

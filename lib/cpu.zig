@@ -1447,6 +1447,94 @@ fn execute(
 
             state.pc += 4;
         },
+        .SRLIW => {
+            // I-type specialization
+
+            const rd = instruction.rd.read();
+
+            if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const shmt = instruction.i_specialization.smallShift();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SRLIW - src: x{}, dest: x{}, shmt: {}
+                        \\  32 bit set x{} to x{} >> {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        shmt,
+                    });
+                }
+
+                state.x[rd] = signExtend32bit(@truncate(u32, state.x[rs1]) >> shmt);
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SRLIW - src: x{}, dest: x{}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
+        .SRAIW => {
+            // I-type specialization
+
+            const rd = instruction.rd.read();
+
+            if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const shmt = instruction.i_specialization.smallShift();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SRAI - src: x{}, dest: x{}, shmt: {}
+                        \\  set x{} to x{} >> arithmetic {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        shmt,
+                    });
+                }
+
+                state.x[rd] = signExtend32bit(@bitCast(u32, @bitCast(i32, @truncate(u32, state.x[rs1])) >> shmt));
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SRAI - src: x{}, dest: x{}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
 
         // Zicsr
 

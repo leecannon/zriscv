@@ -126,6 +126,14 @@ test "rv64ui_p_slliw" {
     try runTest("rv64ui_p_slliw.bin");
 }
 
+test "rv64ui_p_srliw" {
+    try runTest("rv64ui_p_srliw.bin");
+}
+
+test "rv64ui_p_sraiw" {
+    try runTest("rv64ui_p_sraiw.bin");
+}
+
 test "rv64mi_p_scall" {
     try runTest("rv64mi_p_scall.bin");
 }

@@ -91,6 +91,8 @@ pub const InstructionType = enum {
     LWU,
     /// load 64 bits
     LD,
+    /// store 64 bits
+    SD,
     /// add immediate - 32 bit
     ADDIW,
     /// logical left shift - 32 bit
@@ -153,6 +155,7 @@ pub const Instruction = extern union {
                 0b000 => InstructionType.SB,
                 0b001 => InstructionType.SH,
                 0b010 => InstructionType.SW,
+                0b011 => InstructionType.SD,
                 else => |funct3| {
                     if (unimplemented_is_fatal) {
                         std.log.emerg("unimplemented STORE {b:0>7}/{b:0>3}", .{ opcode, funct3 });

@@ -158,6 +158,10 @@ test "rv64ui_p_ld" {
     try runTest("rv64ui_p_ld.bin");
 }
 
+test "rv64ui_p_sd" {
+    try runTest("rv64ui_p_sd.bin");
+}
+
 test "rv64ui_p_addiw" {
     try runTest("rv64ui_p_addiw.bin");
 }

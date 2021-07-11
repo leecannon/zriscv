@@ -18,7 +18,7 @@ The focus is on correctness not performance, i'm expecting practically every exe
  - single hart (this allows us to ignore memory ordering/synchronization)
 
 ## Progress
-- [ ] RV64I (64-bit Base Integer)
+- [X] RV64I (64-bit Base Integer)
 - [ ] M (Multiplication and Division)
 - [ ] A (Atomic)
 - [ ] F (Single-Precision Floating-Point)

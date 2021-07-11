@@ -799,6 +799,64 @@ fn execute(
 
             state.pc += 4;
         },
+        .LHU => {
+            // I-type
+
+            const rd = instruction.rd.read();
+
+            if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\LHU - base: x{}, dest: x{}, imm: 0x{x}
+                        \\  load 2 bytes into x{} from memory x{} + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
+
+                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+
+                const memory = if (options.execution_out_of_bounds_is_fatal)
+                    try loadMemory(state, 16, address)
+                else blk: {
+                    break :blk loadMemory(state, 16, address) catch |err| switch (err) {
+                        LoadError.ExecutionOutOfBounds => {
+                            try throw(state, .LoadAccessFault, 0, writer);
+                            return;
+                        },
+                        else => |e| return e,
+                    };
+                };
+
+                state.x[rd] = memory;
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\LHU - base: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
         .ADDI => {
             // I-type
 

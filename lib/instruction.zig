@@ -32,6 +32,8 @@ pub const InstructionType = enum {
     LW,
     /// load 8 bits - zero extended
     LBU,
+    /// load 16 bits - zero extended
+    LHU,
     /// add immediate
     ADDI,
     /// set less than immediate - signed
@@ -141,6 +143,7 @@ pub const Instruction = extern union {
                 0b001 => InstructionType.LH,
                 0b010 => InstructionType.LW,
                 0b100 => InstructionType.LBU,
+                0b101 => InstructionType.LHU,
                 else => |funct3| {
                     if (unimplemented_is_fatal) {
                         std.log.emerg("unimplemented LOAD {b:0>7}/{b:0>3}", .{ opcode, funct3 });

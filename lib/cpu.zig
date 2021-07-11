@@ -56,8 +56,10 @@ fn execute(
 ) !void {
     const has_writer = comptime isWriter(@TypeOf(writer));
 
-    const instruction_type = if (comptime options.unrecognised_instruction_is_fatal) try instruction.decode() else blk: {
-        break :blk instruction.decode() catch {
+    const instruction_type = if (comptime options.unrecognised_instruction_is_fatal)
+        try instruction.decode(options.unrecognised_instruction_is_fatal)
+    else blk: {
+        break :blk instruction.decode(options.unrecognised_instruction_is_fatal) catch {
             try throw(state, .IllegalInstruction, instruction.backing, writer);
             return;
         };

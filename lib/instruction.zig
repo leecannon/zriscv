@@ -73,6 +73,8 @@ pub const InstructionType = enum {
 
     /// add immediate - 32 bit
     ADDIW,
+    /// logical left shift - 32 bit
+    SLLIW,
 
     // Zicsr
 
@@ -174,6 +176,7 @@ pub const Instruction = extern union {
             // OP-IMM-32
             0b0011011 => switch (instruction.funct3.read()) {
                 0b000 => InstructionType.ADDIW,
+                0b001 => InstructionType.SLLIW,
                 else => |funct3| {
                     std.log.emerg("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;

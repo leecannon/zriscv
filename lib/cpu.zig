@@ -1382,16 +1382,8 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = @bitCast(
-                    u64,
-                    @bitCast(
-                        i64,
-                        (addSignedToUnsignedIgnoreOverflow(
-                            state.x[rs1],
-                            imm,
-                        ) & 0xFFFFFFFF) << 32,
-                    ) >> 32,
-                );
+                const addition_result_32bit = addSignedToUnsignedIgnoreOverflow(state.x[rs1], imm) & 0xFFFFFFFF;
+                state.x[rd] = signExtend32bit(addition_result_32bit);
             } else {
                 if (has_writer) {
                     const rs1 = instruction.rs1.read();
@@ -1405,6 +1397,50 @@ fn execute(
                         rs1,
                         rd,
                         imm,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
+        .SLLIW => {
+            // I-type specialization
+
+            const rd = instruction.rd.read();
+
+            if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const shmt = instruction.i_specialization.smallShift();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLLIW - src: x{}, dest: x{}, shmt: {}
+                        \\  set x{} to x{} << {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        shmt,
+                    });
+                }
+
+                state.x[rd] = signExtend32bit(@truncate(u32, state.x[rs1]) << shmt);
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SLLIW - src: x{}, dest: x{}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
                     });
                 }
             }
@@ -1990,6 +2026,10 @@ test "addSignedToUnsignedIgnoreOverflow" {
         @as(u64, std.math.maxInt(u64)),
         addSignedToUnsignedIgnoreOverflow(5, -6),
     );
+}
+
+inline fn signExtend32bit(value: u64) u64 {
+    return @bitCast(u64, @bitCast(i64, value << 32) >> 32);
 }
 
 comptime {

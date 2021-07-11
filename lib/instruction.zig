@@ -79,6 +79,10 @@ pub const InstructionType = enum {
     SRLIW,
     /// arithmetic right shift - 32 bit
     SRAIW,
+    /// add - 32 bit
+    ADDW,
+    /// sub - 32 bit
+    SUBW,
 
     // Zicsr
 
@@ -184,6 +188,14 @@ pub const Instruction = extern union {
                 0b101 => if (instruction.funct7.read() == 0) InstructionType.SRLIW else InstructionType.SRAIW,
                 else => |funct3| {
                     std.log.emerg("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                    return error.UnimplementedOpcode;
+                },
+            },
+            // OP-32
+            0b0111011 => switch (instruction.funct3.read()) {
+                0b000 => if (instruction.funct7.read() == 0) InstructionType.ADDW else InstructionType.SUBW,
+                else => |funct3| {
+                    std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     return error.UnimplementedOpcode;
                 },
             },

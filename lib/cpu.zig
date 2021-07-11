@@ -579,7 +579,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\LB - base: x{}, dest: x{}, imm: 0x{x}
-                        \\  load 1 byte into x{} from memory x{} + 0x{x}
+                        \\  load 1 byte sign extended into x{} from memory x{} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -637,7 +637,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\LH - base: x{}, dest: x{}, imm: 0x{x}
-                        \\  load 2 bytes into x{} from memory x{} + 0x{x}
+                        \\  load 2 bytes sign extended into x{} from memory x{} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -695,7 +695,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\LW - base: x{}, dest: x{}, imm: 0x{x}
-                        \\  load 4 bytes into x{} from memory x{} + 0x{x}
+                        \\  load 4 bytes sign extended into x{} from memory x{} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -729,6 +729,64 @@ fn execute(
 
                     try writer.print(
                         \\LW - base: x{}, dest: x{}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
+        .LBU => {
+            // I-type
+
+            const rd = instruction.rd.read();
+
+            if (rd != 0) {
+                const rs1 = instruction.rs1.read();
+                const imm = instruction.i_imm.read();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\LBU - base: x{}, dest: x{}, imm: 0x{x}
+                        \\  load 1 byte into x{} from memory x{} + 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        imm,
+                    });
+                }
+
+                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+
+                const memory = if (options.execution_out_of_bounds_is_fatal)
+                    try loadMemory(state, 8, address)
+                else blk: {
+                    break :blk loadMemory(state, 8, address) catch |err| switch (err) {
+                        LoadError.ExecutionOutOfBounds => {
+                            try throw(state, .LoadAccessFault, 0, writer);
+                            return;
+                        },
+                        else => |e| return e,
+                    };
+                };
+
+                state.x[rd] = memory;
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1.read();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\LBU - base: x{}, dest: x{}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{

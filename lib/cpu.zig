@@ -936,6 +936,44 @@ fn execute(
 
             state.pc += 4;
         },
+        .SW => {
+            // S-type
+
+            const rs1 = instruction.rs1.read();
+            const rs2 = instruction.rs2.read();
+            const imm = instruction.s_imm.read();
+
+            if (has_writer) {
+                try writer.print(
+                    \\SW - base: x{}, src: x{}, imm: 0x{x}
+                    \\  store 4 bytes from x{} into memory x{} + 0x{x}
+                    \\
+                , .{
+                    rs1,
+                    rs2,
+                    imm,
+                    rs2,
+                    rs1,
+                    imm,
+                });
+            }
+
+            const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+
+            if (options.execution_out_of_bounds_is_fatal) {
+                try storeMemory(state, 32, address, @truncate(u32, state.x[rs2]));
+            } else {
+                storeMemory(state, 32, address, @truncate(u32, state.x[rs2])) catch |err| switch (err) {
+                    StoreError.ExecutionOutOfBounds => {
+                        try throw(state, .@"Store/AMOAccessFault", 0, writer);
+                        return;
+                    },
+                    else => |e| return e,
+                };
+            }
+
+            state.pc += 4;
+        },
         .ADDI => {
             // I-type
 

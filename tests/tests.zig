@@ -70,6 +70,10 @@ test "rv64ui_p_sh" {
     try runTest("rv64ui_p_sh.bin");
 }
 
+test "rv64ui_p_sw" {
+    try runTest("rv64ui_p_sw.bin");
+}
+
 test "rv64ui_p_addi" {
     try runTest("rv64ui_p_addi.bin");
 }

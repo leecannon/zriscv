@@ -38,6 +38,8 @@ pub const InstructionType = enum {
     SB,
     /// store 16 bits
     SH,
+    /// store 32 bits
+    SW,
     /// add immediate
     ADDI,
     /// set less than immediate - signed
@@ -150,6 +152,7 @@ pub const Instruction = extern union {
             0b0100011 => switch (instruction.funct3.read()) {
                 0b000 => InstructionType.SB,
                 0b001 => InstructionType.SH,
+                0b010 => InstructionType.SW,
                 else => |funct3| {
                     if (unimplemented_is_fatal) {
                         std.log.emerg("unimplemented STORE {b:0>7}/{b:0>3}", .{ opcode, funct3 });

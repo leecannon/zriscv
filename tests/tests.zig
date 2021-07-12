@@ -214,6 +214,10 @@ test "rv64mi_p_access" {
     try runTest("rv64mi_p_access.bin");
 }
 
+test "rv64um_p_mul" {
+    try runTest("rv64um_p_mul.bin");
+}
+
 const TestContext = struct {
     file_name: []const u8,
     the_error: ?anyerror = null,

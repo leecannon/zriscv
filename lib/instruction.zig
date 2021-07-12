@@ -115,7 +115,7 @@ pub const InstructionType = enum {
 
     // Zicsr
 
-    // atomic read/write csr
+    /// atomic read/write csr
     CSRRW,
     /// atomic read and set bits in csr
     CSRRS,
@@ -124,7 +124,12 @@ pub const InstructionType = enum {
     /// atomic read/write csr - immediate
     CSRRWI,
 
-    // Privilege
+    // 32M
+
+    /// multiply
+    MUL,
+
+    /// Privilege
     MRET,
 };
 
@@ -232,6 +237,7 @@ pub const Instruction = extern union {
                 0b000 => switch (funct7) {
                     0b0000000 => InstructionType.ADD,
                     0b0100000 => InstructionType.SUB,
+                    0b0000001 => InstructionType.MUL,
                     else => {
                         if (unimplemented_is_fatal) {
                             std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });

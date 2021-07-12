@@ -202,6 +202,18 @@ test "rv64mi_p_scall" {
     try runTest("rv64mi_p_scall.bin");
 }
 
+test "rv64ui_p_fence_i" {
+    try runTest("rv64ui_p_fence_i.bin");
+}
+
+test "rv64ui_p_simple" {
+    try runTest("rv64ui_p_simple.bin");
+}
+
+test "rv64mi_p_access" {
+    try runTest("rv64mi_p_access.bin");
+}
+
 const TestContext = struct {
     file_name: []const u8,
     the_error: ?anyerror = null,

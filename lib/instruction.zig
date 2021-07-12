@@ -1,5 +1,6 @@
 const std = @import("std");
 const bitjuggle = @import("bitjuggle");
+usingnamespace @import("types.zig");
 
 pub const InstructionType = enum {
     // 32I
@@ -131,9 +132,9 @@ pub const Instruction = extern union {
     opcode: bitjuggle.Bitfield(u32, 0, 7),
     funct3: bitjuggle.Bitfield(u32, 12, 3),
     funct7: bitjuggle.Bitfield(u32, 25, 7),
-    rd: bitjuggle.Bitfield(u32, 7, 5),
-    rs1: bitjuggle.Bitfield(u32, 15, 5),
-    rs2: bitjuggle.Bitfield(u32, 20, 5),
+    _rd: bitjuggle.Bitfield(u32, 7, 5),
+    _rs1: bitjuggle.Bitfield(u32, 15, 5),
+    _rs2: bitjuggle.Bitfield(u32, 20, 5),
     csr: bitjuggle.Bitfield(u32, 20, 12),
 
     j_imm: JImm,
@@ -276,6 +277,18 @@ pub const Instruction = extern union {
                 return error.UnimplementedOpcode;
             },
         };
+    }
+
+    pub fn rd(self: Instruction) IntegerRegister {
+        return IntegerRegister.getIntegerRegister(self._rd.read());
+    }
+
+    pub fn rs1(self: Instruction) IntegerRegister {
+        return IntegerRegister.getIntegerRegister(self._rs1.read());
+    }
+
+    pub fn rs2(self: Instruction) IntegerRegister {
+        return IntegerRegister.getIntegerRegister(self._rs2.read());
     }
 
     pub const ISpecialization = extern union {

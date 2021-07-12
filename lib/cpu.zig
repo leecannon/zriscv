@@ -149,15 +149,15 @@ fn execute(
         .LUI => {
             // U-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
+            if (rd != .zero) {
                 const imm = instruction.u_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\LUI - dest: x{}, value: 0x{x}
-                        \\  setting x{} to 0x{x}
+                        \\LUI - dest: {}, value: 0x{x}
+                        \\  setting {} to 0x{x}
                         \\
                     , .{
                         rd,
@@ -167,13 +167,13 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = @bitCast(u64, imm);
+                state.x[@enumToInt(rd)] = @bitCast(u64, imm);
             } else {
                 if (has_writer) {
                     const imm = instruction.u_imm.read();
 
                     try writer.print(
-                        \\LUI - dest: x{}, value: 0x{x}
+                        \\LUI - dest: {}, value: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -188,15 +188,15 @@ fn execute(
         .AUIPC => {
             // U-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
+            if (rd != .zero) {
                 const imm = instruction.u_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\AUIPC - dest: x{}, offset: 0x{x}
-                        \\  setting x{} to current pc (0x{x}) + 0x{x}
+                        \\AUIPC - dest: {}, offset: 0x{x}
+                        \\  setting {} to current pc (0x{x}) + 0x{x}
                         \\
                     , .{
                         rd,
@@ -207,13 +207,13 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = addSignedToUnsignedWrap(state.pc, imm);
+                state.x[@enumToInt(rd)] = addSignedToUnsignedWrap(state.pc, imm);
             } else {
                 if (has_writer) {
                     const imm = instruction.u_imm.read();
 
                     try writer.print(
-                        \\AUIPC - dest: x{}, offset: 0x{x}
+                        \\AUIPC - dest: {}, offset: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -228,14 +228,14 @@ fn execute(
         .JAL => {
             // J-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
             const imm = instruction.j_imm.read();
 
-            if (rd != 0) {
+            if (rd != .zero) {
                 if (has_writer) {
                     try writer.print(
-                        \\JAL - dest: x{}, offset: 0x{x}
-                        \\  setting x{} to current pc (0x{x}) + 0x4
+                        \\JAL - dest: {}, offset: 0x{x}
+                        \\  setting {} to current pc (0x{x}) + 0x4
                         \\  setting pc to current pc (0x{x}) + 0x{x}
                         \\
                     , .{
@@ -248,11 +248,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.pc + 4;
+                state.x[@enumToInt(rd)] = state.pc + 4;
             } else {
                 if (has_writer) {
                     try writer.print(
-                        \\JAL - dest: x{}, offset: 0x{x}
+                        \\JAL - dest: {}, offset: 0x{x}
                         \\  setting pc to current pc (0x{x}) + 0x{x}
                         \\
                     , .{
@@ -270,17 +270,17 @@ fn execute(
             // I-type
 
             const imm = instruction.i_imm.read();
-            const rs1 = instruction.rs1.read();
-            const rd = instruction.rd.read();
+            const rs1 = instruction.rs1();
+            const rd = instruction.rd();
 
-            const rs1_inital = state.x[rs1];
+            const rs1_inital = state.x[@enumToInt(rs1)];
 
-            if (rd != 0) {
+            if (rd != .zero) {
                 if (has_writer) {
                     try writer.print(
-                        \\JALR - dest: x{}, base: x{}, offset: 0x{x}
-                        \\  setting x{} to current pc (0x{x}) + 0x4
-                        \\  setting pc to x{} + 0x{x}
+                        \\JALR - dest: {}, base: {}, offset: 0x{x}
+                        \\  setting {} to current pc (0x{x}) + 0x4
+                        \\  setting pc to {} + 0x{x}
                         \\
                     , .{
                         rd,
@@ -293,12 +293,12 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.pc + 4;
+                state.x[@enumToInt(rd)] = state.pc + 4;
             } else {
                 if (has_writer) {
                     try writer.print(
-                        \\JALR - dest: x{}, base: x{}, offset: 0x{x}
-                        \\  setting pc to x{} + 0x{x}
+                        \\JALR - dest: {}, base: {}, offset: 0x{x}
+                        \\  setting pc to {} + 0x{x}
                         \\
                     , .{
                         rd,
@@ -315,15 +315,15 @@ fn execute(
         .BEQ => {
             // B-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
 
-            if (state.x[rs1] == state.x[rs2]) {
+            if (state.x[@enumToInt(rs1)] == state.x[@enumToInt(rs2)]) {
                 const imm = instruction.b_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BEQ - src1: {}, src2: {}, offset: 0x{x}
                         \\  true
                         \\  setting pc to current pc (0x{x}) + 0x{x}
                         \\
@@ -342,7 +342,7 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BEQ - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BEQ - src1: {}, src2: {}, offset: 0x{x}
                         \\  false
                         \\
                     , .{
@@ -358,15 +358,15 @@ fn execute(
         .BNE => {
             // B-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
 
-            if (state.x[rs1] != state.x[rs2]) {
+            if (state.x[@enumToInt(rs1)] != state.x[@enumToInt(rs2)]) {
                 const imm = instruction.b_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BNE - src1: {}, src2: {}, offset: 0x{x}
                         \\  true
                         \\  setting pc to current pc (0x{x}) + 0x{x}
                         \\
@@ -385,7 +385,7 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BNE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BNE - src1: {}, src2: {}, offset: 0x{x}
                         \\  false
                         \\
                     , .{
@@ -401,15 +401,15 @@ fn execute(
         .BLT => {
             // B-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
 
-            if (@bitCast(i64, state.x[rs1]) < @bitCast(i64, state.x[rs2])) {
+            if (@bitCast(i64, state.x[@enumToInt(rs1)]) < @bitCast(i64, state.x[@enumToInt(rs2)])) {
                 const imm = instruction.b_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\BLT - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BLT - src1: {}, src2: {}, offset: 0x{x}
                         \\  true
                         \\  setting pc to current pc (0x{x}) + 0x{x}
                         \\
@@ -428,7 +428,7 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BLT - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BLT - src1: {}, src2: {}, offset: 0x{x}
                         \\  false
                         \\
                     , .{
@@ -444,15 +444,15 @@ fn execute(
         .BGE => {
             // B-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
 
-            if (@bitCast(i64, state.x[rs1]) >= @bitCast(i64, state.x[rs2])) {
+            if (@bitCast(i64, state.x[@enumToInt(rs1)]) >= @bitCast(i64, state.x[@enumToInt(rs2)])) {
                 const imm = instruction.b_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BGE - src1: {}, src2: {}, offset: 0x{x}
                         \\  true
                         \\  setting pc to current pc (0x{x}) + 0x{x}
                         \\
@@ -471,7 +471,7 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BGE - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BGE - src1: {}, src2: {}, offset: 0x{x}
                         \\  false
                         \\
                     , .{
@@ -487,15 +487,15 @@ fn execute(
         .BLTU => {
             // B-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
 
-            if (state.x[rs1] < state.x[rs2]) {
+            if (state.x[@enumToInt(rs1)] < state.x[@enumToInt(rs2)]) {
                 const imm = instruction.b_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\BLTU - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BLTU - src1: {}, src2: {}, offset: 0x{x}
                         \\  true
                         \\  setting pc to current pc (0x{x}) + 0x{x}
                         \\
@@ -514,7 +514,7 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BLTU - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BLTU - src1: {}, src2: {}, offset: 0x{x}
                         \\  false
                         \\
                     , .{
@@ -530,15 +530,15 @@ fn execute(
         .BGEU => {
             // B-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
 
-            if (state.x[rs1] >= state.x[rs2]) {
+            if (state.x[@enumToInt(rs1)] >= state.x[@enumToInt(rs2)]) {
                 const imm = instruction.b_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\BGEU - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BGEU - src1: {}, src2: {}, offset: 0x{x}
                         \\  true
                         \\  setting pc to current pc (0x{x}) + 0x{x}
                         \\
@@ -557,7 +557,7 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BGEU - src1: x{}, src2: x{}, offset: 0x{x}
+                        \\BGEU - src1: {}, src2: {}, offset: 0x{x}
                         \\  false
                         \\
                     , .{
@@ -573,16 +573,16 @@ fn execute(
         .LB => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\LB - base: x{}, dest: x{}, imm: 0x{x}
-                        \\  load 1 byte sign extended into x{} from memory x{} + 0x{x}
+                        \\LB - base: {}, dest: {}, imm: 0x{x}
+                        \\  load 1 byte sign extended into {} from memory {} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -594,7 +594,7 @@ fn execute(
                     });
                 }
 
-                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+                const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
                 const memory = if (options.execution_out_of_bounds_is_fatal)
                     try loadMemory(state, 8, address)
@@ -608,14 +608,14 @@ fn execute(
                     };
                 };
 
-                state.x[rd] = signExtend8bit(memory);
+                state.x[@enumToInt(rd)] = signExtend8bit(memory);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LB - base: x{}, dest: x{}, imm: 0x{x}
+                        \\LB - base: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -631,16 +631,16 @@ fn execute(
         .LH => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\LH - base: x{}, dest: x{}, imm: 0x{x}
-                        \\  load 2 bytes sign extended into x{} from memory x{} + 0x{x}
+                        \\LH - base: {}, dest: {}, imm: 0x{x}
+                        \\  load 2 bytes sign extended into {} from memory {} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -652,7 +652,7 @@ fn execute(
                     });
                 }
 
-                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+                const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
                 const memory = if (options.execution_out_of_bounds_is_fatal)
                     try loadMemory(state, 16, address)
@@ -666,14 +666,14 @@ fn execute(
                     };
                 };
 
-                state.x[rd] = signExtend16bit(memory);
+                state.x[@enumToInt(rd)] = signExtend16bit(memory);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LH - base: x{}, dest: x{}, imm: 0x{x}
+                        \\LH - base: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -689,16 +689,16 @@ fn execute(
         .LW => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\LW - base: x{}, dest: x{}, imm: 0x{x}
-                        \\  load 4 bytes sign extended into x{} from memory x{} + 0x{x}
+                        \\LW - base: {}, dest: {}, imm: 0x{x}
+                        \\  load 4 bytes sign extended into {} from memory {} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -710,7 +710,7 @@ fn execute(
                     });
                 }
 
-                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+                const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
                 const memory = if (options.execution_out_of_bounds_is_fatal)
                     try loadMemory(state, 32, address)
@@ -724,14 +724,14 @@ fn execute(
                     };
                 };
 
-                state.x[rd] = signExtend32bit(memory);
+                state.x[@enumToInt(rd)] = signExtend32bit(memory);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LW - base: x{}, dest: x{}, imm: 0x{x}
+                        \\LW - base: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -747,16 +747,16 @@ fn execute(
         .LBU => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\LBU - base: x{}, dest: x{}, imm: 0x{x}
-                        \\  load 1 byte into x{} from memory x{} + 0x{x}
+                        \\LBU - base: {}, dest: {}, imm: 0x{x}
+                        \\  load 1 byte into {} from memory {} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -768,7 +768,7 @@ fn execute(
                     });
                 }
 
-                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+                const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
                 const memory = if (options.execution_out_of_bounds_is_fatal)
                     try loadMemory(state, 8, address)
@@ -782,14 +782,14 @@ fn execute(
                     };
                 };
 
-                state.x[rd] = memory;
+                state.x[@enumToInt(rd)] = memory;
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LBU - base: x{}, dest: x{}, imm: 0x{x}
+                        \\LBU - base: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -805,16 +805,16 @@ fn execute(
         .LHU => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\LHU - base: x{}, dest: x{}, imm: 0x{x}
-                        \\  load 2 bytes into x{} from memory x{} + 0x{x}
+                        \\LHU - base: {}, dest: {}, imm: 0x{x}
+                        \\  load 2 bytes into {} from memory {} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -826,7 +826,7 @@ fn execute(
                     });
                 }
 
-                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+                const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
                 const memory = if (options.execution_out_of_bounds_is_fatal)
                     try loadMemory(state, 16, address)
@@ -840,14 +840,14 @@ fn execute(
                     };
                 };
 
-                state.x[rd] = memory;
+                state.x[@enumToInt(rd)] = memory;
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LHU - base: x{}, dest: x{}, imm: 0x{x}
+                        \\LHU - base: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -863,14 +863,14 @@ fn execute(
         .SB => {
             // S-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
             const imm = instruction.s_imm.read();
 
             if (has_writer) {
                 try writer.print(
-                    \\SB - base: x{}, src: x{}, imm: 0x{x}
-                    \\  store 1 byte from x{} into memory x{} + 0x{x}
+                    \\SB - base: {}, src: {}, imm: 0x{x}
+                    \\  store 1 byte from {} into memory {} + 0x{x}
                     \\
                 , .{
                     rs1,
@@ -882,12 +882,12 @@ fn execute(
                 });
             }
 
-            const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+            const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
             if (options.execution_out_of_bounds_is_fatal) {
-                try storeMemory(state, 8, address, @truncate(u8, state.x[rs2]));
+                try storeMemory(state, 8, address, @truncate(u8, state.x[@enumToInt(rs2)]));
             } else {
-                storeMemory(state, 8, address, @truncate(u8, state.x[rs2])) catch |err| switch (err) {
+                storeMemory(state, 8, address, @truncate(u8, state.x[@enumToInt(rs2)])) catch |err| switch (err) {
                     StoreError.ExecutionOutOfBounds => {
                         try throw(state, .@"Store/AMOAccessFault", 0, writer);
                         return;
@@ -901,14 +901,14 @@ fn execute(
         .SH => {
             // S-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
             const imm = instruction.s_imm.read();
 
             if (has_writer) {
                 try writer.print(
-                    \\SH - base: x{}, src: x{}, imm: 0x{x}
-                    \\  store 2 bytes from x{} into memory x{} + 0x{x}
+                    \\SH - base: {}, src: {}, imm: 0x{x}
+                    \\  store 2 bytes from {} into memory {} + 0x{x}
                     \\
                 , .{
                     rs1,
@@ -920,12 +920,12 @@ fn execute(
                 });
             }
 
-            const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+            const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
             if (options.execution_out_of_bounds_is_fatal) {
-                try storeMemory(state, 16, address, @truncate(u16, state.x[rs2]));
+                try storeMemory(state, 16, address, @truncate(u16, state.x[@enumToInt(rs2)]));
             } else {
-                storeMemory(state, 16, address, @truncate(u16, state.x[rs2])) catch |err| switch (err) {
+                storeMemory(state, 16, address, @truncate(u16, state.x[@enumToInt(rs2)])) catch |err| switch (err) {
                     StoreError.ExecutionOutOfBounds => {
                         try throw(state, .@"Store/AMOAccessFault", 0, writer);
                         return;
@@ -939,14 +939,14 @@ fn execute(
         .SW => {
             // S-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
             const imm = instruction.s_imm.read();
 
             if (has_writer) {
                 try writer.print(
-                    \\SW - base: x{}, src: x{}, imm: 0x{x}
-                    \\  store 4 bytes from x{} into memory x{} + 0x{x}
+                    \\SW - base: {}, src: {}, imm: 0x{x}
+                    \\  store 4 bytes from {} into memory {} + 0x{x}
                     \\
                 , .{
                     rs1,
@@ -958,12 +958,12 @@ fn execute(
                 });
             }
 
-            const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+            const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
             if (options.execution_out_of_bounds_is_fatal) {
-                try storeMemory(state, 32, address, @truncate(u32, state.x[rs2]));
+                try storeMemory(state, 32, address, @truncate(u32, state.x[@enumToInt(rs2)]));
             } else {
-                storeMemory(state, 32, address, @truncate(u32, state.x[rs2])) catch |err| switch (err) {
+                storeMemory(state, 32, address, @truncate(u32, state.x[@enumToInt(rs2)])) catch |err| switch (err) {
                     StoreError.ExecutionOutOfBounds => {
                         try throw(state, .@"Store/AMOAccessFault", 0, writer);
                         return;
@@ -977,14 +977,14 @@ fn execute(
         .SD => {
             // S-type
 
-            const rs1 = instruction.rs1.read();
-            const rs2 = instruction.rs2.read();
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
             const imm = instruction.s_imm.read();
 
             if (has_writer) {
                 try writer.print(
-                    \\SD - base: x{}, src: x{}, imm: 0x{x}
-                    \\  store 8 bytes from x{} into memory x{} + 0x{x}
+                    \\SD - base: {}, src: {}, imm: 0x{x}
+                    \\  store 8 bytes from {} into memory {} + 0x{x}
                     \\
                 , .{
                     rs1,
@@ -996,12 +996,12 @@ fn execute(
                 });
             }
 
-            const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+            const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
             if (options.execution_out_of_bounds_is_fatal) {
-                try storeMemory(state, 64, address, state.x[rs2]);
+                try storeMemory(state, 64, address, state.x[@enumToInt(rs2)]);
             } else {
-                storeMemory(state, 64, address, state.x[rs2]) catch |err| switch (err) {
+                storeMemory(state, 64, address, state.x[@enumToInt(rs2)]) catch |err| switch (err) {
                     StoreError.ExecutionOutOfBounds => {
                         try throw(state, .@"Store/AMOAccessFault", 0, writer);
                         return;
@@ -1015,16 +1015,16 @@ fn execute(
         .ADDI => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
-                        \\  set x{} to x{} + 0x{x}
+                        \\ADDI - src: {}, dest: {}, imm: 0x{x}
+                        \\  set {} to {} + 0x{x}
                         \\
                     , .{
                         rs1,
@@ -1036,14 +1036,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = addSignedToUnsignedIgnoreOverflow(state.x[rs1], imm);
+                state.x[@enumToInt(rd)] = addSignedToUnsignedIgnoreOverflow(state.x[@enumToInt(rs1)], imm);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\ADDI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\ADDI - src: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -1059,16 +1059,16 @@ fn execute(
         .SLTI => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\SLTI - src: x{}, dest: x{}, imm: 0x{x}
-                        \\  set x{} to x{} < 0x{x} ? 1 : 0
+                        \\SLTI - src: {}, dest: {}, imm: 0x{x}
+                        \\  set {} to {} < 0x{x} ? 1 : 0
                         \\
                     , .{
                         rs1,
@@ -1080,14 +1080,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = @boolToInt(@bitCast(i64, state.x[rs1]) < imm);
+                state.x[@enumToInt(rd)] = @boolToInt(@bitCast(i64, state.x[@enumToInt(rs1)]) < imm);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\SLTI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\SLTI - src: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -1103,16 +1103,16 @@ fn execute(
         .SLTIU => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\SLTIU - src: x{}, dest: x{}, imm: 0x{x}
-                        \\  set x{} to x{} < 0x{x} ? 1 : 0
+                        \\SLTIU - src: {}, dest: {}, imm: 0x{x}
+                        \\  set {} to {} < 0x{x} ? 1 : 0
                         \\
                     , .{
                         rs1,
@@ -1124,14 +1124,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = @boolToInt(state.x[rs1] < @bitCast(u64, imm));
+                state.x[@enumToInt(rd)] = @boolToInt(state.x[@enumToInt(rs1)] < @bitCast(u64, imm));
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\SLTIU - src: x{}, dest: x{}, imm: 0x{x}
+                        \\SLTIU - src: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -1147,16 +1147,16 @@ fn execute(
         .XORI => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\XORI - src: x{}, dest: x{}, imm: 0x{x}
-                        \\  set x{} to x{} ^ 0x{x}
+                        \\XORI - src: {}, dest: {}, imm: 0x{x}
+                        \\  set {} to {} ^ 0x{x}
                         \\
                     , .{
                         rs1,
@@ -1168,14 +1168,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] ^ @bitCast(u64, imm);
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] ^ @bitCast(u64, imm);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\XORI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\XORI - src: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -1191,16 +1191,16 @@ fn execute(
         .ORI => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\ORI - src: x{}, dest: x{}, imm: 0x{x}
-                        \\  set x{} to x{} | 0x{x}
+                        \\ORI - src: {}, dest: {}, imm: 0x{x}
+                        \\  set {} to {} | 0x{x}
                         \\
                     , .{
                         rs1,
@@ -1212,14 +1212,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] | @bitCast(u64, imm);
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] | @bitCast(u64, imm);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\ORI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\ORI - src: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -1235,16 +1235,16 @@ fn execute(
         .ANDI => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
                     try writer.print(
-                        \\ANDI - src: x{}, dest: x{}, imm: 0x{x}
-                        \\  set x{} to x{} & 0x{x}
+                        \\ANDI - src: {}, dest: {}, imm: 0x{x}
+                        \\  set {} to {} & 0x{x}
                         \\
                     , .{
                         rs1,
@@ -1256,14 +1256,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] & @bitCast(u64, imm);
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] & @bitCast(u64, imm);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\ANDI - src: x{}, dest: x{}, imm: 0x{x}
+                        \\ANDI - src: {}, dest: {}, imm: 0x{x}
                         \\  nop
                         \\
                     , .{
@@ -1279,16 +1279,16 @@ fn execute(
         .SLLI => {
             // I-type specialization
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const shmt = instruction.i_specialization.fullShift();
 
                 if (has_writer) {
                     try writer.print(
-                        \\SLLI - src: x{}, dest: x{}, shmt: {}
-                        \\  set x{} to x{} << {}
+                        \\SLLI - src: {}, dest: {}, shmt: {}
+                        \\  set {} to {} << {}
                         \\
                     , .{
                         rs1,
@@ -1300,14 +1300,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] << shmt;
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] << shmt;
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const shmt = instruction.i_specialization.fullShift();
 
                     try writer.print(
-                        \\SLLI - src: x{}, dest: x{}, shmt: {}
+                        \\SLLI - src: {}, dest: {}, shmt: {}
                         \\  nop
                         \\
                     , .{
@@ -1323,16 +1323,16 @@ fn execute(
         .SRLI => {
             // I-type specialization
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const shmt = instruction.i_specialization.fullShift();
 
                 if (has_writer) {
                     try writer.print(
-                        \\SRLI - src: x{}, dest: x{}, shmt: {}
-                        \\  set x{} to x{} >> {}
+                        \\SRLI - src: {}, dest: {}, shmt: {}
+                        \\  set {} to {} >> {}
                         \\
                     , .{
                         rs1,
@@ -1344,14 +1344,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] >> shmt;
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] >> shmt;
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const shmt = instruction.i_specialization.fullShift();
 
                     try writer.print(
-                        \\SRLI - src: x{}, dest: x{}, shmt: {}
+                        \\SRLI - src: {}, dest: {}, shmt: {}
                         \\  nop
                         \\
                     , .{
@@ -1367,16 +1367,16 @@ fn execute(
         .SRAI => {
             // I-type specialization
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const shmt = instruction.i_specialization.fullShift();
 
                 if (has_writer) {
                     try writer.print(
-                        \\SRAI - src: x{}, dest: x{}, shmt: {}
-                        \\  set x{} to x{} >> arithmetic {}
+                        \\SRAI - src: {}, dest: {}, shmt: {}
+                        \\  set {} to {} >> arithmetic {}
                         \\
                     , .{
                         rs1,
@@ -1388,14 +1388,14 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = @bitCast(u64, @bitCast(i64, state.x[rs1]) >> shmt);
+                state.x[@enumToInt(rd)] = @bitCast(u64, @bitCast(i64, state.x[@enumToInt(rs1)]) >> shmt);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const shmt = instruction.i_specialization.fullShift();
 
                     try writer.print(
-                        \\SRAI - src: x{}, dest: x{}, shmt: {}
+                        \\SRAI - src: {}, dest: {}, shmt: {}
                         \\  nop
                         \\
                     , .{
@@ -1411,16 +1411,16 @@ fn execute(
         .ADD => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
-                        \\ADD - src1: x{}, src2: x{}, dest: x{}
-                        \\  set x{} to x{} + x{}
+                        \\ADD - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {} + {}
                         \\
                     , .{
                         rs1,
@@ -1432,14 +1432,14 @@ fn execute(
                     });
                 }
 
-                _ = @addWithOverflow(u64, state.x[rs1], state.x[rs2], &state.x[rd]);
+                _ = @addWithOverflow(u64, state.x[@enumToInt(rs1)], state.x[@enumToInt(rs2)], &state.x[@enumToInt(rd)]);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
-                        \\ADD - src1: x{}, src2: x{}, dest: x{}
+                        \\ADD - src1: {}, src2: {}, dest: {}
                         \\  nop
                         \\
                     , .{
@@ -1455,16 +1455,16 @@ fn execute(
         .SUB => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
-                        \\ADD - src1: x{}, src2: x{}, dest: x{}
-                        \\  set x{} to x{} - x{}
+                        \\ADD - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {} - {}
                         \\
                     , .{
                         rs1,
@@ -1476,11 +1476,11 @@ fn execute(
                     });
                 }
 
-                _ = @subWithOverflow(u64, state.x[rs1], state.x[rs2], &state.x[rd]);
+                _ = @subWithOverflow(u64, state.x[@enumToInt(rs1)], state.x[@enumToInt(rs2)], &state.x[@enumToInt(rd)]);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\ADD - src1: x{}, src2: x{}, dest: x{}
@@ -1499,11 +1499,11 @@ fn execute(
         .SLL => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -1520,11 +1520,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] << @truncate(u6, state.x[rs2]);
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] << @truncate(u6, state.x[@enumToInt(rs2)]);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SLL - src1: x{}, src2: x{}, dest: x{}
@@ -1543,11 +1543,11 @@ fn execute(
         .SLT => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -1564,11 +1564,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = @boolToInt(@bitCast(i64, state.x[rs1]) < @bitCast(i64, state.x[rs2]));
+                state.x[@enumToInt(rd)] = @boolToInt(@bitCast(i64, state.x[@enumToInt(rs1)]) < @bitCast(i64, state.x[@enumToInt(rs2)]));
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SLT - src1: x{}, src2: x{}, dest: x{}
@@ -1587,11 +1587,11 @@ fn execute(
         .SLTU => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -1608,11 +1608,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = @boolToInt(state.x[rs1] < state.x[rs2]);
+                state.x[@enumToInt(rd)] = @boolToInt(state.x[@enumToInt(rs1)] < state.x[@enumToInt(rs2)]);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SLT - src1: x{}, src2: x{}, dest: x{}
@@ -1631,11 +1631,11 @@ fn execute(
         .XOR => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -1652,11 +1652,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] ^ state.x[rs2];
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] ^ state.x[@enumToInt(rs2)];
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\XOR - src1: x{}, src2: x{}, dest: x{}
@@ -1675,11 +1675,11 @@ fn execute(
         .SRL => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -1696,11 +1696,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] >> @truncate(u6, state.x[rs2]);
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] >> @truncate(u6, state.x[@enumToInt(rs2)]);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SRL - src1: x{}, src2: x{}, dest: x{}
@@ -1719,11 +1719,11 @@ fn execute(
         .SRA => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -1740,11 +1740,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = @bitCast(u64, @bitCast(i64, state.x[rs1]) >> @truncate(u6, state.x[rs2]));
+                state.x[@enumToInt(rd)] = @bitCast(u64, @bitCast(i64, state.x[@enumToInt(rs1)]) >> @truncate(u6, state.x[@enumToInt(rs2)]));
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SRA - src1: x{}, src2: x{}, dest: x{}
@@ -1763,11 +1763,11 @@ fn execute(
         .AND => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -1784,11 +1784,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] & state.x[rs2];
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] & state.x[@enumToInt(rs2)];
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\AND - src1: x{}, src2: x{}, dest: x{}
@@ -1807,11 +1807,11 @@ fn execute(
         .OR => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -1828,11 +1828,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = state.x[rs1] | state.x[rs2];
+                state.x[@enumToInt(rd)] = state.x[@enumToInt(rs1)] | state.x[@enumToInt(rs2)];
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\OR - src1: x{}, src2: x{}, dest: x{}
@@ -1883,10 +1883,10 @@ fn execute(
         .LWU => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
@@ -1904,7 +1904,7 @@ fn execute(
                     });
                 }
 
-                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+                const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
                 const memory = if (options.execution_out_of_bounds_is_fatal)
                     try loadMemory(state, 32, address)
@@ -1918,10 +1918,10 @@ fn execute(
                     };
                 };
 
-                state.x[rd] = memory;
+                state.x[@enumToInt(rd)] = memory;
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
@@ -1941,10 +1941,10 @@ fn execute(
         .LD => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
@@ -1962,7 +1962,7 @@ fn execute(
                     });
                 }
 
-                const address = addSignedToUnsignedWrap(state.x[rs1], imm);
+                const address = addSignedToUnsignedWrap(state.x[@enumToInt(rs1)], imm);
 
                 const memory = if (options.execution_out_of_bounds_is_fatal)
                     try loadMemory(state, 64, address)
@@ -1976,10 +1976,10 @@ fn execute(
                     };
                 };
 
-                state.x[rd] = memory;
+                state.x[@enumToInt(rd)] = memory;
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
@@ -1999,10 +1999,10 @@ fn execute(
         .ADDIW => {
             // I-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
                 if (has_writer) {
@@ -2020,11 +2020,11 @@ fn execute(
                     });
                 }
 
-                const addition_result_32bit = addSignedToUnsignedIgnoreOverflow(state.x[rs1], imm) & 0xFFFFFFFF;
-                state.x[rd] = signExtend32bit(addition_result_32bit);
+                const addition_result_32bit = addSignedToUnsignedIgnoreOverflow(state.x[@enumToInt(rs1)], imm) & 0xFFFFFFFF;
+                state.x[@enumToInt(rd)] = signExtend32bit(addition_result_32bit);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
@@ -2044,10 +2044,10 @@ fn execute(
         .SLLIW => {
             // I-type specialization
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const shmt = instruction.i_specialization.smallShift();
 
                 if (has_writer) {
@@ -2065,10 +2065,10 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = signExtend32bit(@truncate(u32, state.x[rs1]) << shmt);
+                state.x[@enumToInt(rd)] = signExtend32bit(@truncate(u32, state.x[@enumToInt(rs1)]) << shmt);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const shmt = instruction.i_specialization.fullShift();
 
                     try writer.print(
@@ -2088,10 +2088,10 @@ fn execute(
         .SRLIW => {
             // I-type specialization
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const shmt = instruction.i_specialization.smallShift();
 
                 if (has_writer) {
@@ -2109,10 +2109,10 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = signExtend32bit(@truncate(u32, state.x[rs1]) >> shmt);
+                state.x[@enumToInt(rd)] = signExtend32bit(@truncate(u32, state.x[@enumToInt(rs1)]) >> shmt);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const shmt = instruction.i_specialization.fullShift();
 
                     try writer.print(
@@ -2132,10 +2132,10 @@ fn execute(
         .SRAIW => {
             // I-type specialization
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
                 const shmt = instruction.i_specialization.smallShift();
 
                 if (has_writer) {
@@ -2153,10 +2153,10 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = signExtend32bit(@bitCast(u32, @bitCast(i32, @truncate(u32, state.x[rs1])) >> shmt));
+                state.x[@enumToInt(rd)] = signExtend32bit(@bitCast(u32, @bitCast(i32, @truncate(u32, state.x[@enumToInt(rs1)])) >> shmt));
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
+                    const rs1 = instruction.rs1();
                     const shmt = instruction.i_specialization.fullShift();
 
                     try writer.print(
@@ -2176,11 +2176,11 @@ fn execute(
         .ADDW => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -2198,12 +2198,12 @@ fn execute(
                 }
 
                 var result: u32 = undefined;
-                _ = @addWithOverflow(u32, @truncate(u32, state.x[rs1]), @truncate(u32, state.x[rs2]), &result);
-                state.x[rd] = signExtend32bit(result);
+                _ = @addWithOverflow(u32, @truncate(u32, state.x[@enumToInt(rs1)]), @truncate(u32, state.x[@enumToInt(rs2)]), &result);
+                state.x[@enumToInt(rd)] = signExtend32bit(result);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\ADDW - src1: x{}, src2: x{}, dest: x{}
@@ -2222,11 +2222,11 @@ fn execute(
         .SUBW => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -2244,12 +2244,12 @@ fn execute(
                 }
 
                 var result: u32 = undefined;
-                _ = @subWithOverflow(u32, @truncate(u32, state.x[rs1]), @truncate(u32, state.x[rs2]), &result);
-                state.x[rd] = signExtend32bit(result);
+                _ = @subWithOverflow(u32, @truncate(u32, state.x[@enumToInt(rs1)]), @truncate(u32, state.x[@enumToInt(rs2)]), &result);
+                state.x[@enumToInt(rd)] = signExtend32bit(result);
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SUBW - src1: x{}, src2: x{}, dest: x{}
@@ -2268,11 +2268,11 @@ fn execute(
         .SLLW => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -2289,11 +2289,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = signExtend32bit(@truncate(u32, state.x[rs1]) << @truncate(u5, state.x[rs2]));
+                state.x[@enumToInt(rd)] = signExtend32bit(@truncate(u32, state.x[@enumToInt(rs1)]) << @truncate(u5, state.x[@enumToInt(rs2)]));
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SLLW - src1: x{}, src2: x{}, dest: x{}
@@ -2312,11 +2312,11 @@ fn execute(
         .SRLW => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -2333,11 +2333,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = signExtend32bit(@truncate(u32, state.x[rs1]) >> @truncate(u5, state.x[rs2]));
+                state.x[@enumToInt(rd)] = signExtend32bit(@truncate(u32, state.x[@enumToInt(rs1)]) >> @truncate(u5, state.x[@enumToInt(rs2)]));
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SRLW - src1: x{}, src2: x{}, dest: x{}
@@ -2356,11 +2356,11 @@ fn execute(
         .SRAW => {
             // R-type
 
-            const rd = instruction.rd.read();
+            const rd = instruction.rd();
 
-            if (rd != 0) {
-                const rs1 = instruction.rs1.read();
-                const rs2 = instruction.rs2.read();
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
 
                 if (has_writer) {
                     try writer.print(
@@ -2377,11 +2377,11 @@ fn execute(
                     });
                 }
 
-                state.x[rd] = signExtend32bit(@bitCast(u32, @bitCast(i32, @truncate(u32, state.x[rs1])) >> @truncate(u5, state.x[rs2])));
+                state.x[@enumToInt(rd)] = signExtend32bit(@bitCast(u32, @bitCast(i32, @truncate(u32, state.x[@enumToInt(rs1)])) >> @truncate(u5, state.x[@enumToInt(rs2)])));
             } else {
                 if (has_writer) {
-                    const rs1 = instruction.rs1.read();
-                    const rs2 = instruction.rs2.read();
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
                         \\SRAW - src1: x{}, src2: x{}, dest: x{}
@@ -2410,10 +2410,10 @@ fn execute(
                 };
             };
 
-            const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
+            const rd = instruction.rd();
+            const rs1 = instruction.rs1();
 
-            if (rd != 0) {
+            if (rd != .zero) {
                 if (has_writer) {
                     try writer.print(
                         \\CSRRW - csr: {s}, dest: x{}, source: x{}
@@ -2436,11 +2436,11 @@ fn execute(
                     return;
                 }
 
-                const initial_rs1 = state.x[rs1];
+                const initial_rs1 = state.x[@enumToInt(rs1)];
                 const initial_csr = readCsr(state, csr);
 
                 try writeCsr(state, csr, initial_rs1);
-                state.x[rd] = initial_csr;
+                state.x[@enumToInt(rd)] = initial_csr;
             } else {
                 if (has_writer) {
                     try writer.print(
@@ -2461,7 +2461,7 @@ fn execute(
                     return;
                 }
 
-                try writeCsr(state, csr, state.x[rs1]);
+                try writeCsr(state, csr, state.x[@enumToInt(rs1)]);
             }
 
             state.pc += 4;
@@ -2476,10 +2476,10 @@ fn execute(
                 };
             };
 
-            const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
+            const rd = instruction.rd();
+            const rs1 = instruction.rs1();
 
-            if (rs1 != 0 and rd != 0) {
+            if (rs1 != .zero and rd != .zero) {
                 if (has_writer) {
                     try writer.print(
                         \\CSRRS - csr: {s}, dest: x{}, source: x{}
@@ -2502,12 +2502,12 @@ fn execute(
                     return;
                 }
 
-                const initial_rs1 = state.x[rs1];
+                const initial_rs1 = state.x[@enumToInt(rs1)];
                 const initial_csr_value = readCsr(state, csr);
 
                 try writeCsr(state, csr, initial_csr_value | initial_rs1);
-                state.x[rd] = initial_csr_value;
-            } else if (rs1 != 0) {
+                state.x[@enumToInt(rd)] = initial_csr_value;
+            } else if (rs1 != .zero) {
                 if (has_writer) {
                     try writer.print(
                         \\CSRRS - csr: {s}, dest: x{}, source: x{}
@@ -2527,8 +2527,8 @@ fn execute(
                     return;
                 }
 
-                try writeCsr(state, csr, readCsr(state, csr) | state.x[rs1]);
-            } else if (rd != 0) {
+                try writeCsr(state, csr, readCsr(state, csr) | state.x[@enumToInt(rs1)]);
+            } else if (rd != .zero) {
                 if (has_writer) {
                     try writer.print(
                         \\CSRRS - csr: {s}, dest: x{}, source: x{}
@@ -2548,7 +2548,7 @@ fn execute(
                     return;
                 }
 
-                state.x[rd] = readCsr(state, csr);
+                state.x[@enumToInt(rd)] = readCsr(state, csr);
             } else {
                 if (has_writer) {
                     try writer.print(
@@ -2575,10 +2575,10 @@ fn execute(
                 };
             };
 
-            const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
+            const rd = instruction.rd();
+            const rs1 = instruction.rs1();
 
-            if (rs1 != 0 and rd != 0) {
+            if (rs1 != .zero and rd != .zero) {
                 if (has_writer) {
                     try writer.print(
                         \\CSRRC - csr: {s}, dest: x{}, source: x{}
@@ -2601,12 +2601,12 @@ fn execute(
                     return;
                 }
 
-                const initial_rs1 = state.x[rs1];
+                const initial_rs1 = state.x[@enumToInt(rs1)];
                 const initial_csr_value = readCsr(state, csr);
 
                 try writeCsr(state, csr, initial_csr_value & ~initial_rs1);
-                state.x[rd] = initial_csr_value;
-            } else if (rs1 != 0) {
+                state.x[@enumToInt(rd)] = initial_csr_value;
+            } else if (rs1 != .zero) {
                 if (has_writer) {
                     try writer.print(
                         \\CSRRC - csr: {s}, dest: x{}, source: x{}
@@ -2626,8 +2626,8 @@ fn execute(
                     return;
                 }
 
-                try writeCsr(state, csr, readCsr(state, csr) & ~state.x[rs1]);
-            } else if (rd != 0) {
+                try writeCsr(state, csr, readCsr(state, csr) & ~state.x[@enumToInt(rs1)]);
+            } else if (rd != .zero) {
                 if (has_writer) {
                     try writer.print(
                         \\CSRRC - csr: {s}, dest: x{}, source: x{}
@@ -2647,7 +2647,7 @@ fn execute(
                     return;
                 }
 
-                state.x[rd] = readCsr(state, csr);
+                state.x[@enumToInt(rd)] = readCsr(state, csr);
             } else {
                 if (has_writer) {
                     try writer.print(
@@ -2674,10 +2674,10 @@ fn execute(
                 };
             };
 
-            const rd = instruction.rd.read();
-            const rs1 = instruction.rs1.read();
+            const rd = instruction.rd();
+            const rs1 = instruction.rs1();
 
-            if (rd != 0) {
+            if (rd != .zero) {
                 if (has_writer) {
                     try writer.print(
                         \\CSRRWI - csr: {s}, dest: x{}, imm: 0x{}
@@ -2702,8 +2702,8 @@ fn execute(
 
                 const initial_csr_value = readCsr(state, csr);
 
-                try writeCsr(state, csr, rs1);
-                state.x[rd] = initial_csr_value;
+                try writeCsr(state, csr, @enumToInt(rs1));
+                state.x[@enumToInt(rd)] = initial_csr_value;
             } else {
                 if (has_writer) {
                     try writer.print(
@@ -2724,7 +2724,7 @@ fn execute(
                     return;
                 }
 
-                try writeCsr(state, csr, rs1);
+                try writeCsr(state, csr, @enumToInt(rs1));
             }
 
             state.pc += 4;

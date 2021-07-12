@@ -74,26 +74,27 @@ pub fn dump(self: CpuState, writer: anytype) !void {
     var i: usize = 0;
     while (i < 32 - 3) : (i += 4) {
         if (i == 0) {
-            try writer.print(" pc: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
+            try writer.print("{s:>9}: 0x{x:<16} {s:>9}: 0x{x:<16} {s:>9}: 0x{x:<16} {s:>9}: 0x{x:<16}\n", .{
+                "pc",
                 self.pc,
-                i + 1,
+                IntegerRegister.getIntegerRegister(i + 1).getString(),
                 self.x[i + 1],
-                i + 2,
+                IntegerRegister.getIntegerRegister(i + 2).getString(),
                 self.x[i + 2],
-                i + 3,
+                IntegerRegister.getIntegerRegister(i + 3).getString(),
                 self.x[i + 3],
             });
             continue;
         }
 
-        try writer.print("x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16} x{:0>2}: 0x{x:<16}\n", .{
-            i,
+        try writer.print("{s:>9}: 0x{x:<16} {s:>9}: 0x{x:<16} {s:>9}: 0x{x:<16} {s:>9}: 0x{x:<16}\n", .{
+            IntegerRegister.getIntegerRegister(i).getString(),
             self.x[i],
-            i + 1,
+            IntegerRegister.getIntegerRegister(i + 1).getString(),
             self.x[i + 1],
-            i + 2,
+            IntegerRegister.getIntegerRegister(i + 2).getString(),
             self.x[i + 2],
-            i + 3,
+            IntegerRegister.getIntegerRegister(i + 3).getString(),
             self.x[i + 3],
         });
     }

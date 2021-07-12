@@ -13,6 +13,9 @@ pub const CpuOptions = struct {
     unrecognised_csr_is_fatal: bool = true,
     ebreak_is_fatal: bool = false,
     execution_out_of_bounds_is_fatal: bool = true,
+
+    /// this option is only taken into account if a writer is given
+    always_print_pc: bool = true,
 };
 
 pub fn Cpu(comptime options: CpuOptions) type {
@@ -40,6 +43,10 @@ pub fn Cpu(comptime options: CpuOptions) type {
                         break :blk Instruction{ .backing = backing };
                     }
                 };
+
+                if (options.always_print_pc) {
+                    try writer.print("pc: {x:0>16}\n", .{state.pc});
+                }
 
                 try execute(instruction, state, writer, options);
             }
@@ -2778,6 +2785,51 @@ fn execute(
 
             state.pc += 4;
         },
+        .MULH => {
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\MULH - src1: x{}, src2: x{}, dest: x{}
+                        \\  set x{} to x{} * x{} high bits
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                const mul = signExtend64bit(state.x[@enumToInt(rs1)]) * signExtend64bit(state.x[@enumToInt(rs2)]);
+                state.x[@enumToInt(rd)] = @truncate(u64, @bitCast(u128, mul) >> 64);
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\MULH - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
 
         // Privilege
 
@@ -3025,6 +3077,10 @@ test "addSignedToUnsignedIgnoreOverflow" {
         @as(u64, std.math.maxInt(u64)),
         addSignedToUnsignedIgnoreOverflow(5, -6),
     );
+}
+
+inline fn signExtend64bit(value: u64) i128 {
+    return @bitCast(i128, @as(u128, value) << 64) >> 64;
 }
 
 inline fn signExtend32bit(value: u64) u64 {

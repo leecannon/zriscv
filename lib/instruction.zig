@@ -128,6 +128,8 @@ pub const InstructionType = enum {
 
     /// multiply
     MUL,
+    /// multiply - high bits
+    MULH,
 
     /// Privilege
     MRET,
@@ -247,11 +249,15 @@ pub const Instruction = extern union {
                 },
                 0b110 => InstructionType.OR,
                 0b111 => InstructionType.AND,
-                0b001 => if (funct7 == 0) InstructionType.SLL else {
-                    if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
-                    }
-                    return error.UnimplementedOpcode;
+                0b001 => switch (funct7) {
+                    0b0000000 => InstructionType.SLL,
+                    0b0000001 => InstructionType.MULH,
+                    else => {
+                        if (unimplemented_is_fatal) {
+                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                        }
+                        return error.UnimplementedOpcode;
+                    },
                 },
                 0b010 => if (funct7 == 0) InstructionType.SLT else {
                     if (unimplemented_is_fatal) {

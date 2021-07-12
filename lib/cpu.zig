@@ -2756,7 +2756,9 @@ fn execute(
                     });
                 }
 
-                state.x[@enumToInt(rd)] = @truncate(u64, @as(u128, state.x[@enumToInt(rs1)]) * @as(u128, state.x[@enumToInt(rs2)]));
+                var result: u64 = undefined;
+                _ = @mulWithOverflow(u64, state.x[@enumToInt(rs1)], state.x[@enumToInt(rs2)], &result);
+                state.x[@enumToInt(rd)] = result;
             } else {
                 if (has_writer) {
                     const rs1 = instruction.rs1();

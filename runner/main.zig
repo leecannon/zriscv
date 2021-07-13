@@ -63,17 +63,8 @@ pub fn main() !u8 {
 
     var cpu_state = zriscv.CpuState{ .memory = file_contents };
 
-    // set stdin to raw mode
-    const previous_terminal_settings = blk: {
-        const previous = try std.os.tcgetattr(stdin.handle);
-        var current_settings = previous;
-
-        current_settings.lflag &= ~@as(u32, std.os.linux.ICANON);
-
-        try std.os.tcsetattr(stdin.handle, .FLUSH, current_settings);
-        break :blk previous;
-    };
-
+    const previous_terminal_settings = try std.os.tcgetattr(stdin.handle);
+    try setRawMode(previous_terminal_settings);
     defer {
         std.os.tcsetattr(stdin.handle, .FLUSH, previous_terminal_settings) catch {};
         stdout_writer.writeByte('\n') catch {};
@@ -102,6 +93,10 @@ pub fn main() !u8 {
             continue;
         }
         if (input == 'b') {
+            // disable raw mode to enable user to enter hex string
+            std.os.tcsetattr(stdin.handle, .FLUSH, previous_terminal_settings) catch {};
+            defer setRawMode(previous_terminal_settings) catch {};
+
             const hex_str = (try stdin_reader.readUntilDelimiterOrEofAlloc(allocator, '\n', std.math.maxInt(usize))) orelse return 1;
             defer allocator.free(hex_str);
 
@@ -193,6 +188,14 @@ pub fn main() !u8 {
 
         try stdout_writer.writeAll("invalid option\n");
     }
+}
+
+fn setRawMode(previous: std.os.termios) !void {
+    var current_settings = previous;
+
+    current_settings.lflag &= ~@as(u32, std.os.linux.ICANON);
+
+    try std.os.tcsetattr(stdin.handle, .FLUSH, current_settings);
 }
 
 comptime {

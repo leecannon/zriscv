@@ -3179,6 +3179,62 @@ fn execute(
 
             state.pc += 4;
         },
+        .DIVW => {
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\DIVW - src1: {}, src2: {}, dest: {}
+                        \\  32 bit set {} to {} / {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                state.x[@enumToInt(rd)] = signExtend32bit(
+                    @bitCast(
+                        u32,
+                        std.math.divTrunc(
+                            i32,
+                            @bitCast(i32, @truncate(u32, state.x[@enumToInt(rs1)])),
+                            @bitCast(i32, @truncate(u32, state.x[@enumToInt(rs2)])),
+                        ) catch |err| switch (err) {
+                            error.DivisionByZero => @as(i32, -1),
+                            error.Overflow => @as(i32, std.math.minInt(i32)),
+                        },
+                    ),
+                );
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\DIVW - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
 
         // Privilege
 

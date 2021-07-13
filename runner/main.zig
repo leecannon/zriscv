@@ -72,7 +72,7 @@ pub fn main() !u8 {
 
     var opt_break_point: ?u64 = null;
 
-    outer: while (true) {
+    while (true) {
         try stdout_writer.writeAll("> ");
 
         const input = stdin_reader.readByte() catch return 0;
@@ -123,44 +123,56 @@ pub fn main() !u8 {
         }
         if (input == 'r') {
             try stdout_writer.writeByte('\n');
+
+            const timer = try std.time.Timer.start();
+
             if (opt_break_point) |break_point| {
                 while (cpu_state.pc != break_point) {
                     NoOutputCpu.step(&cpu_state) catch |err| {
                         try stdout_writer.print("error: {s}\n", .{@errorName(err)});
-                        continue :outer;
+                        break;
                     };
+                } else {
+                    try stdout_writer.writeAll("hit breakpoint\n");
                 }
-
-                try stdout_writer.writeAll("hit breakpoint\n");
             } else {
                 while (true) {
                     NoOutputCpu.run(&cpu_state) catch |err| {
                         try stdout_writer.print("error: {s}\n", .{@errorName(err)});
-                        continue :outer;
+                        break;
                     };
                 }
             }
+
+            const elapsed = timer.read();
+            try stdout_writer.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed });
             continue;
         }
         if (input == 'e') {
             try stdout_writer.writeByte('\n');
+
+            const timer = try std.time.Timer.start();
+
             if (opt_break_point) |break_point| {
                 while (cpu_state.pc != break_point) {
                     OutputCpu.step(&cpu_state, stdout_writer) catch |err| {
                         try stdout_writer.print("error: {s}\n", .{@errorName(err)});
-                        continue :outer;
+                        break;
                     };
+                } else {
+                    try stdout_writer.writeAll("hit breakpoint\n");
                 }
-
-                try stdout_writer.writeAll("hit breakpoint\n");
             } else {
                 while (true) {
                     OutputCpu.run(&cpu_state, stdout_writer) catch |err| {
                         try stdout_writer.print("error: {s}\n", .{@errorName(err)});
-                        continue :outer;
+                        break;
                     };
                 }
             }
+
+            const elapsed = timer.read();
+            try stdout_writer.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed });
             continue;
         }
         if (input == 'n') {

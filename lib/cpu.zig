@@ -2830,6 +2830,51 @@ fn execute(
 
             state.pc += 4;
         },
+        .MULHSU => {
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\MULHSU - src1: x{}, src2: x{}, dest: x{}
+                        \\  set x{} to x{} * x{} high bits
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                const mul = signExtend64bit(state.x[@enumToInt(rs1)]) * state.x[@enumToInt(rs2)];
+                state.x[@enumToInt(rd)] = @truncate(u64, @bitCast(u128, mul) >> 64);
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\MULHSU - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
 
         // Privilege
 

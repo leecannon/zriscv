@@ -130,6 +130,8 @@ pub const InstructionType = enum {
     MUL,
     /// multiply - high bits
     MULH,
+    /// multiply - high bits - signed/unsigned
+    MULHSU,
 
     /// Privilege
     MRET,
@@ -259,21 +261,25 @@ pub const Instruction = extern union {
                         return error.UnimplementedOpcode;
                     },
                 },
-                0b010 => if (funct7 == 0) InstructionType.SLT else {
-                    if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
-                    }
-                    return error.UnimplementedOpcode;
+                0b010 => switch (funct7) {
+                    0b0000000 => InstructionType.SLT,
+                    0b0000001 => InstructionType.MULHSU,
+                    else => {
+                        if (unimplemented_is_fatal) {
+                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                        }
+                        return error.UnimplementedOpcode;
+                    },
                 },
                 0b011 => if (funct7 == 0) InstructionType.SLTU else {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                        std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                     }
                     return error.UnimplementedOpcode;
                 },
                 0b100 => if (funct7 == 0) InstructionType.XOR else {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                        std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                     }
                     return error.UnimplementedOpcode;
                 },

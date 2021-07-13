@@ -3081,6 +3081,55 @@ fn execute(
 
             state.pc += 4;
         },
+        .REMU => {
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\REMU - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {} % {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                const numerator = state.x[@enumToInt(rs1)];
+                const denominator = state.x[@enumToInt(rs2)];
+
+                state.x[@enumToInt(rd)] = std.math.rem(u64, numerator, denominator) catch |err| switch (err) {
+                    error.DivisionByZero => numerator,
+                };
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\REMU - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
 
         // Privilege
 

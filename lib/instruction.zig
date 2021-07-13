@@ -140,6 +140,8 @@ pub const InstructionType = enum {
     DIVU,
     /// remainder
     REM,
+    /// remainder - unsigned
+    REMU,
 
     /// Privilege
     MRET,
@@ -269,6 +271,7 @@ pub const Instruction = extern union {
                 },
                 0b111 => switch (funct7) {
                     0b0000000 => InstructionType.AND,
+                    0b0000001 => InstructionType.REMU,
                     else => {
                         if (unimplemented_is_fatal) {
                             std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });

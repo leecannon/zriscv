@@ -19,7 +19,7 @@ The focus is on correctness not performance, i'm expecting practically every exe
 
 ## Progress
 - [X] RV64I (64-bit Base Integer)
-- [ ] M (Multiplication and Division)
+- [X] M (Multiplication and Division)
 - [ ] A (Atomic)
 - [ ] F (Single-Precision Floating-Point)
 - [ ] D (Double-Precision Floating-Point)

@@ -136,6 +136,8 @@ pub const InstructionType = enum {
     MULHU,
     /// divide
     DIV,
+    /// divide - unsigned
+    DIVU,
 
     /// Privilege
     MRET,
@@ -298,6 +300,7 @@ pub const Instruction = extern union {
                 0b101 => switch (funct7) {
                     0b0000000 => InstructionType.SRL,
                     0b0100000 => InstructionType.SRA,
+                    0b0000001 => InstructionType.DIVU,
                     else => {
                         if (unimplemented_is_fatal) {
                             std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });

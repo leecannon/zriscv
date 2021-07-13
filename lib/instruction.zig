@@ -143,6 +143,11 @@ pub const InstructionType = enum {
     /// remainder - unsigned
     REMU,
 
+    // 64M
+
+    /// multiply - 32 bit
+    MULW,
+
     /// Privilege
     MRET,
 };
@@ -389,6 +394,7 @@ pub const Instruction = extern union {
             0b0111011 => switch (funct3) {
                 0b000 => switch (funct7) {
                     0b0000000 => InstructionType.ADDW,
+                    0b0000001 => InstructionType.MULW,
                     0b0100000 => InstructionType.SUBW,
                     else => {
                         if (unimplemented_is_fatal) {

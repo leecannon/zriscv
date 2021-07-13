@@ -3131,6 +3131,55 @@ fn execute(
             state.pc += 4;
         },
 
+        // 64M
+
+        .MULW => {
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\MULW - src1: {}, src2: {}, dest: {}
+                        \\  32 bit set {} to {} * {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                var result: u32 = undefined;
+                _ = @mulWithOverflow(u32, @truncate(u32, state.x[@enumToInt(rs1)]), @truncate(u32, state.x[@enumToInt(rs2)]), &result);
+                state.x[@enumToInt(rd)] = signExtend32bit(result);
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\MULW - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
+
         // Privilege
 
         .MRET => {

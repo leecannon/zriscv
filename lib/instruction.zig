@@ -149,6 +149,8 @@ pub const InstructionType = enum {
     MULW,
     /// divide - 32 bit
     DIVW,
+    /// divide - unsigned - 32 bit
+    DIVUW,
 
     /// Privilege
     MRET,
@@ -425,6 +427,7 @@ pub const Instruction = extern union {
                 },
                 0b101 => switch (funct7) {
                     0b0000000 => InstructionType.SRLW,
+                    0b0000001 => InstructionType.DIVUW,
                     0b0100000 => InstructionType.SRAW,
                     else => {
                         if (unimplemented_is_fatal) {

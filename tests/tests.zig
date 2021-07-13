@@ -238,6 +238,10 @@ test "rv64um_p_divu" {
     try runTest("rv64um_p_divu.bin");
 }
 
+test "rv64um_p_rem" {
+    try runTest("rv64um_p_rem.bin");
+}
+
 const TestContext = struct {
     file_name: []const u8,
     the_error: ?anyerror = null,

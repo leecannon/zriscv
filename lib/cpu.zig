@@ -2920,6 +2920,60 @@ fn execute(
 
             state.pc += 4;
         },
+        .DIV => {
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\DIV - src1: x{}, src2: x{}, dest: x{}
+                        \\  set x{} to x{} / x{}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs2,
+                    });
+                }
+
+                state.x[@enumToInt(rd)] = @bitCast(
+                    u64,
+                    std.math.divTrunc(
+                        i64,
+                        @bitCast(i64, state.x[@enumToInt(rs1)]),
+                        @bitCast(i64, state.x[@enumToInt(rs2)]),
+                    ) catch |err| switch (err) {
+                        error.DivisionByZero => @as(i64, -1),
+                        error.Overflow => @as(i64, std.math.minInt(i64)),
+                    },
+                );
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\DIV - src1: x{}, src2: x{}, dest: x{}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            state.pc += 4;
+        },
 
         // Privilege
 

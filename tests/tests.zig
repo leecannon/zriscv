@@ -230,6 +230,10 @@ test "rv64um_p_mulhu" {
     try runTest("rv64um_p_mulhu.bin");
 }
 
+test "rv64um_p_div" {
+    try runTest("rv64um_p_div.bin");
+}
+
 const TestContext = struct {
     file_name: []const u8,
     the_error: ?anyerror = null,

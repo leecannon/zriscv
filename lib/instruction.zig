@@ -134,6 +134,8 @@ pub const InstructionType = enum {
     MULHSU,
     /// multiply - high bits - unsigned
     MULHU,
+    /// divide
+    DIV,
 
     /// Privilege
     MRET,
@@ -283,11 +285,15 @@ pub const Instruction = extern union {
                         return error.UnimplementedOpcode;
                     },
                 },
-                0b100 => if (funct7 == 0) InstructionType.XOR else {
-                    if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
-                    }
-                    return error.UnimplementedOpcode;
+                0b100 => switch (funct7) {
+                    0b0000000 => InstructionType.XOR,
+                    0b0000001 => InstructionType.DIV,
+                    else => {
+                        if (unimplemented_is_fatal) {
+                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                        }
+                        return error.UnimplementedOpcode;
+                    },
                 },
                 0b101 => switch (funct7) {
                     0b0000000 => InstructionType.SRL,

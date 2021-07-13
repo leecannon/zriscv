@@ -151,6 +151,8 @@ pub const InstructionType = enum {
     DIVW,
     /// divide - unsigned - 32 bit
     DIVUW,
+    /// remainder - 32 bit
+    REMW,
 
     /// Privilege
     MRET,
@@ -418,6 +420,15 @@ pub const Instruction = extern union {
                 },
                 0b100 => switch (funct7) {
                     0b0000001 => InstructionType.DIVW,
+                    else => {
+                        if (unimplemented_is_fatal) {
+                            std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                        }
+                        return error.UnimplementedOpcode;
+                    },
+                },
+                0b110 => switch (funct7) {
+                    0b0000001 => InstructionType.REMW,
                     else => {
                         if (unimplemented_is_fatal) {
                             std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });

@@ -61,7 +61,10 @@ pub fn main() !u8 {
     };
     defer allocator.free(file_contents);
 
-    var cpu_state = zriscv.CpuState{ .memory = file_contents };
+    var memory = try allocator.dupe(u8, file_contents);
+    defer allocator.free(memory);
+
+    var cpu_state = zriscv.CpuState{ .memory = memory };
 
     const previous_terminal_settings = try std.os.tcgetattr(stdin.handle);
     try setRawMode(previous_terminal_settings);
@@ -87,9 +90,19 @@ pub fn main() !u8 {
                 \\        s - single step with output
                 \\        n - single step without output
                 \\        d - dump cpu state
+                \\        0 - reset cpu
                 \\        q - quit
                 \\
             );
+            continue;
+        }
+        if (input == '0') {
+            const new_memory = try allocator.dupe(u8, file_contents);
+            allocator.free(memory);
+            memory = new_memory;
+            cpu_state = zriscv.CpuState{ .memory = memory };
+
+            try stdout_writer.writeAll("\nstate reset\n");
             continue;
         }
         if (input == 'b') {

@@ -37,7 +37,10 @@ pub fn build(b: *std.build.Builder) void {
         const test_exe = b.addTest("tests/tests.zig");
         test_exe.setBuildMode(mode);
         test_exe.addPackage(zriscv_pkg);
-        test_exe.addBuildOption([]const u8, "resource_path", b.pathFromRoot("tests/resources"));
+
+        const build_options = b.addOptions();
+        build_options.addOption([]const u8, "resource_path", b.pathFromRoot("tests/resources"));
+        test_exe.addOptions("build_options", build_options);
 
         const runner_test = b.addTest("runner/main.zig");
         runner_test.setBuildMode(mode);

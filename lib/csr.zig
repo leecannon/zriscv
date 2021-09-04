@@ -1,6 +1,11 @@
 const std = @import("std");
 const bitjuggle = @import("bitjuggle");
-usingnamespace @import("types.zig");
+const PrivilegeLevel = @import("types.zig").PrivilegeLevel;
+const IntegerRegister = @import("types.zig").IntegerRegister;
+const ExceptionCode = @import("types.zig").ExceptionCode;
+const ContextStatus = @import("types.zig").ContextStatus;
+const VectorMode = @import("types.zig").VectorMode;
+const AddressTranslationMode = @import("types.zig").AddressTranslationMode;
 
 pub const Csr = enum(u12) {
     /// Supervisor address translation and protection

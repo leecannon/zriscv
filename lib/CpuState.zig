@@ -1,6 +1,19 @@
 const std = @import("std");
-usingnamespace @import("types.zig");
-usingnamespace @import("csr.zig");
+const Csr = @import("csr.zig").Csr;
+const Mstatus = @import("csr.zig").Mstatus;
+const MCause = @import("csr.zig").MCause;
+const Mtvec = @import("csr.zig").Mtvec;
+const Stvec = @import("csr.zig").Stvec;
+const SCause = @import("csr.zig").SCause;
+const Satp = @import("csr.zig").Satp;
+const InstructionType = @import("instruction.zig").InstructionType;
+const Instruction = @import("instruction.zig").Instruction;
+const PrivilegeLevel = @import("types.zig").PrivilegeLevel;
+const IntegerRegister = @import("types.zig").IntegerRegister;
+const ExceptionCode = @import("types.zig").ExceptionCode;
+const ContextStatus = @import("types.zig").ContextStatus;
+const VectorMode = @import("types.zig").VectorMode;
+const AddressTranslationMode = @import("types.zig").AddressTranslationMode;
 
 const CpuState = @This();
 

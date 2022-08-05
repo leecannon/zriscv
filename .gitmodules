@@ -1,0 +1,6 @@
+[submodule "external/zig-bitjuggle"]
+	path = external/zig-bitjuggle
+	url = https://github.com/leecannon/zig-bitjuggle.git
+[submodule "external/zig-args"]
+	path = external/zig-args
+	url = https://github.com/MasterQ32/zig-args.git

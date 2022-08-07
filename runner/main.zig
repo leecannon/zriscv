@@ -13,7 +13,7 @@ const MainErrors = error{} ||
     std.os.MMapError;
 
 pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
-    const stderr_writer = std.io.getStdErr().writer();
+    const stderr = std.io.getStdErr().writer();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
@@ -41,8 +41,7 @@ pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
             \\      -h, --help          display this help and exit
             \\
         ) catch |err| {
-            stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
-
+            stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
             if (is_debug_or_test) return err;
             return 1;
         };
@@ -51,11 +50,11 @@ pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
 
     const file_path = blk: {
         if (options.positionals.len < 1) {
-            stderr_writer.writeAll("no file path provided\n") catch {};
+            stderr.writeAll("no file path provided\n") catch {};
             return 1;
         }
         if (options.positionals.len > 1) {
-            stderr_writer.writeAll("multiple files are not supported\n") catch {};
+            stderr.writeAll("multiple files are not supported\n") catch {};
             return 1;
         }
 
@@ -65,12 +64,11 @@ pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
     const file_contents = blk: {
         const file = std.fs.cwd().openFile(file_path, .{}) catch |err| switch (err) {
             error.FileNotFound => {
-                stderr_writer.print("file not found: {s}\n", .{file_path}) catch {};
+                stderr.print("file not found: {s}\n", .{file_path}) catch {};
                 return 1;
             },
             else => |e| {
-                stderr_writer.print("failed to open file '{s}': {s}\n", .{ file_path, @errorName(e) }) catch {};
-
+                stderr.print("failed to open file '{s}': {s}\n", .{ file_path, @errorName(e) }) catch {};
                 if (is_debug_or_test) return e;
                 return 1;
             },
@@ -78,8 +76,7 @@ pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
         defer file.close();
 
         const stat = file.stat() catch |err| {
-            stderr_writer.print("failed to stat file '{s}': {s}\n", .{ file_path, @errorName(err) }) catch {};
-
+            stderr.print("failed to stat file '{s}': {s}\n", .{ file_path, @errorName(err) }) catch {};
             if (is_debug_or_test) return err;
             return 1;
         };
@@ -92,8 +89,7 @@ pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
             file.handle,
             0,
         ) catch |err| {
-            stderr_writer.print("failed to map file '{s}': {s}\n", .{ file_path, @errorName(err) }) catch {};
-
+            stderr.print("failed to map file '{s}': {s}\n", .{ file_path, @errorName(err) }) catch {};
             if (is_debug_or_test) return err;
             return 1;
         };
@@ -125,41 +121,41 @@ const ReplErrors = error{
 fn repl(file_contents: []const u8) ReplErrors!void {
     _ = file_contents;
 
-    const stdin = std.io.getStdIn();
-    const stdin_reader = stdin.reader();
-    const stdout_writer = std.io.getStdOut().writer();
-    const stderr_writer = std.io.getStdErr().writer();
+    const raw_stdin = std.io.getStdIn();
+    const stdin = raw_stdin.reader();
+    const stdout = std.io.getStdOut().writer();
+    const stderr = std.io.getStdErr().writer();
 
-    const previous_terminal_settings = std.os.tcgetattr(stdin.handle) catch |err| {
-        try stderr_writer.print("failed to capture termios settings: {s}\n", .{@errorName(err)});
+    const previous_terminal_settings = std.os.tcgetattr(raw_stdin.handle) catch |err| {
+        try stderr.print("failed to capture termios settings: {s}\n", .{@errorName(err)});
         return err;
     };
-    setRawMode(previous_terminal_settings, stdin.handle) catch |err| {
-        try stderr_writer.print("failed to set raw console mode: {s}\n", .{@errorName(err)});
+    setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
+        try stderr.print("failed to set raw console mode: {s}\n", .{@errorName(err)});
         return err;
     };
     defer {
-        std.os.tcsetattr(stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
-            stderr_writer.print("failed to restore termios settings: {s}\n", .{@errorName(err)}) catch {};
+        std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
+            stderr.print("failed to restore termios settings: {s}\n", .{@errorName(err)}) catch {};
         };
-        stdout_writer.writeByte('\n') catch {};
+        stdout.writeByte('\n') catch {};
     }
 
     var opt_break_point: ?u64 = null;
 
     while (true) {
-        stdout_writer.writeAll("> ") catch |err| {
-            try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+        stdout.writeAll("> ") catch |err| {
+            try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
             return err;
         };
 
-        const input = stdin_reader.readByte() catch |err| {
-            try stderr_writer.print("failed to read from stdin: {s}\n", .{@errorName(err)});
+        const input = stdin.readByte() catch |err| {
+            try stderr.print("failed to read from stdin: {s}\n", .{@errorName(err)});
             return err;
         };
 
         switch (input) {
-            '?', 'h', '\n' => stdout_writer.writeAll(
+            '?', 'h', '\n' => stdout.writeAll(
                 \\help:
                 \\ ?|h|'\n' - this help menu
                 \\        r - run without output (this will not stop unless a breakpoint is hit, or an error)
@@ -172,7 +168,7 @@ fn repl(file_contents: []const u8) ReplErrors!void {
                 \\        q - quit
                 \\
             ) catch |err| {
-                try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
                 return err;
             },
             '0' => {
@@ -180,39 +176,39 @@ fn repl(file_contents: []const u8) ReplErrors!void {
             },
             'b' => {
                 // disable raw mode to enable user to enter hex string
-                std.os.tcsetattr(stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
-                    try stderr_writer.print("failed to restore termios settings: {s}\n", .{@errorName(err)});
+                std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
+                    try stderr.print("failed to restore termios settings: {s}\n", .{@errorName(err)});
                     return err;
                 };
-                defer setRawMode(previous_terminal_settings, stdin.handle) catch |err| {
-                    stderr_writer.print("failed to set raw console mode: {s}\n", .{@errorName(err)}) catch {};
+                defer setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
+                    stderr.print("failed to set raw console mode: {s}\n", .{@errorName(err)}) catch {};
                 };
 
                 var hex_buffer: [86]u8 = undefined;
 
-                const hex_str: []const u8 = stdin_reader.readUntilDelimiterOrEof(&hex_buffer, '\n') catch |err| {
-                    try stderr_writer.print("failed to read from stdin: {s}\n", .{@errorName(err)});
+                const hex_str: []const u8 = stdin.readUntilDelimiterOrEof(&hex_buffer, '\n') catch |err| {
+                    try stderr.print("failed to read from stdin: {s}\n", .{@errorName(err)});
                     return err;
                 } orelse "";
 
                 if (hex_str.len == 0) {
                     opt_break_point = null;
-                    stdout_writer.writeAll("cleared breakpoint\n") catch |err| {
-                        try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                    stdout.writeAll("cleared breakpoint\n") catch |err| {
+                        try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
                         return err;
                     };
                     continue;
                 }
 
                 const addr = std.fmt.parseUnsigned(u64, hex_str, 16) catch |err| {
-                    try stderr_writer.print("unable to parse '{s}' as hex: {s}\n", .{ hex_str, @errorName(err) });
+                    try stderr.print("unable to parse '{s}' as hex: {s}\n", .{ hex_str, @errorName(err) });
                     continue;
                 };
 
                 // TODO: Check if breakpoint exceeds CPU memory
 
-                stdout_writer.print("set breakpoint to 0x{x}\n", .{addr}) catch |err| {
-                    try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                stdout.print("set breakpoint to 0x{x}\n", .{addr}) catch |err| {
+                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
                     return err;
                 };
 
@@ -221,13 +217,13 @@ fn repl(file_contents: []const u8) ReplErrors!void {
             'r', 'e' => {
                 const output = input == 'e';
 
-                stdout_writer.writeByte('\n') catch |err| {
-                    try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                stdout.writeByte('\n') catch |err| {
+                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
                     return err;
                 };
 
                 const timer = std.time.Timer.start() catch |err| {
-                    try stderr_writer.print("failed to start timer: {s}\n", .{@errorName(err)});
+                    try stderr.print("failed to start timer: {s}\n", .{@errorName(err)});
                     return err;
                 };
 
@@ -247,16 +243,16 @@ fn repl(file_contents: []const u8) ReplErrors!void {
                 }
 
                 const elapsed = timer.read();
-                stdout_writer.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch |err| {
-                    try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch |err| {
+                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
                     return err;
                 };
             },
             's', 'n' => {
                 const output = input == 's';
 
-                stdout_writer.writeByte('\n') catch |err| {
-                    try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                stdout.writeByte('\n') catch |err| {
+                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
                     return err;
                 };
 
@@ -267,16 +263,16 @@ fn repl(file_contents: []const u8) ReplErrors!void {
                 }
             },
             'd' => {
-                stdout_writer.writeByte('\n') catch |err| {
-                    try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                stdout.writeByte('\n') catch |err| {
+                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
                     return err;
                 };
                 @panic("unimplemented"); // TODO: dump cpu state
             },
             'q' => return,
             else => {
-                stdout_writer.writeAll("\ninvalid option\n") catch |err| {
-                    try stderr_writer.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                stdout.writeAll("\ninvalid option\n") catch |err| {
+                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
                     return err;
                 };
             },

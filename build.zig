@@ -16,6 +16,7 @@ pub fn build(b: *std.build.Builder) void {
         runner.install();
 
         const run_cmd = runner.run();
+        run_cmd.expected_exit_code = null;
         run_cmd.step.dependOn(b.getInstallStep());
         if (b.args) |args| {
             run_cmd.addArgs(args);

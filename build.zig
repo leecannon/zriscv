@@ -36,7 +36,7 @@ pub fn build(b: *std.build.Builder) void {
         runner_test.addPackage(args_pkg);
         runner_test.addPackage(zriscv_pkg);
 
-        const zriscv_test = b.addTest("lib/index.zig");
+        const zriscv_test = b.addTest("lib/lib.zig");
         zriscv_test.setBuildMode(mode);
         zriscv_test.addPackage(bitjuggle_pkg);
 
@@ -61,6 +61,6 @@ const bitjuggle_pkg: std.build.Pkg = .{
 
 pub const zriscv_pkg = std.build.Pkg{
     .name = "zriscv",
-    .source = .{ .path = "lib/index.zig" },
+    .source = .{ .path = "lib/lib.zig" },
     .dependencies = &.{bitjuggle_pkg},
 };

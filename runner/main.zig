@@ -5,14 +5,9 @@ const builtin = @import("builtin");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
-const MainErrors = error{} ||
-    ReplErrors ||
-    std.mem.Allocator.Error ||
-    std.fs.File.OpenError ||
-    std.fs.File.WriteError ||
-    std.os.MMapError;
+const Engine = zriscv.Engine(.{});
 
-pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
+pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     const stderr = std.io.getStdErr().writer();
 
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -61,7 +56,7 @@ pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
         break :blk options.positionals[0];
     };
 
-    const file_contents = blk: {
+    const memory_description: []const zriscv.MemoryDescriptor = blk: {
         const file = std.fs.cwd().openFile(file_path, .{}) catch |err| switch (err) {
             error.FileNotFound => {
                 stderr.print("file not found: {s}\n", .{file_path}) catch {};
@@ -94,44 +89,67 @@ pub fn main() if (is_debug_or_test) MainErrors!u8 else u8 {
             return 1;
         };
 
-        break :blk ptr[0..stat.size];
+        const description = try allocator.alloc(zriscv.MemoryDescriptor, 1);
+        description[0] = .{
+            .start_address = 0,
+            .memory = ptr[0..stat.size],
+        };
+
+        break :blk description;
     };
+    defer allocator.free(memory_description);
+
+    // TODO: Parse file as Elf and produce `[]const zriscv.MemoryDescriptor` to describe the sections
 
     if (options.options.interactive) {
-        repl(file_contents) catch |err| {
+        repl(allocator, memory_description) catch |err| {
             if (is_debug_or_test) return err;
             return 1;
         };
         return 0;
     }
 
-    @panic("unimplemented"); // TODO: Run without output, until error.
+    const machine = zriscv.Machine.create(
+        allocator,
+        memory_description,
+        1,
+    ) catch |err| switch (err) {
+        error.OverlappingDescriptor => |e| {
+            stderr.print("error: elf file has overlapping sections?\n", .{}) catch {};
+            if (is_debug_or_test) return e;
+            return 1;
+        },
+        error.NonZeroNumberOfHartsRequired => unreachable, // we pass 1
+        else => |e| {
+            if (is_debug_or_test) return e;
+            return 1;
+        },
+    };
+    defer machine.destory();
+
+    while (true) {
+        // TODO: Support multiple harts
+        // TODO: Someway to exit loop without an error, as it is every execution "fails".
+        Engine.run(&machine.harts[0], {}) catch |err| {
+            stderr.print("error: {s}\n", .{@errorName(err)}) catch {};
+            if (is_debug_or_test) return err;
+            return 1;
+        };
+    }
 }
 
-const ReplErrors = error{
-    EndOfStream,
-    StreamTooLong,
-} ||
-    std.fs.File.ReadError ||
-    std.fs.File.WriteError ||
-    std.os.TermiosGetError ||
-    std.time.Timer.Error ||
-    std.os.TermiosSetError;
-
-fn repl(file_contents: []const u8) ReplErrors!void {
-    _ = file_contents;
-
+fn repl(allocator: std.mem.Allocator, memory_description: []const zriscv.MemoryDescriptor) !void {
     const raw_stdin = std.io.getStdIn();
     const stdin = raw_stdin.reader();
     const stdout = std.io.getStdOut().writer();
     const stderr = std.io.getStdErr().writer();
 
     const previous_terminal_settings = std.os.tcgetattr(raw_stdin.handle) catch |err| {
-        try stderr.print("failed to capture termios settings: {s}\n", .{@errorName(err)});
+        stderr.print("failed to capture termios settings: {s}\n", .{@errorName(err)}) catch {};
         return err;
     };
     setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
-        try stderr.print("failed to set raw console mode: {s}\n", .{@errorName(err)});
+        stderr.print("failed to set raw console mode: {s}\n", .{@errorName(err)}) catch {};
         return err;
     };
     defer {
@@ -141,16 +159,39 @@ fn repl(file_contents: []const u8) ReplErrors!void {
         stdout.writeByte('\n') catch {};
     }
 
+    const machine = zriscv.Machine.create(
+        allocator,
+        memory_description,
+        1, // TODO: Support multiple harts
+    ) catch |err| switch (err) {
+        error.OverlappingDescriptor => |e| {
+            stderr.print("error: elf file has overlapping sections?\n", .{}) catch {};
+            if (is_debug_or_test) return e;
+            return 1;
+        },
+        error.NonZeroNumberOfHartsRequired => unreachable, // we pass 1
+        else => |e| {
+            if (is_debug_or_test) return e;
+            return 1;
+        },
+    };
+    defer machine.destory();
+
+    var timer = std.time.Timer.start() catch |err| {
+        stderr.print("failed to start timer: {s}\n", .{@errorName(err)}) catch {};
+        return err;
+    };
+
     var opt_break_point: ?u64 = null;
 
     while (true) {
         stdout.writeAll("> ") catch |err| {
-            try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+            stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
             return err;
         };
 
         const input = stdin.readByte() catch |err| {
-            try stderr.print("failed to read from stdin: {s}\n", .{@errorName(err)});
+            stderr.print("failed to read from stdin: {s}\n", .{@errorName(err)}) catch {};
             return err;
         };
 
@@ -163,21 +204,29 @@ fn repl(file_contents: []const u8) ReplErrors!void {
                 \\  b[addr] - set breakpoint, [addr] must be in hex, blank [addr] clears the breakpoint 
                 \\        s - single step with output
                 \\        n - single step without output
-                \\        d - dump cpu state
-                \\        0 - reset cpu
+                \\        d - dump machine state
+                \\        0 - reset machine
                 \\        q - quit
                 \\
             ) catch |err| {
-                try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
                 return err;
             },
             '0' => {
-                @panic("unimplemented"); // TODO: reset cpu
+                machine.reset(memory_description) catch |err| {
+                    stderr.print("failed to reset machine state: {s}\n", .{@errorName(err)}) catch {};
+                    return err;
+                };
+
+                stdout.writeAll("\nreset machine state\n") catch |err| {
+                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
+                    return err;
+                };
             },
             'b' => {
                 // disable raw mode to enable user to enter hex string
                 std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
-                    try stderr.print("failed to restore termios settings: {s}\n", .{@errorName(err)});
+                    stderr.print("failed to restore termios settings: {s}\n", .{@errorName(err)}) catch {};
                     return err;
                 };
                 defer setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
@@ -187,92 +236,141 @@ fn repl(file_contents: []const u8) ReplErrors!void {
                 var hex_buffer: [86]u8 = undefined;
 
                 const hex_str: []const u8 = stdin.readUntilDelimiterOrEof(&hex_buffer, '\n') catch |err| {
-                    try stderr.print("failed to read from stdin: {s}\n", .{@errorName(err)});
+                    stderr.print("failed to read from stdin: {s}\n", .{@errorName(err)}) catch {};
                     return err;
                 } orelse "";
 
                 if (hex_str.len == 0) {
                     opt_break_point = null;
                     stdout.writeAll("cleared breakpoint\n") catch |err| {
-                        try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                        stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
                         return err;
                     };
                     continue;
                 }
 
                 const addr = std.fmt.parseUnsigned(u64, hex_str, 16) catch |err| {
-                    try stderr.print("unable to parse '{s}' as hex: {s}\n", .{ hex_str, @errorName(err) });
+                    stderr.print("unable to parse '{s}' as hex: {s}\n", .{ hex_str, @errorName(err) }) catch {};
                     continue;
                 };
 
                 // TODO: Check if breakpoint exceeds CPU memory
 
                 stdout.print("set breakpoint to 0x{x}\n", .{addr}) catch |err| {
-                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
                     return err;
                 };
 
                 opt_break_point = addr;
             },
             'r', 'e' => {
+                // TODO: Support multiple harts
+
                 const output = input == 'e';
 
                 stdout.writeByte('\n') catch |err| {
-                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
                     return err;
                 };
 
-                const timer = std.time.Timer.start() catch |err| {
-                    try stderr.print("failed to start timer: {s}\n", .{@errorName(err)});
-                    return err;
-                };
+                timer.reset();
 
                 if (opt_break_point) |break_point| {
-                    _ = break_point;
-                    if (output) {
-                        @panic("unimplemented"); // TODO: Run with output, until breakpoint is hit.
+                    while (machine.harts[0].pc != break_point) {
+                        if (output) {
+                            Engine.step(&machine.harts[0], stdout) catch |err| {
+                                stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
+                                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
+                                    return e;
+                                };
+                                break;
+                            };
+                        } else {
+                            Engine.step(&machine.harts[0], {}) catch |err| {
+                                stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
+                                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
+                                    return e;
+                                };
+                                break;
+                            };
+                        }
                     } else {
-                        @panic("unimplemented"); // TODO: Run without output, until breakpoint is hit.
+                        stdout.writeAll("hit breakpoint\n") catch |err| {
+                            stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
+                            return err;
+                        };
                     }
                 } else {
                     if (output) {
-                        @panic("unimplemented"); // TODO: Run with output, until error.
+                        Engine.run(&machine.harts[0], stdout) catch |err| {
+                            stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
+                                stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
+                                return e;
+                            };
+                            break;
+                        };
                     } else {
-                        @panic("unimplemented"); // TODO: Run without output, until error.
+                        Engine.run(&machine.harts[0], {}) catch |err| {
+                            stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
+                                stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
+                                return e;
+                            };
+                            break;
+                        };
                     }
                 }
 
                 const elapsed = timer.read();
                 stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch |err| {
-                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
                     return err;
                 };
             },
             's', 'n' => {
+                // TODO: Support multiple harts
+
                 const output = input == 's';
 
                 stdout.writeByte('\n') catch |err| {
-                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
                     return err;
                 };
 
+                timer.reset();
+
                 if (output) {
-                    @panic("unimplemented"); // TODO: single step with output
+                    Engine.step(&machine.harts[0], stdout) catch |err| {
+                        stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
+                            stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
+                            return e;
+                        };
+                    };
                 } else {
-                    @panic("unimplemented"); // TODO: single step without output
+                    Engine.step(&machine.harts[0], {}) catch |err| {
+                        stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
+                            stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
+                            return e;
+                        };
+                    };
                 }
+
+                const elapsed = timer.read();
+                stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch |err| {
+                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
+                    return err;
+                };
             },
             'd' => {
                 stdout.writeByte('\n') catch |err| {
-                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
                     return err;
                 };
-                @panic("unimplemented"); // TODO: dump cpu state
+                @panic("unimplemented"); // TODO: dump machine state
             },
             'q' => return,
             else => {
                 stdout.writeAll("\ninvalid option\n") catch |err| {
-                    try stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)});
+                    stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
                     return err;
                 };
             },

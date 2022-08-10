@@ -8,14 +8,19 @@ memory: lib.Memory,
 harts: []lib.Hart,
 
 /// Create a machine with `number_of_harts` harts with `memory_description` describing the initial contents of memory.
-pub fn create(allocator: std.mem.Allocator, memory_description: []const lib.MemoryDescriptor, number_of_harts: usize) !*Machine {
+pub fn create(
+    allocator: std.mem.Allocator,
+    memory_size: usize,
+    memory_description: []const lib.MemoryDescriptor,
+    number_of_harts: usize,
+) !*Machine {
     if (number_of_harts == 0) return error.NonZeroNumberOfHartsRequired;
     if (number_of_harts != 1) @panic("multiple harts is unimplemented");
 
     const self = try allocator.create(Machine);
     errdefer allocator.destroy(self);
 
-    var memory = lib.Memory.init(allocator);
+    var memory = try lib.Memory.init(memory_size);
     errdefer memory.deinit();
 
     for (memory_description) |descriptor| {
@@ -49,7 +54,7 @@ pub fn reset(self: *Machine, memory_description: []const lib.MemoryDescriptor) !
         };
     }
 
-    self.memory.reset();
+    try self.memory.reset();
 
     for (memory_description) |descriptor| {
         try self.memory.addDescriptor(descriptor);

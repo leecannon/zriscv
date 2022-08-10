@@ -18,10 +18,12 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     const options = args.parseForCurrentProcess(struct {
         help: bool = false,
         interactive: bool = false,
+        memory: usize = 20,
 
         pub const shorthands = .{
             .i = "interactive",
             .h = "help",
+            .m = "memory",
         };
     }, allocator, .print) catch return 1;
     defer options.deinit();
@@ -32,8 +34,9 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
             \\
             \\Interpret FILE as a riscv program and execute it.
             \\
-            \\      -i, --interactive   enter an interactive repl
-            \\      -h, --help          display this help and exit
+            \\      -i, --interactive      enter an interactive repl
+            \\      -m, --memory [number]  the amount of memory to make available to the emulated machine (MiB)      
+            \\      -h, --help             display this help and exit
             \\
         ) catch |err| {
             stderr.print("failed to write to stdout: {s}\n", .{@errorName(err)}) catch {};
@@ -99,10 +102,12 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     };
     defer allocator.free(memory_description);
 
+    const memory_size = options.options.memory * 1024;
+
     // TODO: Parse file as Elf and produce `[]const zriscv.MemoryDescriptor` to describe the sections
 
     if (options.options.interactive) {
-        repl(allocator, memory_description) catch |err| {
+        repl(allocator, memory_size, memory_description) catch |err| {
             if (is_debug_or_test) return err;
             return 1;
         };
@@ -111,15 +116,16 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
 
     const machine = zriscv.Machine.create(
         allocator,
+        memory_size,
         memory_description,
         1,
     ) catch |err| switch (err) {
-        error.OverlappingDescriptor => |e| {
-            stderr.print("error: elf file has overlapping sections?\n", .{}) catch {};
+        error.NonZeroNumberOfHartsRequired => unreachable, // we pass 1
+        error.OutOfBoundsWrite => |e| {
+            stderr.writeAll("error: insufficent memory provided to load elf file\n") catch {};
             if (is_debug_or_test) return e;
             return 1;
         },
-        error.NonZeroNumberOfHartsRequired => unreachable, // we pass 1
         else => |e| {
             if (is_debug_or_test) return e;
             return 1;
@@ -138,7 +144,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     }
 }
 
-fn repl(allocator: std.mem.Allocator, memory_description: []const zriscv.MemoryDescriptor) !void {
+fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []const zriscv.MemoryDescriptor) !void {
     const raw_stdin = std.io.getStdIn();
     const stdin = raw_stdin.reader();
     const stdout = std.io.getStdOut().writer();
@@ -161,15 +167,16 @@ fn repl(allocator: std.mem.Allocator, memory_description: []const zriscv.MemoryD
 
     const machine = zriscv.Machine.create(
         allocator,
+        memory_size,
         memory_description,
         1, // TODO: Support multiple harts
     ) catch |err| switch (err) {
-        error.OverlappingDescriptor => |e| {
-            stderr.print("error: elf file has overlapping sections?\n", .{}) catch {};
+        error.NonZeroNumberOfHartsRequired => unreachable, // we pass 1
+        error.OutOfBoundsWrite => |e| {
+            stderr.writeAll("error: insufficent memory provided to load elf file\n") catch {};
             if (is_debug_or_test) return e;
             return 1;
         },
-        error.NonZeroNumberOfHartsRequired => unreachable, // we pass 1
         else => |e| {
             if (is_debug_or_test) return e;
             return 1;

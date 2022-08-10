@@ -5,8 +5,6 @@ const builtin = @import("builtin");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
-const Engine = zriscv.Engine(.{});
-
 pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     const stderr = std.io.getStdErr().writer();
 
@@ -136,7 +134,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     while (true) {
         // TODO: Support multiple harts
         // TODO: Someway to exit loop without an error, as it is every execution "fails".
-        Engine.run(&machine.harts[0], {}) catch |err| {
+        zriscv.engine.run(&machine.harts[0], {}) catch |err| {
             stderr.print("error: {s}\n", .{@errorName(err)}) catch {};
             if (is_debug_or_test) return err;
             return 1;
@@ -285,7 +283,7 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
                 if (opt_break_point) |break_point| {
                     while (machine.harts[0].pc != break_point) {
                         if (output) {
-                            Engine.step(&machine.harts[0], stdout) catch |err| {
+                            zriscv.engine.step(&machine.harts[0], stdout) catch |err| {
                                 stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
                                     stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
                                     return e;
@@ -293,7 +291,7 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
                                 break;
                             };
                         } else {
-                            Engine.step(&machine.harts[0], {}) catch |err| {
+                            zriscv.engine.step(&machine.harts[0], {}) catch |err| {
                                 stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
                                     stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
                                     return e;
@@ -309,7 +307,7 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
                     }
                 } else {
                     if (output) {
-                        Engine.run(&machine.harts[0], stdout) catch |err| {
+                        zriscv.engine.run(&machine.harts[0], stdout) catch |err| {
                             stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
                                 stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
                                 return e;
@@ -317,7 +315,7 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
                             break;
                         };
                     } else {
-                        Engine.run(&machine.harts[0], {}) catch |err| {
+                        zriscv.engine.run(&machine.harts[0], {}) catch |err| {
                             stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
                                 stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
                                 return e;
@@ -346,14 +344,14 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
                 timer.reset();
 
                 if (output) {
-                    Engine.step(&machine.harts[0], stdout) catch |err| {
+                    zriscv.engine.step(&machine.harts[0], stdout) catch |err| {
                         stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
                             stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
                             return e;
                         };
                     };
                 } else {
-                    Engine.step(&machine.harts[0], {}) catch |err| {
+                    zriscv.engine.step(&machine.harts[0], {}) catch |err| {
                         stdout.print("error: {s}\n", .{@errorName(err)}) catch |e| {
                             stderr.print("failed to write to stdout: {s}\n", .{@errorName(e)}) catch {};
                             return e;

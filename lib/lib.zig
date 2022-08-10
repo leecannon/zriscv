@@ -9,9 +9,7 @@ pub const Hart = @import("Hart.zig");
 pub const Memory = @import("Memory.zig");
 pub const MemoryDescriptor = Memory.MemoryDescriptor;
 
-const execution_engine = @import("execution_engine.zig");
-pub const Engine = execution_engine.Engine;
-pub const EngineOptions = execution_engine.EngineOptions;
+pub const engine = @import("engine.zig");
 
 comptime {
     std.testing.refAllDeclsRecursive(@This());

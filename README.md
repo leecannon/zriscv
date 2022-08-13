@@ -13,7 +13,6 @@ The focus is on correctness not performance, i'm expecting practically every exe
 ## Goal
  - RV64GC 
  - user, super and machine mode 
- - single hart (this allows us to ignore memory ordering/synchronization)
 
 ## Progress
 - [ ] RV64I (64-bit Base Integer)
@@ -28,3 +27,6 @@ The focus is on correctness not performance, i'm expecting practically every exe
 - [ ] Machine-Level ISA
 - [ ] Supervisor-Level ISA
 - [ ] CSRs
+
+## Spec
+The version of the riscv spec used is draft-20220723-10eea63 released 23/07/2022

@@ -1,6 +1,3 @@
-// This file only contains public decls that should be accessible outside the package.
-// Any internal only decls are made available from `internal.zig`
-
 const std = @import("std");
 
 pub const Machine = @import("Machine.zig");

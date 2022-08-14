@@ -40,16 +40,32 @@ fn deallocateMemory(memory: []align(std.mem.page_size) const u8) void {
     std.os.munmap(memory);
 }
 
-pub fn addDescriptor(self: *Memory, descriptor: MemoryDescriptor) !void {
+pub fn addDescriptor(self: *Memory, descriptor: Descriptor) !void {
     if (descriptor.start_address + descriptor.memory.len > self.memory.len) return error.OutOfBoundsWrite;
     std.mem.copy(u8, self.memory[descriptor.start_address..], descriptor.memory);
 }
 
-pub const MemoryDescriptor = struct {
+pub const Descriptor = struct {
     start_address: usize,
     memory: []const u8,
 };
 
 comptime {
-    std.testing.refAllDeclsRecursive(@This());
+    refAllDeclsRecursive(@This());
+}
+
+// This code is from `std.testing.refAllDeclsRecursive` but as it is in the file it can access private decls
+fn refAllDeclsRecursive(comptime T: type) void {
+    if (!@import("builtin").is_test) return;
+    inline for (comptime std.meta.declarations(T)) |decl| {
+        if (decl.is_pub) {
+            if (@TypeOf(@field(T, decl.name)) == type) {
+                switch (@typeInfo(@field(T, decl.name))) {
+                    .Struct, .Enum, .Union, .Opaque => refAllDeclsRecursive(@field(T, decl.name)),
+                    else => {},
+                }
+            }
+            _ = @field(T, decl.name);
+        }
+    }
 }

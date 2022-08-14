@@ -1,7 +1,10 @@
 const std = @import("std");
-const zriscv = @import("zriscv");
 const args = @import("args");
 const builtin = @import("builtin");
+
+const engine = @import("engine.zig");
+const Memory = @import("Memory.zig");
+const Machine = @import("Machine.zig");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
@@ -35,7 +38,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
 }
 
 // OLD
-fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []const zriscv.MemoryDescriptor) !void {
+fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []const Memory.Descriptor) !void {
     const raw_stdin = std.io.getStdIn();
     const stdin = raw_stdin.reader();
     const stdout = std.io.getStdOut().writer();
@@ -56,7 +59,7 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
         stdout.writeByte('\n') catch unreachable;
     }
 
-    const machine = zriscv.Machine.create(
+    const machine = Machine.create(
         allocator,
         memory_size,
         memory_description,
@@ -158,12 +161,12 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
                 if (opt_break_point) |break_point| {
                     while (machine.harts[0].pc != break_point) {
                         if (output) {
-                            zriscv.engine.step(&machine.harts[0], stdout) catch |err| {
+                            engine.step(&machine.harts[0], stdout) catch |err| {
                                 stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break;
                             };
                         } else {
-                            zriscv.engine.step(&machine.harts[0], {}) catch |err| {
+                            engine.step(&machine.harts[0], {}) catch |err| {
                                 stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break;
                             };
@@ -173,12 +176,12 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
                     }
                 } else {
                     if (output) {
-                        zriscv.engine.run(&machine.harts[0], stdout) catch |err| {
+                        engine.run(&machine.harts[0], stdout) catch |err| {
                             stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
                             break;
                         };
                     } else {
-                        zriscv.engine.run(&machine.harts[0], {}) catch |err| {
+                        engine.run(&machine.harts[0], {}) catch |err| {
                             stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
                             break;
                         };
@@ -198,11 +201,11 @@ fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []
                 timer.reset();
 
                 if (output) {
-                    zriscv.engine.step(&machine.harts[0], stdout) catch |err| {
+                    engine.step(&machine.harts[0], stdout) catch |err| {
                         stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
                     };
                 } else {
-                    zriscv.engine.step(&machine.harts[0], {}) catch |err| {
+                    engine.step(&machine.harts[0], {}) catch |err| {
                         stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
                     };
                 }
@@ -233,7 +236,7 @@ fn setRawMode(previous: std.os.termios, handle: std.os.fd_t) !void {
 
 const Executable = struct {
     contents: []align(std.mem.page_size) const u8,
-    memory_description: []const zriscv.MemoryDescriptor,
+    memory_description: []const Memory.Descriptor,
 
     pub fn load(
         allocator: std.mem.Allocator,
@@ -286,9 +289,9 @@ const Executable = struct {
 
         const format = if (opt_format) |f| f else @panic("UNIMPLEMENTED"); // TODO: Autodetect file format
 
-        const memory_description: []const zriscv.MemoryDescriptor = switch (format) {
+        const memory_description: []const Memory.Descriptor = switch (format) {
             .flat => blk: {
-                const description = allocator.alloc(zriscv.MemoryDescriptor, 1) catch {
+                const description = allocator.alloc(Memory.Descriptor, 1) catch {
                     stderr.writeAll("ERROR: failed to allocate memory\n") catch unreachable;
                     std.process.exit(1);
                 };
@@ -417,5 +420,21 @@ const SystemModeOptions = struct {
 };
 
 comptime {
-    std.testing.refAllDeclsRecursive(@This());
+    refAllDeclsRecursive(@This());
+}
+
+// This code is from `std.testing.refAllDeclsRecursive` but as it is in the file it can access private decls
+fn refAllDeclsRecursive(comptime T: type) void {
+    if (!@import("builtin").is_test) return;
+    inline for (comptime std.meta.declarations(T)) |decl| {
+        if (decl.is_pub) {
+            if (@TypeOf(@field(T, decl.name)) == type) {
+                switch (@typeInfo(@field(T, decl.name))) {
+                    .Struct, .Enum, .Union, .Opaque => refAllDeclsRecursive(@field(T, decl.name)),
+                    else => {},
+                }
+            }
+            _ = @field(T, decl.name);
+        }
+    }
 }

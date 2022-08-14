@@ -4,13 +4,13 @@ const engine = @import("engine.zig");
 const Executable = @import("Executable.zig");
 
 pub inline fn systemMemory(minimum_memory_size: usize) !Memory(.system) {
-    return .{
+    return Memory(.system){
         .impl = try SystemMemory.init(minimum_memory_size),
     };
 }
 
 pub inline fn userMemory(allocator: std.mem.Allocator) !Memory(.user) {
-    return .{
+    return Memory(.user){
         .impl = try UserMemory.init(allocator),
     };
 }
@@ -40,7 +40,7 @@ const SystemMemory = struct {
     memory: []align(std.mem.page_size) u8,
 
     pub fn init(minimum_memory_size: usize) !SystemMemory {
-        return .{
+        return SystemMemory{
             .memory = try allocateMemory(
                 std.mem.alignForward(minimum_memory_size, std.mem.page_size),
             ),
@@ -84,8 +84,8 @@ const SystemMemory = struct {
 const UserMemory = struct {
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: usize) !UserMemory {
-        return .{
+    pub fn init(allocator: std.mem.Allocator) !UserMemory {
+        return UserMemory{
             .allocator = allocator,
         };
     }

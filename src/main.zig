@@ -4,8 +4,8 @@ const builtin = @import("builtin");
 
 const Executable = @import("Executable.zig");
 const engine = @import("engine.zig");
-const memory = @import("memory.zig");
-const machine = @import("machine.zig");
+const Machine = @import("machine.zig").Machine;
+const Hart = @import("hart.zig").Hart;
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
@@ -16,9 +16,8 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     const allocator = gpa.allocator();
 
     const stderr = std.io.getStdErr().writer();
-    const stdout = std.io.getStdOut().writer();
 
-    const options = parseArguments(allocator, stdout, stderr);
+    const options = parseArguments(allocator, stderr);
     defer options.deinit();
 
     const executable = Executable.load(
@@ -31,13 +30,23 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     defer executable.unload(allocator);
 
     // `parseArguments` ensures a verb was given
-    switch (options.verb.?) {
-        .user => @panic("UNIMPLEMENTED"), // TODO: Implement user mode
-        .system => |system_mode_options| systemMode(allocator, executable, system_mode_options) catch |err| {
-            if (is_debug_or_test) return err;
-            return 1;
-        },
-    }
+    _ = switch (options.verb.?) {
+        .user => |user_mode_options| userMode(
+            allocator,
+            executable,
+            user_mode_options,
+            stderr,
+        ),
+        .system => |system_mode_options| systemMode(
+            allocator,
+            executable,
+            system_mode_options,
+            stderr,
+        ),
+    } catch |err| {
+        if (is_debug_or_test) return err;
+        return 1;
+    };
 
     return 0;
 }
@@ -46,208 +55,231 @@ fn systemMode(
     allocator: std.mem.Allocator,
     executable: Executable,
     system_mode_options: SystemModeOptions,
+    stderr: anytype,
 ) !void {
-    _ = allocator;
-    _ = executable;
-    _ = system_mode_options;
-    @panic("UNIMPLEMENTED"); // TODO: Implement system mode
+    if (system_mode_options.interactive and system_mode_options.harts > 1) {
+        stderr.writeAll("ERROR: interactive mode is not supported with multiple harts\n") catch unreachable;
+        return error.InteractiveDoesNotSupportMultipleHarts;
+    }
+
+    if (system_mode_options.harts == 0) {
+        stderr.writeAll("ERROR: non-zero number of harts required\n") catch unreachable;
+        return error.ZeroHartsRequested;
+    }
+
+    const machine: Machine(.system) = @import("machine.zig").systemMachine(
+        allocator,
+        system_mode_options.memory,
+        executable,
+        system_mode_options.harts,
+    ) catch |err| switch (err) {
+        error.OutOfBoundsWrite => |e| {
+            stderr.writeAll("ERROR: insufficent memory provided to load executable file\n") catch unreachable;
+            return e;
+        },
+        else => |e| {
+            stderr.print("ERROR: failed to create machine: {s}\n", .{@errorName(err)}) catch unreachable;
+            return e;
+        },
+    };
+    defer machine.destroy();
+
+    if (system_mode_options.interactive) {
+        return interactiveSystemMode(machine, stderr);
+    }
+
+    @panic("UNIMPLEMENTED"); // TODO: Non-interactive system mode
 }
 
-// // OLD
-// fn repl(allocator: std.mem.Allocator, memory_size: usize, memory_description: []const Memory.Descriptor) !void {
-//     const raw_stdin = std.io.getStdIn();
-//     const stdin = raw_stdin.reader();
-//     const stdout = std.io.getStdOut().writer();
-//     const stderr = std.io.getStdErr().writer();
+fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
+    std.debug.assert(machine.impl.harts.len == 1);
 
-//     const previous_terminal_settings = std.os.tcgetattr(raw_stdin.handle) catch |err| {
-//         stderr.print("ERROR: failed to capture termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
-//         return err;
-//     };
-//     setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
-//         stderr.print("ERROR: failed to set raw console mode: {s}\n", .{@errorName(err)}) catch unreachable;
-//         return err;
-//     };
-//     defer {
-//         std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
-//             stderr.print("ERROR: failed to restore termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
-//         };
-//         stdout.writeByte('\n') catch unreachable;
-//     }
+    const hart: *Hart(.system) = &machine.impl.harts[0];
 
-//     const machine = Machine.create(
-//         allocator,
-//         memory_size,
-//         memory_description,
-//         1, // TODO: Support multiple harts
-//     ) catch |err| switch (err) {
-//         error.NonZeroNumberOfHartsRequired => unreachable, // we pass 1
-//         error.OutOfBoundsWrite => |e| {
-//             stderr.writeAll("ERROR: insufficent memory provided to load elf file\n") catch unreachable;
-//             if (is_debug_or_test) return e;
-//             return 1;
-//         },
-//         else => |e| {
-//             if (is_debug_or_test) return e;
-//             return 1;
-//         },
-//     };
-//     defer machine.destory();
+    const raw_stdin = std.io.getStdIn();
+    const stdin = raw_stdin.reader();
+    const stdout = std.io.getStdOut().writer();
 
-//     var timer = std.time.Timer.start() catch |err| {
-//         stderr.print("ERROR: failed to start timer: {s}\n", .{@errorName(err)}) catch unreachable;
-//         return err;
-//     };
+    const previous_terminal_settings = std.os.tcgetattr(raw_stdin.handle) catch |err| {
+        stderr.print("ERROR: failed to capture termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
+        return err;
+    };
+    setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
+        stderr.print("ERROR: failed to set raw console mode: {s}\n", .{@errorName(err)}) catch unreachable;
+        return err;
+    };
+    defer {
+        std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
+            stderr.print("ERROR: failed to restore termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
+        };
+        stdout.writeByte('\n') catch unreachable;
+    }
 
-//     var opt_break_point: ?u64 = null;
+    var timer = std.time.Timer.start() catch |err| {
+        stderr.print("ERROR: failed to start timer: {s}\n", .{@errorName(err)}) catch unreachable;
+        return err;
+    };
 
-//     while (true) {
-//         stdout.writeAll("> ") catch unreachable;
+    var opt_break_point: ?u64 = null;
 
-//         const input = stdin.readByte() catch |err| {
-//             stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
-//             return err;
-//         };
+    while (true) {
+        stdout.writeAll("> ") catch unreachable;
 
-//         switch (input) {
-//             '?', 'h', '\n' => stdout.writeAll(
-//                 \\help:
-//                 \\ ?|h|'\n' - this help menu
-//                 \\        r - run without output (this will not stop unless a breakpoint is hit, or an error)
-//                 \\        e - run with output (this will not stop unless a breakpoint is hit, or an error)
-//                 \\  b[addr] - set breakpoint, [addr] must be in hex, blank [addr] clears the breakpoint
-//                 \\        s - single step with output
-//                 \\        n - single step without output
-//                 \\        d - dump machine state
-//                 \\        0 - reset machine
-//                 \\        q - quit
-//                 \\
-//             ) catch unreachable,
-//             '0' => {
-//                 machine.reset(memory_description) catch |err| {
-//                     stderr.print("ERROR: failed to reset machine state: {s}\n", .{@errorName(err)}) catch unreachable;
-//                     return err;
-//                 };
+        const input = stdin.readByte() catch |err| {
+            stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
+            return err;
+        };
 
-//                 stdout.writeAll("\nreset machine state\n") catch unreachable;
-//             },
-//             'b' => {
-//                 // disable raw mode to enable user to enter hex string
-//                 std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
-//                     stderr.print("ERROR: failed to restore termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
-//                     return err;
-//                 };
-//                 defer setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
-//                     stderr.print("ERROR: failed to set raw console mode: {s}\n", .{@errorName(err)}) catch unreachable;
-//                 };
+        switch (input) {
+            '\n' => stdout.writeAll(interactive_help_menu) catch unreachable,
+            '?', 'h' => stdout.writeAll("\n" ++ interactive_help_menu) catch unreachable,
+            '0' => {
+                machine.reset(true) catch |err| {
+                    stderr.print("\nERROR: failed to reset machine state: {s}\n", .{@errorName(err)}) catch unreachable;
+                    return err;
+                };
 
-//                 var hex_buffer: [86]u8 = undefined;
+                stdout.writeAll("\nreset machine state\n") catch unreachable;
+            },
+            'b' => {
+                // disable raw mode to enable user to enter hex string
+                std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
+                    stderr.print("\nERROR: failed to restore termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
+                    return err;
+                };
+                defer setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
+                    stderr.print("ERROR: failed to set raw console mode: {s}\n", .{@errorName(err)}) catch unreachable;
+                };
 
-//                 const hex_str: []const u8 = stdin.readUntilDelimiterOrEof(&hex_buffer, '\n') catch |err| {
-//                     stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
-//                     return err;
-//                 } orelse "";
+                var hex_buffer: [86]u8 = undefined;
 
-//                 if (hex_str.len == 0) {
-//                     opt_break_point = null;
-//                     stdout.writeAll("cleared breakpoint\n") catch unreachable;
-//                     continue;
-//                 }
+                const hex_str: []const u8 = stdin.readUntilDelimiterOrEof(&hex_buffer, '\n') catch |err| {
+                    stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
+                    return err;
+                } orelse "";
 
-//                 const addr = std.fmt.parseUnsigned(u64, hex_str, 16) catch |err| {
-//                     stderr.print("ERROR: unable to parse '{s}' as hex: {s}\n", .{ hex_str, @errorName(err) }) catch unreachable;
-//                     continue;
-//                 };
+                if (hex_str.len == 0) {
+                    opt_break_point = null;
+                    stdout.writeAll("cleared breakpoint\n") catch unreachable;
+                    continue;
+                }
 
-//                 // TODO: Check if breakpoint exceeds CPU memory
+                const addr = std.fmt.parseUnsigned(u64, hex_str, 16) catch |err| {
+                    stderr.print("ERROR: unable to parse '{s}' as hex: {s}\n", .{ hex_str, @errorName(err) }) catch unreachable;
+                    continue;
+                };
 
-//                 stdout.print("set breakpoint to 0x{x}\n", .{addr}) catch unreachable;
+                // TODO: Check if breakpoint exceeds CPU memory
 
-//                 opt_break_point = addr;
-//             },
-//             'r', 'e' => {
-//                 // TODO: Support multiple harts
+                stdout.print("set breakpoint to 0x{x}\n", .{addr}) catch unreachable;
 
-//                 const output = input == 'e';
+                opt_break_point = addr;
+            },
+            'r', 'e' => {
+                const output = input == 'e';
 
-//                 stdout.writeByte('\n') catch unreachable;
+                stdout.writeByte('\n') catch unreachable;
 
-//                 timer.reset();
+                timer.reset();
 
-//                 if (opt_break_point) |break_point| {
-//                     while (machine.harts[0].pc != break_point) {
-//                         if (output) {
-//                             engine.step(&machine.harts[0], stdout) catch |err| {
-//                                 stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
-//                                 break;
-//                             };
-//                         } else {
-//                             engine.step(&machine.harts[0], {}) catch |err| {
-//                                 stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
-//                                 break;
-//                             };
-//                         }
-//                     } else {
-//                         stdout.writeAll("hit breakpoint\n") catch unreachable;
-//                     }
-//                 } else {
-//                     if (output) {
-//                         engine.run(&machine.harts[0], stdout) catch |err| {
-//                             stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
-//                             break;
-//                         };
-//                     } else {
-//                         engine.run(&machine.harts[0], {}) catch |err| {
-//                             stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
-//                             break;
-//                         };
-//                     }
-//                 }
+                if (opt_break_point) |break_point| {
+                    while (hart.pc != break_point) {
+                        if (output) {
+                            engine.step(.system, hart, stdout) catch |err| {
+                                stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                                break;
+                            };
+                        } else {
+                            engine.step(.system, hart, {}) catch |err| {
+                                stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                                break;
+                            };
+                        }
+                    } else {
+                        stdout.writeAll("hit breakpoint\n") catch unreachable;
+                    }
+                } else {
+                    if (output) {
+                        engine.run(.system, hart, stdout) catch |err| {
+                            stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                            break;
+                        };
+                    } else {
+                        engine.run(.system, hart, {}) catch |err| {
+                            stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                            break;
+                        };
+                    }
+                }
 
-//                 const elapsed = timer.read();
-//                 stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch unreachable;
-//             },
-//             's', 'n' => {
-//                 // TODO: Support multiple harts
+                const elapsed = timer.read();
+                stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch unreachable;
+            },
+            's', 'n' => {
+                const output = input == 's';
 
-//                 const output = input == 's';
+                stdout.writeByte('\n') catch unreachable;
 
-//                 stdout.writeByte('\n') catch unreachable;
+                timer.reset();
 
-//                 timer.reset();
+                if (output) {
+                    engine.step(.system, hart, stdout) catch |err| {
+                        stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                    };
+                } else {
+                    engine.step(.system, hart, {}) catch |err| {
+                        stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                    };
+                }
 
-//                 if (output) {
-//                     engine.step(&machine.harts[0], stdout) catch |err| {
-//                         stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
-//                     };
-//                 } else {
-//                     engine.step(&machine.harts[0], {}) catch |err| {
-//                         stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
-//                     };
-//                 }
+                const elapsed = timer.read();
+                stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch unreachable;
+            },
+            'd' => {
+                stdout.writeByte('\n') catch unreachable;
+                @panic("UNIMPLEMENTED"); // TODO: dump machine state
+            },
+            'q' => return,
+            else => {
+                stdout.writeAll("\ninvalid option\n") catch unreachable;
+            },
+        }
+    }
+}
 
-//                 const elapsed = timer.read();
-//                 stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch unreachable;
-//             },
-//             'd' => {
-//                 stdout.writeByte('\n') catch unreachable;
-//                 @panic("unimplemented"); // TODO: dump machine state
-//             },
-//             'q' => return,
-//             else => {
-//                 stdout.writeAll("\ninvalid option\n") catch unreachable;
-//             },
-//         }
-//     }
-// }
+const interactive_help_menu =
+    \\help:
+    \\ ?|h|'\n' - this help menu
+    \\        r - run without output (this will not stop unless a breakpoint is hit, or an error)
+    \\        e - run with output (this will not stop unless a breakpoint is hit, or an error)
+    \\  b[addr] - set breakpoint, [addr] must be in hex, blank [addr] clears the breakpoint
+    \\        s - single step with output
+    \\        n - single step without output
+    \\        d - dump machine state
+    \\        0 - reset machine
+    \\        q - quit
+    \\
+;
 
-// OLD
 fn setRawMode(previous: std.os.termios, handle: std.os.fd_t) !void {
     var current_settings = previous;
 
     current_settings.lflag &= ~@as(u32, std.os.linux.ICANON);
 
     try std.os.tcsetattr(handle, .FLUSH, current_settings);
+}
+
+fn userMode(
+    allocator: std.mem.Allocator,
+    executable: Executable,
+    user_mode_options: UserModeOptions,
+    stderr: anytype,
+) !void {
+    _ = allocator;
+    _ = executable;
+    _ = user_mode_options;
+    _ = stderr;
+    @panic("UNIMPLEMENTED"); // TODO: Implement user mode
 }
 
 /// This function parses the arguments from the user.
@@ -258,7 +290,6 @@ fn setRawMode(previous: std.os.termios, handle: std.os.fd_t) !void {
 ///     - Validates that a single file path has been given
 fn parseArguments(
     allocator: std.mem.Allocator,
-    stdout: anytype,
     stderr: anytype,
 ) args.ParseArgsResult(SharedArguments, ModeOptions) {
     const options = args.parseWithVerbForCurrentProcess(
@@ -271,13 +302,12 @@ fn parseArguments(
     };
 
     if (options.options.help) {
-        stdout.writeAll(usage) catch unreachable;
+        std.io.getStdOut().writeAll(usage) catch unreachable;
         std.process.exit(0);
     }
 
     if (options.verb == null) {
-        stderr.writeAll("ERROR: no execution mode given\n\n") catch unreachable;
-        stdout.writeAll(usage) catch unreachable;
+        stderr.writeAll("ERROR: no execution mode given\n") catch unreachable;
         std.process.exit(1);
     }
 
@@ -311,12 +341,15 @@ const usage =
     \\
     \\      --start-address=ADDRESS    will be used as the execution start address; if not provided:
     \\                                   flat files will start at address 0
-    \\                                   elf file will start at the start address specifed in the file
+    \\                                   elf files will start at the start address specifed in the file
     \\
     \\      -h, --help                 display this help and exit
     \\
     \\SYSTEM mode options:
-    \\      -m, --memory=[MEMORY]      the amount of memory to make available to the emulated machine (MiB), defaults to 20MiB 
+    \\      -i, --interactive          run in a interactive repl mode, only supported with a single hart
+    \\
+    \\      -m, --memory=[MEMORY]      the amount of memory to make available to the emulated machine (MiB), defaults to 20MiB
+    \\
     \\      --harts=[HARTS]            the number of harts the system has, defaults to 1, must be greater than zero
     \\
 ;
@@ -344,9 +377,11 @@ const UserModeOptions = struct {};
 const SystemModeOptions = struct {
     memory: usize = 20,
     harts: usize = 1,
+    interactive: bool = false,
 
     pub const shorthands = .{
         .m = "memory",
+        .i = "interactive",
     };
 };
 

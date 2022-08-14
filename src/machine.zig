@@ -10,8 +10,8 @@ pub inline fn systemMachine(
     memory_size: usize,
     executable: Executable,
     number_of_harts: usize,
-) !*Machine(.system) {
-    return .{
+) !Machine(.system) {
+    return Machine(.system){
         .impl = try SystemMachine.create(
             allocator,
             memory_size,
@@ -21,23 +21,23 @@ pub inline fn systemMachine(
     };
 }
 
-pub inline fn userMachine(allocator: std.mem.Allocator) !*Machine(.user) {
-    return .{
+pub inline fn userMachine(allocator: std.mem.Allocator) !Machine(.user) {
+    return Machine(.user){
         .impl = try UserMachine.create(allocator),
     };
 }
 
 pub fn Machine(comptime mode: engine.Mode) type {
     return struct {
-        impl: if (mode == .system) SystemMachine else UserMachine,
+        impl: if (mode == .system) *SystemMachine else *UserMachine,
 
         const Self = @This();
 
-        pub fn reset(self: *Machine, clear_memory: bool) !void {
+        pub fn reset(self: Self, clear_memory: bool) !void {
             return self.impl.reset(clear_memory);
         }
 
-        pub fn destroy(self: *Machine) void {
+        pub fn destroy(self: Self) void {
             self.impl.destroy();
         }
     };
@@ -55,13 +55,13 @@ const SystemMachine = struct {
         executable: Executable,
         number_of_harts: usize,
     ) !*SystemMachine {
-        if (number_of_harts == 0) return error.NonZeroNumberOfHartsRequired;
-        if (number_of_harts != 1) @panic("multiple harts is unimplemented");
+        std.debug.assert(number_of_harts != 0); // non-zero number of harts required
+        if (number_of_harts > 1) @panic("UNIMPLEMENTED"); // TODO: Multiple harts
 
         const self = try allocator.create(SystemMachine);
         errdefer allocator.destroy(self);
 
-        var memory = try Memory(.system).init(memory_size);
+        var memory = try @import("memory.zig").systemMemory(memory_size);
         errdefer memory.deinit();
 
         const harts = try allocator.alloc(Hart(.system), number_of_harts);
@@ -74,7 +74,7 @@ const SystemMachine = struct {
             .harts = harts,
         };
 
-        self.reset();
+        try self.reset(false);
 
         return self;
     }
@@ -83,7 +83,7 @@ const SystemMachine = struct {
         for (self.harts) |*hart, i| {
             hart.* = .{
                 .hart_id = i,
-                .machine = self,
+                .machine = .{ .impl = self },
                 .pc = self.executable.start_address,
             };
         }
@@ -91,7 +91,7 @@ const SystemMachine = struct {
         if (clear_memory) {
             try self.memory.reset();
         }
-        try self.memory.loadExecuatable(self.executable);
+        try self.memory.loadExecutable(self.executable);
     }
 
     pub fn destroy(self: *SystemMachine) void {

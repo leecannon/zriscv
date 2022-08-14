@@ -6,7 +6,7 @@ const engine = @import("engine.zig");
 pub fn Hart(comptime mode: engine.Mode) type {
     return struct {
         hart_id: usize,
-        machine: *Machine(mode),
+        machine: Machine(mode),
 
         pc: usize = 0,
         x: [32]u64 = [_]u64{0} ** 32,

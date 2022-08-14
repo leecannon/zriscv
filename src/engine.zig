@@ -20,7 +20,7 @@ pub inline fn run(comptime mode: Mode, state: *Hart(mode), writer: anytype) !voi
 pub fn step(comptime mode: Mode, state: *Hart(mode), writer: anytype) !void {
     _ = state;
     _ = writer;
-    @panic("unimplemented");
+    @panic("UNIMPLEMENTED");
 
     // decode
 

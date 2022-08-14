@@ -41,7 +41,7 @@ fn executeTest(context: *TestContext) !void {
 
     // TODO: Run until error.
     //       How will we know if it is successful?
-    @panic("unimplemented");
+    @panic("UNIMPLEMENTED");
 }
 
 comptime {

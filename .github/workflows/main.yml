@@ -42,7 +42,7 @@ jobs:
           version: master
       
       - name: Test
-        run: zig build test
+        run: zig build test -fno-stage1
         
   build:
     runs-on: ubuntu-latest
@@ -58,4 +58,4 @@ jobs:
           version: master
       
       - name: Build
-        run: zig build install
+        run: zig build install -fno-stage1

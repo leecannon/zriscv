@@ -3,4 +3,4 @@
 	url = https://github.com/leecannon/zig-bitjuggle.git
 [submodule "external/zig-args"]
 	path = external/zig-args
-	url = https://github.com/MasterQ32/zig-args.git
+	url = https://github.com/leecannon/zig-args.git

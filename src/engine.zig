@@ -1,6 +1,11 @@
 const std = @import("std");
 const Hart = @import("Hart.zig");
 
+pub const Mode = enum {
+    user,
+    system,
+};
+
 /// Execute instructions until an exception is encountered
 ///
 /// Note: `writer` may be void (`{}`) inorder to suppress output

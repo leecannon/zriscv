@@ -386,7 +386,7 @@ const usage =
     \\
 ;
 
-const ModeOptions = union(enum) {
+const ModeOptions = union(engine.Mode) {
     user: UserModeOptions,
     system: SystemModeOptions,
 };

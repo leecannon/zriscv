@@ -1,5 +1,6 @@
 const std = @import("std");
-const Hart = @import("Hart.zig");
+
+const Hart = @import("hart.zig").Hart;
 
 pub const Mode = enum {
     user,
@@ -9,14 +10,14 @@ pub const Mode = enum {
 /// Execute instructions until an exception is encountered
 ///
 /// Note: `writer` may be void (`{}`) inorder to suppress output
-pub inline fn run(state: *Hart, writer: anytype) !void {
-    while (true) try step(state, writer);
+pub inline fn run(comptime mode: Mode, state: *Hart(mode), writer: anytype) !void {
+    while (true) try step(mode, state, writer);
 }
 
 /// Execute a single instruction
 ///
 /// Note: `writer` may be void (`{}`) inorder to suppress output
-pub fn step(state: *Hart, writer: anytype) !void {
+pub fn step(comptime mode: Mode, state: *Hart(mode), writer: anytype) !void {
     _ = state;
     _ = writer;
     @panic("unimplemented");

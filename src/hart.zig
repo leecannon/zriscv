@@ -1,13 +1,17 @@
 const std = @import("std");
-const Machine = @import("Machine.zig");
 
-const Hart = @This();
+const Machine = @import("machine.zig").Machine;
+const engine = @import("engine.zig");
 
-hart_id: usize,
-machine: *Machine,
+pub fn Hart(comptime mode: engine.Mode) type {
+    return struct {
+        hart_id: usize,
+        machine: *Machine(mode),
 
-pc: usize = 0,
-x: [32]u64 = [_]u64{0} ** 32,
+        pc: usize = 0,
+        x: [32]u64 = [_]u64{0} ** 32,
+    };
+}
 
 comptime {
     refAllDeclsRecursive(@This());

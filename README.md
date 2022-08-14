@@ -8,11 +8,12 @@ This is the first emulator I've made other than CHIP-8, don't expect high qualit
 
 The only thing that should be expected is mistakes.
 
-The focus is on correctness not performance, i'm expecting practically every execution path to be littered with potential optimization opportunities.
+The focus is on correctness not performance, I'm expecting practically every execution path to be littered with potential optimization opportunities.
 
 ## Goal
- - RV64GC 
- - user, super and machine mode 
+ - RV64GC
+ - user, super and machine mode
+ - provide a linux userspace emulation similar to qemu's
 
 ## Progress
 - [ ] RV64I (64-bit Base Integer)

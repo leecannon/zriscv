@@ -95,9 +95,9 @@ fn systemMode(
 }
 
 fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
-    std.debug.assert(machine.impl.harts.len == 1);
+    std.debug.assert(machine.getSystem().harts.len == 1);
 
-    const hart: *Hart(.system) = &machine.impl.harts[0];
+    const hart: *Hart(.system) = &machine.getSystem().harts[0];
 
     const raw_stdin = std.io.getStdIn();
     const stdin = raw_stdin.reader();
@@ -133,6 +133,7 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
             return err;
         };
 
+        // TODO: Support arrow keys, history?
         switch (input) {
             '\n' => stdout.writeAll(interactive_help_menu) catch unreachable,
             '?', 'h' => stdout.writeAll("\n" ++ interactive_help_menu) catch unreachable,
@@ -172,7 +173,11 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
                     continue;
                 };
 
-                // TODO: Check if breakpoint exceeds CPU memory
+                const memory_size = machine.getSystem().memory.getSystem().memory.len;
+                if (addr >= memory_size) {
+                    stderr.print("ERROR: breakpoint 0x{x} overflows memory size 0x{x}\n", .{ addr, memory_size }) catch unreachable;
+                    continue;
+                }
 
                 stdout.print("set breakpoint to 0x{x}\n", .{addr}) catch unreachable;
 

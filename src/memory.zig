@@ -21,6 +21,14 @@ pub fn Memory(comptime mode: engine.Mode) type {
 
         const Self = @This();
 
+        pub inline fn getSystem(self: *Self) *SystemMemory {
+            return &self.impl;
+        }
+
+        pub inline fn getUser(self: *Self) *UserMemory {
+            return &self.impl;
+        }
+
         pub inline fn deinit(self: *Self) void {
             self.impl.deinit();
         }

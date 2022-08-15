@@ -33,6 +33,14 @@ pub fn Machine(comptime mode: engine.Mode) type {
 
         const Self = @This();
 
+        pub inline fn getSystem(self: Self) *SystemMachine {
+            return self.impl;
+        }
+
+        pub inline fn getUser(self: Self) *UserMachine {
+            return self.impl;
+        }
+
         pub fn reset(self: Self, clear_memory: bool) !void {
             return self.impl.reset(clear_memory);
         }
@@ -56,7 +64,6 @@ const SystemMachine = struct {
         number_of_harts: usize,
     ) !*SystemMachine {
         std.debug.assert(number_of_harts != 0); // non-zero number of harts required
-        if (number_of_harts > 1) @panic("UNIMPLEMENTED"); // TODO: Multiple harts
 
         const self = try allocator.create(SystemMachine);
         errdefer allocator.destroy(self);

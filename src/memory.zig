@@ -59,8 +59,8 @@ const SystemMemory = struct {
 
     pub fn loadExecutable(self: *SystemMemory, executable: Executable) !void {
         for (executable.region_description) |descriptor| {
-            if (descriptor.start_address + descriptor.memory.len > self.memory.len) return error.OutOfBoundsWrite;
-            std.mem.copy(u8, self.memory[descriptor.start_address..], descriptor.memory);
+            if (descriptor.load_address + descriptor.length > self.memory.len) return error.OutOfBoundsWrite;
+            std.mem.copy(u8, self.memory[descriptor.load_address..], descriptor.memory);
         }
     }
 

@@ -26,7 +26,10 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
         options.positionals[0], // `parseArguments` ensures a single positional is given
         options.options.format,
         options.options.@"start-address",
-    );
+    ) catch |err| {
+        if (is_debug_or_test) return err;
+        return 1;
+    };
     defer executable.unload(allocator);
 
     // `parseArguments` ensures a verb was given
@@ -69,7 +72,7 @@ fn systemMode(
 
     const machine: Machine(.system) = @import("machine.zig").systemMachine(
         allocator,
-        system_mode_options.memory,
+        system_mode_options.memory * 1024 * 1024, // convert from MiB to bytes
         executable,
         system_mode_options.harts,
     ) catch |err| switch (err) {
@@ -361,9 +364,8 @@ const ModeOptions = union(engine.Mode) {
 
 const SharedArguments = struct {
     help: bool = false,
-    // TODO: Change default to null once autodetect is implemented
     /// `null` means autodetect
-    format: ?Executable.Format = .flat,
+    format: ?Executable.Format = null,
     @"start-address": ?u64 = null,
 
     pub const shorthands = .{
@@ -375,6 +377,7 @@ const SharedArguments = struct {
 const UserModeOptions = struct {};
 
 const SystemModeOptions = struct {
+    /// memory size in MiB, defaults to 20MiB
     memory: usize = 20,
     harts: usize = 1,
     interactive: bool = false,

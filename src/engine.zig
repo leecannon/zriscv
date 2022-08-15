@@ -18,8 +18,10 @@ pub inline fn run(comptime mode: Mode, state: *Hart(mode), writer: anytype) !voi
 ///
 /// Note: `writer` may be void (`{}`) inorder to suppress output
 pub fn step(comptime mode: Mode, state: *Hart(mode), writer: anytype) !void {
+    const has_writer = comptime isWriter(@TypeOf(writer));
+    _ = has_writer;
+
     _ = state;
-    _ = writer;
     @panic("UNIMPLEMENTED");
 
     // decode

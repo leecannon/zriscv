@@ -126,12 +126,13 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
     while (true) {
         stdout.writeAll("> ") catch unreachable;
 
-        const input = stdin.readByte() catch |err| {
+        const input = readCharFromRaw(stdin) catch |err| {
             stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
             return err;
         };
 
-        // TODO: Support arrow keys, history?
+        // const input = stdin.readByte() catch |err| {};
+
         switch (input) {
             '\n' => stdout.writeAll(interactive_help_menu) catch unreachable,
             '?', 'h' => stdout.writeAll("\n" ++ interactive_help_menu) catch unreachable,
@@ -246,6 +247,17 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
                 @panic("UNIMPLEMENTED"); // TODO: dump machine state
             },
             'q' => return,
+            0x1b => {
+                // escape, arrow keys, etc
+                const key = readEscapeCode(raw_stdin) catch |err| {
+                    stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
+                    return err;
+                };
+
+                if (key == .escape) return;
+
+                stdout.writeAll("\ninvalid option\n") catch unreachable;
+            },
             else => {
                 stdout.writeAll("\ninvalid option\n") catch unreachable;
             },
@@ -253,24 +265,84 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
     }
 }
 
+fn readEscapeCode(stdin: std.fs.File) !EscapeKey {
+    var seq: [3]u8 = undefined;
+
+    if ((try stdin.read(seq[0..1])) != 1) return .escape;
+
+    if ((try stdin.read(seq[1..2])) != 1) return .escape;
+
+    if (seq[0] == '[') {
+        if (seq[1] >= '0' and seq[1] <= '9') {
+            if ((try stdin.read(seq[2..3])) != 1) return .escape;
+
+            if (seq[2] == '~') {
+                switch (seq[1]) {
+                    '5' => return .page_up,
+                    '6' => return .page_down,
+                    else => {},
+                }
+            }
+        } else {
+            switch (seq[1]) {
+                'A' => return .up_arrow,
+                'B' => return .down_arrow,
+                'C' => return .right_arrow,
+                'D' => return .left_arrow,
+                else => {},
+            }
+        }
+    }
+
+    return .escape;
+}
+
+const EscapeKey = union(enum) {
+    up_arrow,
+    left_arrow,
+    right_arrow,
+    down_arrow,
+
+    page_up,
+    page_down,
+
+    escape,
+
+    key: u8,
+};
+
+fn readCharFromRaw(reader: anytype) !u8 {
+    while (true) {
+        return reader.readByte() catch |err| switch (err) {
+            error.EndOfStream => continue,
+            else => |e| return e,
+        };
+    }
+}
+
 const interactive_help_menu =
     \\help:
-    \\ ?|h|'\n' - this help menu
-    \\        r - run without output (this will not stop unless a breakpoint is hit, or an error)
-    \\        e - run with output (this will not stop unless a breakpoint is hit, or an error)
-    \\  b[addr] - set breakpoint, [addr] must be in hex, blank [addr] clears the breakpoint
-    \\        s - single step with output
-    \\        n - single step without output
-    \\        d - dump machine state
-    \\        0 - reset machine
-    \\        q - quit
+    \\ ?|h|Enter|Esc - this help menu
+    \\             r - run without output (this will not stop unless a breakpoint is hit, or an error)
+    \\             e - run with output (this will not stop unless a breakpoint is hit, or an error)
+    \\       b[addr] - set breakpoint, [addr] must be in hex, blank [addr] clears the breakpoint
+    \\             s - single step with output
+    \\             n - single step without output
+    \\             d - dump machine state
+    \\             0 - reset machine
+    \\             q - quit
     \\
 ;
 
 fn setRawMode(previous: std.os.termios, handle: std.os.fd_t) !void {
     var current_settings = previous;
 
-    current_settings.lflag &= ~@as(u32, std.os.linux.ICANON);
+    // Raw mode with no signals and some other stuff disabled
+    // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
+    current_settings.iflag &= ~(std.os.linux.IXON | std.os.linux.BRKINT | std.os.linux.INPCK | std.os.linux.ISTRIP);
+    current_settings.cflag |= std.os.linux.CS8;
+    current_settings.lflag &= ~(std.os.linux.ICANON | std.os.linux.ISIG | std.os.linux.IEXTEN);
+    current_settings.cc[std.os.linux.V.MIN] = 0;
 
     try std.os.tcsetattr(handle, .FLUSH, current_settings);
 }

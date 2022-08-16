@@ -2,11 +2,6 @@ const std = @import("std");
 
 const Executable = @This();
 
-pub const Format = enum {
-    flat,
-    elf,
-};
-
 pub const RegionDescriptor = struct {
     load_address: u64,
     // This length can be less than the length of `memory`, this allows a region to have a zeroed section
@@ -25,65 +20,9 @@ contents: []align(std.mem.page_size) const u8,
 region_description: []const RegionDescriptor,
 start_address: u64,
 
-pub fn load(
-    allocator: std.mem.Allocator,
-    stderr: anytype,
-    file_path: []const u8,
-    opt_format: ?Format,
-    opt_start_address: ?u64,
-) !Executable {
+pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8) !Executable {
     const contents = try mapFile(file_path, stderr);
 
-    const format: Format = if (opt_format) |f|
-        f
-    else if (std.mem.startsWith(u8, contents, std.elf.MAGIC))
-        .elf
-    else
-        .flat;
-
-    var start_address: u64 = undefined;
-    var region_description: []RegionDescriptor = undefined;
-
-    switch (format) {
-        .flat => {
-            region_description = allocator.alloc(RegionDescriptor, 1) catch |err| {
-                stderr.writeAll("ERROR: failed to allocate memory\n") catch unreachable;
-                return err;
-            };
-            region_description[0] = .{
-                .load_address = 0,
-                .length = contents.len,
-                .memory = contents,
-                .flags = .{
-                    .readable = true,
-                    .writeable = true,
-                    .executable = true,
-                },
-            };
-
-            start_address = if (opt_start_address) |addr| addr else 0;
-        },
-        .elf => region_description = try parseElf(
-            contents,
-            allocator,
-            &start_address,
-            stderr,
-        ),
-    }
-
-    return Executable{
-        .contents = contents,
-        .region_description = region_description,
-        .start_address = start_address,
-    };
-}
-
-fn parseElf(
-    contents: []align(std.mem.page_size) u8,
-    allocator: std.mem.Allocator,
-    start_address: *u64,
-    stderr: anytype,
-) ![]RegionDescriptor {
     const elf_header = ElfHeader.read(contents) catch |err| {
         stderr.print("ERROR: invalid ELF file: {s}\n", .{@errorName(err)}) catch unreachable;
         return err;
@@ -109,8 +48,6 @@ fn parseElf(
         return error.ElfNotAnExecutable;
     }
 
-    start_address.* = elf_header.entry;
-
     var regions: std.ArrayListUnmanaged(RegionDescriptor) = .{};
     errdefer regions.deinit(allocator);
 
@@ -118,6 +55,7 @@ fn parseElf(
         .elf_header = elf_header,
         .source = contents,
     };
+
     while (program_header_iter.next()) |program_header| {
         switch (program_header.p_type) {
             std.elf.PT_NULL, std.elf.PT_NOTE, std.elf.PT_PHDR, std.elf.PT_NUM => {}, // ignored
@@ -185,7 +123,11 @@ fn parseElf(
         }
     }
 
-    return regions.toOwnedSlice(allocator);
+    return Executable{
+        .contents = contents,
+        .region_description = regions.toOwnedSlice(allocator),
+        .start_address = elf_header.entry,
+    };
 }
 
 const native_endian = @import("builtin").target.cpu.arch.endian();

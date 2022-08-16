@@ -24,8 +24,6 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
         allocator,
         stderr,
         options.positionals[0], // `parseArguments` ensures a single positional is given
-        options.options.format,
-        options.options.@"start-address",
     ) catch |err| {
         if (is_debug_or_test) return err;
         return 1;
@@ -334,7 +332,7 @@ fn parseArguments(
 
 const usage =
     \\usage: riscv [standard options] MODE [mode specific options] FILE
-    \\ 
+    \\
     \\Load FILE and execute is as a riscv program in either system or user mode.
     \\
     \\Modes:
@@ -342,23 +340,14 @@ const usage =
     \\    system - will run the executable as a system/kernel program
     \\
     \\Standard options:
-    \\      -f, --format=FORMAT        the format of the executable file; if not provided will attempt to autodetect
-    \\                                   Supported Values:
-    \\                                     flat
-    \\                                     elf
+    \\    -h, --help                 display this help and exit
     \\
-    \\      --start-address=ADDRESS    will be used as the execution start address; if not provided:
-    \\                                   flat files will start at address 0
-    \\                                   elf files will start at the start address specifed in the file
+    \\System mode options:
+    \\    -i, --interactive          run in a interactive repl mode, only supported with a single hart
     \\
-    \\      -h, --help                 display this help and exit
+    \\    -m, --memory=[MEMORY]      the amount of memory to make available to the emulated machine (MiB), defaults to 20MiB
     \\
-    \\SYSTEM mode options:
-    \\      -i, --interactive          run in a interactive repl mode, only supported with a single hart
-    \\
-    \\      -m, --memory=[MEMORY]      the amount of memory to make available to the emulated machine (MiB), defaults to 20MiB
-    \\
-    \\      --harts=[HARTS]            the number of harts the system has, defaults to 1, must be greater than zero
+    \\    --harts=[HARTS]            the number of harts the system has, defaults to 1, must be greater than zero
     \\
 ;
 
@@ -369,13 +358,9 @@ const ModeOptions = union(engine.Mode) {
 
 const SharedArguments = struct {
     help: bool = false,
-    /// `null` means autodetect
-    format: ?Executable.Format = null,
-    @"start-address": ?u64 = null,
 
     pub const shorthands = .{
         .h = "help",
-        .f = "format",
     };
 };
 

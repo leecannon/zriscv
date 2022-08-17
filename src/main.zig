@@ -7,6 +7,8 @@ pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 
+const execution_options: lib.ExecutionOptions = .{};
+
 pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
@@ -188,12 +190,12 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 if (opt_break_point) |break_point| {
                     while (hart.pc != break_point) {
                         if (output) {
-                            lib.step(.system, hart, stdout) catch |err| {
+                            lib.step(.system, hart, stdout, execution_options) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break;
                             };
                         } else {
-                            lib.step(.system, hart, {}) catch |err| {
+                            lib.step(.system, hart, {}, execution_options) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break;
                             };
@@ -203,12 +205,12 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                     }
                 } else {
                     if (output) {
-                        lib.run(.system, hart, stdout) catch |err| {
+                        lib.run(.system, hart, stdout, execution_options) catch |err| {
                             stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                             break;
                         };
                     } else {
-                        lib.run(.system, hart, {}) catch |err| {
+                        lib.run(.system, hart, {}, execution_options) catch |err| {
                             stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                             break;
                         };
@@ -226,11 +228,11 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 timer.reset();
 
                 if (output) {
-                    lib.step(.system, hart, stdout) catch |err| {
+                    lib.step(.system, hart, stdout, execution_options) catch |err| {
                         stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                     };
                 } else {
-                    lib.step(.system, hart, {}) catch |err| {
+                    lib.step(.system, hart, {}, execution_options) catch |err| {
                         stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                     };
                 }

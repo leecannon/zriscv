@@ -1,27 +1,29 @@
 const std = @import("std");
-const lib = @import("lib.zig");
 
-pub inline fn Hart(comptime mode: lib.Mode) type {
-    return switch (mode) {
-        .system => SystemHart,
-        .user => UserHart,
-    };
-}
+const engine = @import("engine.zig");
+pub const step = engine.step;
+pub const run = engine.run;
 
-pub const SystemHart = struct {
-    hart_id: usize,
-    machine: *lib.SystemMachine,
+const machine = @import("machine.zig");
+pub const Machine = machine.Machine;
+pub const SystemMachine = machine.SystemMachine;
+pub const UserMachine = machine.UserMachine;
 
-    pc: usize = 0,
-    x: [32]u64 = [_]u64{0} ** 32,
-};
+const hart = @import("hart.zig");
+pub const Hart = hart.Hart;
+pub const SystemHart = hart.SystemHart;
+pub const UserHart = hart.UserHart;
 
-pub const UserHart = struct {
-    hart_id: usize,
-    machine: *lib.UserMachine,
+const memory = @import("memory.zig");
+pub const Memory = memory.Memory;
+pub const SystemMemory = memory.SystemMemory;
+pub const UserMemory = memory.UserMemory;
 
-    pc: usize = 0,
-    x: [32]u64 = [_]u64{0} ** 32,
+pub const Executable = @import("Executable.zig");
+
+pub const Mode = enum {
+    user,
+    system,
 };
 
 comptime {

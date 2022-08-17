@@ -1,50 +1,15 @@
 const std = @import("std");
+const lib = @import("lib.zig");
 
-const engine = @import("engine.zig");
-const Executable = @import("Executable.zig");
-
-pub inline fn systemMemory(minimum_memory_size: usize) !Memory(.system) {
-    return Memory(.system){
-        .impl = try SystemMemory.init(minimum_memory_size),
-    };
-}
-
-pub inline fn userMemory(allocator: std.mem.Allocator) !Memory(.user) {
-    return Memory(.user){
-        .impl = try UserMemory.init(allocator),
-    };
-}
-
-pub fn Memory(comptime mode: engine.Mode) type {
-    return struct {
-        impl: if (mode == .system) SystemMemory else UserMemory,
-
-        const Self = @This();
-
-        pub inline fn getSystem(self: *Self) *SystemMemory {
-            return &self.impl;
-        }
-
-        pub inline fn getUser(self: *Self) *UserMemory {
-            return &self.impl;
-        }
-
-        pub inline fn deinit(self: *Self) void {
-            self.impl.deinit();
-        }
-
-        pub inline fn reset(self: *Self) !void {
-            return self.impl.reset();
-        }
-
-        pub inline fn loadExecutable(self: *Self, executable: Executable) !void {
-            return self.impl.loadExecutable(executable);
-        }
+pub inline fn Memory(comptime mode: lib.Mode) type {
+    return switch (mode) {
+        .system => SystemMemory,
+        .user => UserMemory,
     };
 }
 
 // TODO: Thread-safety for mutliple harts
-const SystemMemory = struct {
+pub const SystemMemory = struct {
     memory: []align(std.mem.page_size) u8,
 
     pub fn init(minimum_memory_size: usize) !SystemMemory {
@@ -65,7 +30,7 @@ const SystemMemory = struct {
         self.memory = try allocateMemory(memory_size);
     }
 
-    pub fn loadExecutable(self: *SystemMemory, executable: Executable) !void {
+    pub fn loadExecutable(self: *SystemMemory, executable: lib.Executable) !void {
         for (executable.region_description) |descriptor| {
             if (descriptor.load_address + descriptor.length > self.memory.len) return error.OutOfBoundsWrite;
             std.mem.copy(u8, self.memory[descriptor.load_address..], descriptor.memory);
@@ -89,7 +54,7 @@ const SystemMemory = struct {
     }
 };
 
-const UserMemory = struct {
+pub const UserMemory = struct {
     allocator: std.mem.Allocator,
 
     pub fn init(allocator: std.mem.Allocator) !UserMemory {
@@ -108,7 +73,7 @@ const UserMemory = struct {
         @panic("UNIMPLEMENTED");
     }
 
-    pub fn loadExecutable(self: *SystemMemory, executable: Executable) !void {
+    pub fn loadExecutable(self: *UserMemory, executable: lib.Executable) !void {
         _ = self;
         _ = executable;
         @panic("UNIMPLEMENTED");

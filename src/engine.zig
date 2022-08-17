@@ -1,23 +1,17 @@
 const std = @import("std");
-
-const Hart = @import("hart.zig").Hart;
-
-pub const Mode = enum {
-    user,
-    system,
-};
+const lib = @import("lib.zig");
 
 /// Execute instructions until an exception is encountered
 ///
-/// Note: `writer` may be void (`{}`) inorder to suppress output
-pub inline fn run(comptime mode: Mode, state: *Hart(mode), writer: anytype) !void {
+/// Note: `writer` may be void (`{}`) in order to suppress output
+pub inline fn run(comptime mode: lib.Mode, state: *lib.Hart(mode), writer: anytype) !void {
     while (true) try step(mode, state, writer);
 }
 
 /// Execute a single instruction
 ///
-/// Note: `writer` may be void (`{}`) inorder to suppress output
-pub fn step(comptime mode: Mode, state: *Hart(mode), writer: anytype) !void {
+/// Note: `writer` may be void (`{}`) in order to suppress output
+pub fn step(comptime mode: lib.Mode, state: *lib.Hart(mode), writer: anytype) !void {
     const has_writer = comptime isWriter(@TypeOf(writer));
     _ = has_writer;
 
@@ -30,7 +24,7 @@ pub fn step(comptime mode: Mode, state: *Hart(mode), writer: anytype) !void {
 }
 
 inline fn isWriter(comptime T: type) bool {
-    return std.meta.trait.hasFn("print")(T);
+    return comptime std.meta.trait.hasFn("print")(T);
 }
 
 comptime {

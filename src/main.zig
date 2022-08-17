@@ -1,11 +1,7 @@
 const std = @import("std");
 const args = @import("args");
 const builtin = @import("builtin");
-
-const Executable = @import("Executable.zig");
-const engine = @import("engine.zig");
-const Machine = @import("machine.zig").Machine;
-const Hart = @import("hart.zig").Hart;
+const lib = @import("lib.zig");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
@@ -20,7 +16,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     const options = parseArguments(allocator, stderr);
     defer options.deinit();
 
-    const executable = Executable.load(
+    const executable = lib.Executable.load(
         allocator,
         stderr,
         options.positionals[0], // `parseArguments` ensures a single positional is given
@@ -54,7 +50,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
 
 fn systemMode(
     allocator: std.mem.Allocator,
-    executable: Executable,
+    executable: lib.Executable,
     system_mode_options: SystemModeOptions,
     stderr: anytype,
 ) !void {
@@ -68,7 +64,7 @@ fn systemMode(
         return error.ZeroHartsRequested;
     }
 
-    const machine: Machine(.system) = @import("machine.zig").systemMachine(
+    const machine = lib.SystemMachine.create(
         allocator,
         system_mode_options.memory * 1024 * 1024, // convert from MiB to bytes
         executable,
@@ -92,10 +88,10 @@ fn systemMode(
     @panic("UNIMPLEMENTED"); // TODO: Non-interactive system mode
 }
 
-fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
-    std.debug.assert(machine.getSystem().harts.len == 1);
+fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
+    std.debug.assert(machine.harts.len == 1);
 
-    const hart: *Hart(.system) = &machine.getSystem().harts[0];
+    const hart: *lib.SystemHart = &machine.harts[0];
 
     const raw_stdin = std.io.getStdIn();
     const stdin = raw_stdin.reader();
@@ -172,7 +168,7 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
                     continue;
                 };
 
-                const memory_size = machine.getSystem().memory.getSystem().memory.len;
+                const memory_size = machine.memory.memory.len;
                 if (addr >= memory_size) {
                     stderr.print("ERROR: breakpoint 0x{x} overflows memory size 0x{x}\n", .{ addr, memory_size }) catch unreachable;
                     continue;
@@ -192,13 +188,13 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
                 if (opt_break_point) |break_point| {
                     while (hart.pc != break_point) {
                         if (output) {
-                            engine.step(.system, hart, stdout) catch |err| {
-                                stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                            lib.step(.system, hart, stdout) catch |err| {
+                                stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break;
                             };
                         } else {
-                            engine.step(.system, hart, {}) catch |err| {
-                                stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                            lib.step(.system, hart, {}) catch |err| {
+                                stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break;
                             };
                         }
@@ -207,13 +203,13 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
                     }
                 } else {
                     if (output) {
-                        engine.run(.system, hart, stdout) catch |err| {
-                            stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                        lib.run(.system, hart, stdout) catch |err| {
+                            stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                             break;
                         };
                     } else {
-                        engine.run(.system, hart, {}) catch |err| {
-                            stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                        lib.run(.system, hart, {}) catch |err| {
+                            stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                             break;
                         };
                     }
@@ -230,12 +226,12 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
                 timer.reset();
 
                 if (output) {
-                    engine.step(.system, hart, stdout) catch |err| {
-                        stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                    lib.step(.system, hart, stdout) catch |err| {
+                        stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                     };
                 } else {
-                    engine.step(.system, hart, {}) catch |err| {
-                        stdout.print("error: {s}\n", .{@errorName(err)}) catch unreachable;
+                    lib.step(.system, hart, {}) catch |err| {
+                        stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                     };
                 }
 
@@ -256,10 +252,10 @@ fn interactiveSystemMode(machine: Machine(.system), stderr: anytype) !void {
 
                 if (key == .escape) return;
 
-                stdout.writeAll("\ninvalid option\n") catch unreachable;
+                stderr.writeAll("\ninvalid option\n") catch unreachable;
             },
             else => {
-                stdout.writeAll("\ninvalid option\n") catch unreachable;
+                stderr.writeAll("\ninvalid option\n") catch unreachable;
             },
         }
     }
@@ -349,7 +345,7 @@ fn setRawMode(previous: std.os.termios, handle: std.os.fd_t) !void {
 
 fn userMode(
     allocator: std.mem.Allocator,
-    executable: Executable,
+    executable: lib.Executable,
     user_mode_options: UserModeOptions,
     stderr: anytype,
 ) !void {
@@ -423,7 +419,7 @@ const usage =
     \\
 ;
 
-const ModeOptions = union(engine.Mode) {
+const ModeOptions = union(lib.Mode) {
     user: UserModeOptions,
     system: SystemModeOptions,
 };

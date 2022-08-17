@@ -1,66 +1,23 @@
 const std = @import("std");
+const lib = @import("lib.zig");
 
-const Executable = @import("Executable.zig");
-const Memory = @import("memory.zig").Memory;
-const Hart = @import("hart.zig").Hart;
-const engine = @import("engine.zig");
+pub inline fn Machine(comptime mode: lib.Mode) type {
+    return switch (mode) {
+        .system => SystemMachine,
+        .user => UserMachine,
+    };
+}
 
-pub inline fn systemMachine(
+pub const SystemMachine = struct {
     allocator: std.mem.Allocator,
-    memory_size: usize,
-    executable: Executable,
-    number_of_harts: usize,
-) !Machine(.system) {
-    return Machine(.system){
-        .impl = try SystemMachine.create(
-            allocator,
-            memory_size,
-            executable,
-            number_of_harts,
-        ),
-    };
-}
-
-pub inline fn userMachine(allocator: std.mem.Allocator) !Machine(.user) {
-    return Machine(.user){
-        .impl = try UserMachine.create(allocator),
-    };
-}
-
-pub fn Machine(comptime mode: engine.Mode) type {
-    return struct {
-        impl: if (mode == .system) *SystemMachine else *UserMachine,
-
-        const Self = @This();
-
-        pub inline fn getSystem(self: Self) *SystemMachine {
-            return self.impl;
-        }
-
-        pub inline fn getUser(self: Self) *UserMachine {
-            return self.impl;
-        }
-
-        pub fn reset(self: Self, clear_memory: bool) !void {
-            return self.impl.reset(clear_memory);
-        }
-
-        pub fn destroy(self: Self) void {
-            self.impl.destroy();
-        }
-    };
-}
-
-const SystemMachine = struct {
-    allocator: std.mem.Allocator,
-    executable: Executable,
-    memory: Memory(.system),
-    harts: []Hart(.system),
+    executable: lib.Executable,
+    memory: lib.SystemMemory,
+    harts: []lib.SystemHart,
 
     pub fn create(
         allocator: std.mem.Allocator,
         memory_size: usize,
-        executable: Executable,
+        executable: lib.Executable,
         number_of_harts: usize,
     ) !*SystemMachine {
         std.debug.assert(number_of_harts != 0); // non-zero number of harts required
@@ -68,10 +25,10 @@ const SystemMachine = struct {
         const self = try allocator.create(SystemMachine);
         errdefer allocator.destroy(self);
 
-        var memory = try @import("memory.zig").systemMemory(memory_size);
+        var memory = try lib.SystemMemory.init(memory_size);
         errdefer memory.deinit();
 
-        const harts = try allocator.alloc(Hart(.system), number_of_harts);
+        const harts = try allocator.alloc(lib.SystemHart, number_of_harts);
         errdefer allocator.free(harts);
 
         self.* = .{
@@ -90,7 +47,7 @@ const SystemMachine = struct {
         for (self.harts) |*hart, i| {
             hart.* = .{
                 .hart_id = i,
-                .machine = .{ .impl = self },
+                .machine = self,
                 .pc = self.executable.start_address,
             };
         }
@@ -108,7 +65,7 @@ const SystemMachine = struct {
     }
 };
 
-const UserMachine = struct {
+pub const UserMachine = struct {
     dummy: usize = 0,
 
     pub fn create(

@@ -14,6 +14,8 @@ pub const SystemMachine = struct {
     memory: lib.SystemMemory,
     harts: []lib.SystemHart,
 
+    address_translation_mode: lib.AddressTranslationMode = .Bare,
+
     pub fn create(
         allocator: std.mem.Allocator,
         memory_size: usize,

@@ -1,5 +1,7 @@
 const std = @import("std");
 
+pub usingnamespace @import("types.zig");
+
 const engine = @import("engine.zig");
 pub const step = engine.step;
 pub const run = engine.run;
@@ -18,6 +20,9 @@ const memory = @import("memory.zig");
 pub const Memory = memory.Memory;
 pub const SystemMemory = memory.SystemMemory;
 pub const UserMemory = memory.UserMemory;
+
+const instruction = @import("instruction.zig");
+pub const Instruction = instruction.Instruction;
 
 pub const Executable = @import("Executable.zig");
 

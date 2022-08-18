@@ -172,6 +172,25 @@ fn execute(
 
             hart.pc += 4;
         },
+        .C_J => {
+            // CJ
+
+            const imm = instruction.compressed_jump_target.read();
+
+            if (has_writer) {
+                try writer.print(
+                    \\C.J - offset: 0x{x}
+                    \\  setting pc to current pc (0x{x}) + 0x{x}
+                    \\
+                , .{
+                    imm,
+                    hart.pc,
+                    imm,
+                });
+            }
+
+            hart.pc = addSignedToUnsignedWrap(hart.pc, imm);
+        },
         else => |e| std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)}),
     }
 }
@@ -183,6 +202,24 @@ fn throw(comptime mode: lib.Mode, hart: *lib.Hart(mode), exception: void, value:
     _ = exception;
     _ = value;
     @panic("UNIMPLEMENTED"); // TODO: Exceptions
+}
+
+fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {
+    return if (signed < 0)
+        unsigned -% @bitCast(u64, -signed)
+    else
+        unsigned +% @bitCast(u64, signed);
+}
+
+test "addSignedToUnsignedWrap" {
+    try std.testing.expectEqual(
+        @as(u64, 0),
+        addSignedToUnsignedWrap(@as(u64, std.math.maxInt(u64)), 1),
+    );
+    try std.testing.expectEqual(
+        @as(u64, std.math.maxInt(u64)),
+        addSignedToUnsignedWrap(0, -1),
+    );
 }
 
 fn addSignedToUnsignedIgnoreOverflow(unsigned: u64, signed: i64) u64 {

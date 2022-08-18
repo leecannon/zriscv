@@ -12,6 +12,12 @@ pub const Instruction = extern union {
     funct3: bitjuggle.Bitfield(u32, 12, 3),
     funct7: bitjuggle.Bitfield(u32, 25, 7),
 
+    _rd: bitjuggle.Bitfield(u32, 7, 5),
+    _rs1: bitjuggle.Bitfield(u32, 15, 5),
+    _rs2: bitjuggle.Bitfield(u32, 20, 5),
+
+    i_imm: IImm,
+
     compressed_backing: CompressedBacking,
     full_backing: u32,
 
@@ -24,6 +30,34 @@ pub const Instruction = extern union {
             std.debug.assert(@bitSizeOf(CompressedBacking) == @bitSizeOf(u32));
         }
     };
+
+    pub const IImm = extern union {
+        imm11_0: bitjuggle.Bitfield(u32, 20, 12),
+
+        backing: u32,
+
+        pub fn read(self: IImm) i64 {
+            const shift_amount = 20 + 32;
+            return @bitCast(i64, @as(u64, self.imm11_0.read()) << shift_amount) >> shift_amount;
+        }
+
+        comptime {
+            std.debug.assert(@sizeOf(IImm) == @sizeOf(u32));
+            std.debug.assert(@bitSizeOf(IImm) == @bitSizeOf(u32));
+        }
+    };
+
+    pub inline fn rd(self: Instruction) lib.IntegerRegister {
+        return lib.IntegerRegister.getIntegerRegister(self._rd.read());
+    }
+
+    pub inline fn rs1(self: Instruction) lib.IntegerRegister {
+        return lib.IntegerRegister.getIntegerRegister(self._rs1.read());
+    }
+
+    pub inline fn rs2(self: Instruction) lib.IntegerRegister {
+        return lib.IntegerRegister.getIntegerRegister(self._rs2.read());
+    }
 
     pub fn decode(instruction: Instruction, comptime unimplemented_is_fatal: bool) !InstructionType {
         const funct3 = instruction.funct3.read();

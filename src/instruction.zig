@@ -3,7 +3,16 @@ const bitjuggle = @import("bitjuggle");
 const lib = @import("lib.zig");
 
 pub const InstructionType = enum {
-    dummy,
+    // OP-IMM
+    ADDI,
+    SLTI,
+    SLTIU,
+    XORI,
+    ORI,
+    ANDI,
+    SLLI,
+    SRLI,
+    SRAI,
 };
 
 pub const Instruction = extern union {
@@ -163,9 +172,25 @@ pub const Instruction = extern union {
                 },
                 // OP-IMM
                 0b0010011 => switch (funct3) {
-                    else => if (unimplemented_is_fatal) {
-                        std.log.err("unimplemented OP-IMM 0010011/{b:0>3}", .{funct3});
+                    0b000 => return .ADDI,
+                    0b001 => switch (instruction.funct7.read()) {
+                        0b0000000 => return .SLLI,
+                        else => |funct7| if (unimplemented_is_fatal) {
+                            std.log.err("unimplemented OP-IMM 0010011/001/{b:0>7}", .{funct7});
+                        },
                     },
+                    0b010 => return .SLTI,
+                    0b011 => return .SLTIU,
+                    0b100 => return .XORI,
+                    0b101 => switch (instruction.funct7.read()) {
+                        0b0000000 => return .SRLI,
+                        0b0100000 => return .SRAI,
+                        else => |funct7| if (unimplemented_is_fatal) {
+                            std.log.err("unimplemented OP-IMM 0010011/101/{b:0>7}", .{funct7});
+                        },
+                    },
+                    0b110 => return .ORI,
+                    0b111 => return .ANDI,
                 },
                 // OP
                 0b0110011 => switch (funct3) {

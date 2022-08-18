@@ -67,7 +67,6 @@ fn execute(
     comptime options: ExecutionOptions,
 ) !void {
     const has_writer = comptime isWriter(@TypeOf(writer));
-    _ = has_writer;
 
     const instruction_type = if (options.unrecognised_instruction_is_fatal)
         try instruction.decode(options.unrecognised_instruction_is_fatal)
@@ -79,7 +78,53 @@ fn execute(
         };
 
     switch (instruction_type) {
-        .dummy => {},
+        .ADDI => {
+            // I-Type
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const imm = instruction.i_imm.read();
+
+                const rs1_value = hart.x[@enumToInt(rs1)];
+
+                if (has_writer) {
+                    try writer.print(
+                        \\ADDI - src: {}, dest: {}, imm: <0x{x}>
+                        \\  set {} to {}<0x{x}> + <0x{x}>
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                    });
+                }
+
+                hart.x[@enumToInt(rd)] = addSignedToUnsignedIgnoreOverflow(rs1_value, imm);
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\ADDI - src: {}, dest: {}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            hart.pc += 4;
+        },
+        else => |e| std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)}),
     }
 }
 
@@ -90,6 +135,28 @@ fn throw(comptime mode: lib.Mode, hart: *lib.Hart(mode), exception: void, value:
     _ = exception;
     _ = value;
     @panic("UNIMPLEMENTED"); // TODO: Exceptions
+}
+
+fn addSignedToUnsignedIgnoreOverflow(unsigned: u64, signed: i64) u64 {
+    @setRuntimeSafety(false);
+    var result: u64 = undefined;
+    if (signed < 0) {
+        _ = @subWithOverflow(u64, unsigned, @bitCast(u64, -signed), &result);
+    } else {
+        _ = @addWithOverflow(u64, unsigned, @bitCast(u64, signed), &result);
+    }
+    return result;
+}
+
+test "addSignedToUnsignedIgnoreOverflow" {
+    try std.testing.expectEqual(
+        @as(u64, 42),
+        addSignedToUnsignedIgnoreOverflow(@as(u64, std.math.maxInt(u64)), 43),
+    );
+    try std.testing.expectEqual(
+        @as(u64, std.math.maxInt(u64)),
+        addSignedToUnsignedIgnoreOverflow(5, -6),
+    );
 }
 
 inline fn isWriter(comptime T: type) bool {

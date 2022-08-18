@@ -124,6 +124,54 @@ fn execute(
 
             hart.pc += 4;
         },
+        .ADD => {
+            // R-Type
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs2 = instruction.rs2();
+
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs2_value = hart.x[@enumToInt(rs2)];
+
+                if (has_writer) {
+                    try writer.print(
+                        \\ADD - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {}<0x{x}> + {}<0x{x}>
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                    });
+                }
+
+                _ = @addWithOverflow(u64, rs1_value, rs2_value, &hart.x[@enumToInt(rd)]);
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\ADD - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            hart.pc += 4;
+        },
         else => |e| std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)}),
     }
 }

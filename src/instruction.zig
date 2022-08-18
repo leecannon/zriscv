@@ -13,6 +13,18 @@ pub const InstructionType = enum {
     SLLI,
     SRLI,
     SRAI,
+
+    // OP
+    ADD,
+    SUB,
+    SLL,
+    SLT,
+    SLTU,
+    XOR,
+    SRL,
+    SRA,
+    OR,
+    AND,
 };
 
 pub const Instruction = extern union {
@@ -194,9 +206,26 @@ pub const Instruction = extern union {
                 },
                 // OP
                 0b0110011 => switch (funct3) {
-                    else => if (unimplemented_is_fatal) {
-                        std.log.err("unimplemented OP 0110011/{b:0>3}", .{funct3});
+                    0b000 => switch (instruction.funct7.read()) {
+                        0b0000000 => return .ADD,
+                        0b0100000 => return .SUB,
+                        else => |funct7| if (unimplemented_is_fatal) {
+                            std.log.err("unimplemented OP 0110011/000/{b:0>7}", .{funct7});
+                        },
                     },
+                    0b001 => return .SLL,
+                    0b010 => return .SLT,
+                    0b011 => return .SLTU,
+                    0b100 => return .XOR,
+                    0b101 => switch (instruction.funct7.read()) {
+                        0b0000000 => return .SRL,
+                        0b0100000 => return .SRA,
+                        else => |funct7| if (unimplemented_is_fatal) {
+                            std.log.err("unimplemented OP 0110011/101/{b:0>7}", .{funct7});
+                        },
+                    },
+                    0b110 => return .OR,
+                    0b111 => return .AND,
                 },
                 // OP-FP
                 0b1010011 => switch (funct3) {

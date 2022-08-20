@@ -4,3 +4,6 @@
 [submodule "external/zig-args"]
 	path = external/zig-args
 	url = https://github.com/MasterQ32/zig-args.git
+[submodule "external/tracy"]
+	path = external/tracy
+	url = https://github.com/wolfpld/tracy.git

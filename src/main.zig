@@ -67,6 +67,11 @@ fn systemMode(
         return error.ZeroHartsRequested;
     }
 
+    // TODO: Support multiple harts
+    if (system_mode_options.harts > 1) {
+        @panic("UNIMPLEMENTED: multiple harts");
+    }
+
     const machine = lib.SystemMachine.create(
         allocator,
         system_mode_options.memory * 1024 * 1024, // convert from MiB to bytes
@@ -88,7 +93,11 @@ fn systemMode(
         return interactiveSystemMode(machine, stderr);
     }
 
-    @panic("UNIMPLEMENTED"); // TODO: Non-interactive system mode
+    // TODO: Support multiple harts
+    lib.run(.system, &machine.harts[0], stderr, execution_options) catch |err| {
+        stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+        return err;
+    };
 }
 
 fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {

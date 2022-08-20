@@ -26,7 +26,10 @@ pub const InstructionType = enum {
     OR,
     AND,
 
-    // Compressed
+    // Compressed - Quadrant 0
+    C_ADDI4SPN,
+
+    // Compressed - Quadrant 1
     C_J,
 };
 
@@ -126,6 +129,7 @@ pub const Instruction = extern union {
         switch (instruction.op.read()) {
             // compressed instruction
             0b00 => switch (instruction.compressed_funct3.read()) {
+                0b000 => return if (instruction.compressed_backing.low == 0) error.IllegalInstruction else .C_ADDI4SPN,
                 else => |funct3| if (unimplemented_is_fatal) {
                     std.log.err("unimplemented compressed instruction 00/{b:0>3}", .{funct3});
                 },

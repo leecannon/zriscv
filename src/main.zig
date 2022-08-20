@@ -1,6 +1,7 @@
 const std = @import("std");
 const args = @import("args");
 const builtin = @import("builtin");
+const build_options = @import("build_options");
 const lib = @import("lib.zig");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
@@ -362,6 +363,7 @@ fn userMode(
 /// It performs the below additional functionality:
 ///     - Prints any errors during parsing
 ///     - Handles the help option
+///     - Handles the version option
 ///     - Validates that a verb has been given
 ///     - Validates that a single file path has been given
 fn parseArguments(
@@ -379,6 +381,11 @@ fn parseArguments(
 
     if (options.options.help) {
         std.io.getStdOut().writeAll(usage) catch unreachable;
+        std.process.exit(0);
+    }
+
+    if (options.options.version) {
+        std.io.getStdOut().writeAll("zriscv " ++ build_options.version ++ "\n") catch unreachable;
         std.process.exit(0);
     }
 
@@ -411,6 +418,7 @@ const usage =
     \\
     \\Standard options:
     \\    -h, --help                 display this help and exit
+    \\    -v, --version              display the version information and exit
     \\
     \\System mode options:
     \\    -i, --interactive          run in a interactive repl mode, only supported with a single hart
@@ -428,9 +436,11 @@ const ModeOptions = union(lib.Mode) {
 
 const SharedArguments = struct {
     help: bool = false,
+    version: bool = false,
 
     pub const shorthands = .{
         .h = "help",
+        .v = "version",
     };
 };
 

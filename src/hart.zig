@@ -27,6 +27,9 @@ pub const SystemHart = struct {
         comptime number_of_bits: comptime_int,
         virtual_address: u64,
     ) LoadError!std.meta.Int(.unsigned, number_of_bits) {
+        const z = lib.traceNamed(@src(), "system load memory");
+        defer z.end();
+
         const MemoryType = std.meta.Int(.unsigned, number_of_bits);
 
         const address = try self.translateAddress(virtual_address);
@@ -41,6 +44,9 @@ pub const SystemHart = struct {
     }
 
     fn translateAddress(self: *SystemHart, virtual_address: u64) !u64 {
+        const z = lib.traceNamed(@src(), "system translate address");
+        defer z.end();
+
         // TODO: Is this correct with multiple harts, atomic read?
         switch (self.address_translation_mode) {
             .Bare => return virtual_address,
@@ -64,6 +70,9 @@ pub const UserHart = struct {
         comptime number_of_bits: comptime_int,
         virtual_address: u64,
     ) LoadError!std.meta.Int(.unsigned, number_of_bits) {
+        const z = lib.traceNamed(@src(), "user load memory");
+        defer z.end();
+
         const MemoryType = std.meta.Int(.unsigned, number_of_bits);
         _ = MemoryType;
 

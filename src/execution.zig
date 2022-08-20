@@ -15,6 +15,9 @@ pub const ExecutionOptions = struct {
 ///
 /// Note: `writer` may be void (`{}`) in order to suppress output
 pub inline fn run(comptime mode: lib.Mode, hart: *lib.Hart(mode), writer: anytype, comptime options: ExecutionOptions) !void {
+    const z = lib.traceNamed(@src(), "execute run");
+    defer z.end();
+
     while (true) try step(mode, hart, writer, options);
 }
 
@@ -22,9 +25,15 @@ pub inline fn run(comptime mode: lib.Mode, hart: *lib.Hart(mode), writer: anytyp
 ///
 /// Note: `writer` may be void (`{}`) in order to suppress output
 pub fn step(comptime mode: lib.Mode, hart: *lib.Hart(mode), writer: anytype, comptime options: ExecutionOptions) !void {
+    const execute_z = lib.traceNamed(@src(), "execute step");
+    defer execute_z.end();
+
     const has_writer = comptime isWriter(@TypeOf(writer));
 
     const instruction: lib.Instruction = blk: {
+        const z = lib.traceNamed(@src(), "instruction read");
+        defer z.end();
+
         break :blk .{
             // try to load 32-bit instruction
             .full_backing = hart.loadMemory(32, hart.pc) catch |err| switch (err) {
@@ -66,6 +75,9 @@ fn execute(
     writer: anytype,
     comptime options: ExecutionOptions,
 ) !void {
+    const execute_z = lib.traceNamed(@src(), "execute");
+    defer execute_z.end();
+
     const has_writer = comptime isWriter(@TypeOf(writer));
 
     const instruction_type = if (options.unrecognised_instruction_is_fatal)
@@ -79,6 +91,9 @@ fn execute(
 
     switch (instruction_type) {
         .ADDI => {
+            const z = lib.traceNamed(@src(), "ADDI");
+            defer z.end();
+
             // I-Type
             const rd = instruction.rd();
 
@@ -125,6 +140,9 @@ fn execute(
             hart.pc += 4;
         },
         .ADD => {
+            const z = lib.traceNamed(@src(), "ADD");
+            defer z.end();
+
             // R-Type
             const rd = instruction.rd();
 
@@ -173,7 +191,10 @@ fn execute(
             hart.pc += 4;
         },
         .C_J => {
-            // CJ
+            const z = lib.traceNamed(@src(), "C_J");
+            defer z.end();
+
+            // CJ Type
 
             const imm = instruction.compressed_jump_target.read();
 
@@ -196,6 +217,9 @@ fn execute(
 }
 
 fn throw(comptime mode: lib.Mode, hart: *lib.Hart(mode), exception: void, value: u64, writer: anytype) !void {
+    const z = lib.traceNamed(@src(), "throw");
+    defer z.end();
+
     const has_writer = comptime isWriter(@TypeOf(writer));
     _ = has_writer;
     _ = hart;

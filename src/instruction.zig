@@ -120,6 +120,9 @@ pub const Instruction = extern union {
     }
 
     pub fn decode(instruction: Instruction, comptime unimplemented_is_fatal: bool) !InstructionType {
+        const z = lib.traceNamed(@src(), "instruction decode");
+        defer z.end();
+
         switch (instruction.op.read()) {
             // compressed instruction
             0b00 => switch (instruction.compressed_funct3.read()) {

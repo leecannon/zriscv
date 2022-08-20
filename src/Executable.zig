@@ -22,6 +22,9 @@ region_description: []const RegionDescriptor,
 start_address: u64,
 
 pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8) !Executable {
+    const z = lib.traceNamed(@src(), "executable loading");
+    defer z.end();
+
     const contents = try mapFile(file_path, stderr);
 
     const elf_header = ElfHeader.read(contents) catch |err| {

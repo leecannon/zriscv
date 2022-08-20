@@ -5,18 +5,30 @@ const zriscv_version = std.builtin.Version{ .major = 0, .minor = 0, .patch = 2 }
 pub fn build(b: *std.build.Builder) !void {
     b.prominent_compile_errors = true;
 
+    // TODO: Check if this is still needed, was hitting issue when using tracy
+    b.use_stage1 = true;
+
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
-    const options = try getOptions(b);
+
+    const trace = b.option(bool, "trace", "enable tracy tracing") orelse false;
+    const trace_callstack = b.option(bool, "trace-callstack", "enable tracy callstack (does nothing without trace option)") orelse false;
+
+    const options_step = try getOptionsStep(b, trace, trace_callstack);
 
     // Exe
     {
         const zriscv = b.addExecutable("zriscv", "src/main.zig");
         zriscv.setTarget(target);
         zriscv.setBuildMode(mode);
-        zriscv.addOptions("build_options", options);
+        zriscv.addOptions("build_options", options_step);
         zriscv.addPackage(args_pkg);
         zriscv.addPackage(bitjuggle_pkg);
+
+        if (trace) {
+            includeTracy(zriscv);
+        }
+
         zriscv.install();
 
         const run_cmd = zriscv.run();
@@ -33,7 +45,7 @@ pub fn build(b: *std.build.Builder) !void {
     {
         const zriscv_test_exe = b.addTest("src/main.zig");
         zriscv_test_exe.setBuildMode(mode);
-        zriscv_test_exe.addOptions("build_options", options);
+        zriscv_test_exe.addOptions("build_options", options_step);
         zriscv_test_exe.addPackage(args_pkg);
         zriscv_test_exe.addPackage(bitjuggle_pkg);
 
@@ -44,8 +56,11 @@ pub fn build(b: *std.build.Builder) !void {
     }
 }
 
-fn getOptions(b: *std.build.Builder) !*std.build.OptionsStep {
+fn getOptionsStep(b: *std.build.Builder, trace: bool, trace_callstack: bool) !*std.build.OptionsStep {
     const options = b.addOptions();
+
+    options.addOption(bool, "trace", trace);
+    options.addOption(bool, "trace_callstack", trace_callstack);
 
     const version = v: {
         const version_string = b.fmt(
@@ -107,6 +122,26 @@ fn getOptions(b: *std.build.Builder) !*std.build.OptionsStep {
     options.addOption([:0]const u8, "version", try b.allocator.dupeZ(u8, version));
 
     return options;
+}
+
+fn includeTracy(exe: *std.build.LibExeObjStep) void {
+    exe.linkLibC();
+    exe.linkLibCpp();
+    exe.addIncludeDir("external/tracy/public");
+
+    const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
+        &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
+    else
+        &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
+
+    exe.addCSourceFile("external/tracy/public/TracyClient.cpp", tracy_c_flags);
+
+    if (exe.target.isWindows()) {
+        exe.linkSystemLibrary("Advapi32");
+        exe.linkSystemLibrary("User32");
+        exe.linkSystemLibrary("Ws2_32");
+        exe.linkSystemLibrary("DbgHelp");
+    }
 }
 
 const args_pkg: std.build.Pkg = .{

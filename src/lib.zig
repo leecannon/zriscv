@@ -1,5 +1,7 @@
 const std = @import("std");
 
+pub usingnamespace @import("tracy.zig");
+
 pub usingnamespace @import("types.zig");
 
 const execution = @import("execution.zig");

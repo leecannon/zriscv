@@ -1,7 +1,7 @@
 const std = @import("std");
-const args = @import("args");
 const builtin = @import("builtin");
 const build_options = @import("build_options");
+const args = @import("args");
 const lib = @import("lib.zig");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
@@ -11,8 +11,17 @@ var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 const execution_options: lib.ExecutionOptions = .{};
 
 pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const main_z = lib.traceNamed(@src(), "main");
+    // this causes the frame to start with our main instead of `std.start`
+    lib.traceFrameMark();
+
+    defer {
+        _ = gpa.deinit();
+        main_z.end();
+    }
+
+    var tracy_allocator = if (build_options.trace) lib.tracyAllocator(gpa.allocator()) else {};
+    const allocator: std.mem.Allocator = if (build_options.trace) tracy_allocator.allocator() else gpa.allocator();
 
     const stderr = std.io.getStdErr().writer();
 
@@ -57,6 +66,9 @@ fn systemMode(
     system_mode_options: SystemModeOptions,
     stderr: anytype,
 ) !void {
+    const z = lib.traceNamed(@src(), "system mode");
+    defer z.end();
+
     if (system_mode_options.interactive and system_mode_options.harts > 1) {
         stderr.writeAll("ERROR: interactive mode is not supported with multiple harts\n") catch unreachable;
         return error.InteractiveDoesNotSupportMultipleHarts;
@@ -101,6 +113,9 @@ fn systemMode(
 }
 
 fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
+    const z = lib.traceNamed(@src(), "interactive system mode");
+    defer z.end();
+
     std.debug.assert(machine.harts.len == 1);
 
     const hart: *lib.SystemHart = &machine.harts[0];
@@ -139,12 +154,21 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
             return err;
         };
 
-        // const input = stdin.readByte() catch |err| {};
+        const user_input_z = lib.traceNamed(@src(), "user input");
+        defer user_input_z.end();
 
         switch (input) {
-            '\n' => stdout.writeAll(interactive_help_menu) catch unreachable,
-            '?', 'h' => stdout.writeAll("\n" ++ interactive_help_menu) catch unreachable,
+            '\n' => {
+                user_input_z.addText("help");
+                stdout.writeAll(interactive_help_menu) catch unreachable;
+            },
+            '?', 'h' => {
+                user_input_z.addText("help");
+                stdout.writeAll("\n" ++ interactive_help_menu) catch unreachable;
+            },
             '0' => {
+                user_input_z.addText("reset");
+
                 machine.reset(true) catch |err| {
                     stderr.print("\nERROR: failed to reset machine state: {s}\n", .{@errorName(err)}) catch unreachable;
                     return err;
@@ -153,6 +177,8 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 stdout.writeAll("\nreset machine state\n") catch unreachable;
             },
             'b' => {
+                user_input_z.addText("breakpoint");
+
                 // disable raw mode to enable user to enter hex string
                 std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
                     stderr.print("\nERROR: failed to restore termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
@@ -191,6 +217,8 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 opt_break_point = addr;
             },
             'r', 'e' => {
+                user_input_z.addText("run");
+
                 const output = input == 'e';
 
                 stdout.writeByte('\n') catch unreachable;
@@ -231,6 +259,8 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch unreachable;
             },
             's', 'n' => {
+                user_input_z.addText("step");
+
                 const output = input == 's';
 
                 stdout.writeByte('\n') catch unreachable;
@@ -251,11 +281,18 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch unreachable;
             },
             'd' => {
+                user_input_z.addText("dump");
+
                 stdout.writeByte('\n') catch unreachable;
                 @panic("UNIMPLEMENTED"); // TODO: dump machine state
             },
-            'q' => return,
+            'q' => {
+                user_input_z.addText("quit");
+                return;
+            },
             0x1b => {
+                user_input_z.addText("invalid");
+
                 // escape, arrow keys, etc
                 const key = readEscapeCode(raw_stdin) catch |err| {
                     stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
@@ -267,6 +304,8 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 stderr.writeAll("\ninvalid option\n") catch unreachable;
             },
             else => {
+                user_input_z.addText("invalid");
+
                 stderr.writeAll("\ninvalid option\n") catch unreachable;
             },
         }
@@ -361,6 +400,9 @@ fn userMode(
     user_mode_options: UserModeOptions,
     stderr: anytype,
 ) !void {
+    const z = lib.traceNamed(@src(), "user mode");
+    defer z.end();
+
     _ = allocator;
     _ = executable;
     _ = user_mode_options;
@@ -379,6 +421,9 @@ fn parseArguments(
     allocator: std.mem.Allocator,
     stderr: anytype,
 ) args.ParseArgsResult(SharedArguments, ModeOptions) {
+    const z = lib.traceNamed(@src(), "parse arguments");
+    defer z.end();
+
     const options = args.parseWithVerbForCurrentProcess(
         SharedArguments,
         ModeOptions,

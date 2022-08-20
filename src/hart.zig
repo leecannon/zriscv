@@ -20,6 +20,8 @@ pub const SystemHart = struct {
     pc: usize = 0,
     x: [32]u64 = [_]u64{0} ** 32,
 
+    address_translation_mode: lib.AddressTranslationMode = .Bare,
+
     pub fn loadMemory(
         self: *SystemHart,
         comptime number_of_bits: comptime_int,
@@ -40,7 +42,7 @@ pub const SystemHart = struct {
 
     fn translateAddress(self: *SystemHart, virtual_address: u64) !u64 {
         // TODO: Is this correct with multiple harts, atomic read?
-        switch (self.machine.address_translation_mode) {
+        switch (self.address_translation_mode) {
             .Bare => return virtual_address,
             else => {
                 std.log.err("unimplemented address translation mode", .{});

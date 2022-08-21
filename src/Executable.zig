@@ -99,8 +99,7 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
                 return error.UnsupportedProgramSectionInElf;
             },
             std.elf.PT_GNU_STACK => {
-                stderr.writeAll("ERROR: unsupported program section type in ELF file: PT_GNU_STACK\n") catch unreachable;
-                return error.UnsupportedProgramSectionInElf;
+                // TODO: Support PT_GNU_STACK
             },
             std.elf.PT_GNU_RELRO => {
                 stderr.writeAll("ERROR: unsupported program section type in ELF file: PT_GNU_RELRO\n") catch unreachable;

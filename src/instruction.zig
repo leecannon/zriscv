@@ -391,6 +391,13 @@ pub const Instruction = extern union {
                             std.log.err("unimplemented OP-32 0111011/{b:0>3}", .{funct3});
                         },
                     },
+                    0b1111111 => {
+                        if (instruction.full_backing == ~@as(u32, 0)) return error.IllegalInstruction;
+
+                        if (unimplemented_is_fatal) {
+                            std.log.err("unimplemented opcode 1111111", .{});
+                        }
+                    },
                     else => |opcode| if (unimplemented_is_fatal) {
                         std.log.err("unimplemented opcode {b:0>7}", .{opcode});
                     },

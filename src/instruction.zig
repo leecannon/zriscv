@@ -2,7 +2,16 @@ const std = @import("std");
 const bitjuggle = @import("bitjuggle");
 const lib = @import("lib.zig");
 
+// Order of the instruction types loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
 pub const InstructionType = enum {
+    // BRANCH
+    BEQ,
+    BNE,
+    BLT,
+    BGE,
+    BLTU,
+    BGEU,
+
     // STORE
     SB,
     SH,
@@ -52,6 +61,7 @@ pub const Instruction = extern union {
 
     i_imm: IImm,
     s_imm: SImm,
+    b_imm: BImm,
     compressed_jump_target: CompressedJumpTarget,
 
     compressed_backing: CompressedBacking,
@@ -138,6 +148,32 @@ pub const Instruction = extern union {
         }
     };
 
+    pub const BImm = extern union {
+        imm11: bitjuggle.Bitfield(u32, 7, 1),
+        imm4_1: bitjuggle.Bitfield(u32, 8, 4),
+        imm10_5: bitjuggle.Bitfield(u32, 25, 6),
+        imm12: bitjuggle.Bitfield(u32, 31, 1),
+
+        backing: u32,
+
+        pub fn read(self: BImm) i64 {
+            const shift_amount = 19 + 32;
+
+            return @bitCast(
+                i64,
+                @as(u64, self.imm12.read()) << 12 + shift_amount |
+                    @as(u64, self.imm11.read()) << 11 + shift_amount |
+                    @as(u64, self.imm10_5.read()) << 5 + shift_amount |
+                    @as(u64, self.imm4_1.read()) << 1 + shift_amount,
+            ) >> shift_amount;
+        }
+
+        comptime {
+            std.debug.assert(@sizeOf(BImm) == @sizeOf(u32));
+            std.debug.assert(@bitSizeOf(BImm) == @bitSizeOf(u32));
+        }
+    };
+
     pub inline fn rd(self: Instruction) lib.IntegerRegister {
         return lib.IntegerRegister.getIntegerRegister(self._rd.read());
     }
@@ -204,6 +240,12 @@ pub const Instruction = extern union {
                     },
                     // BRANCH
                     0b1100011 => switch (funct3) {
+                        0b000 => return .BEQ,
+                        0b001 => return .BNE,
+                        0b100 => return .BLT,
+                        0b101 => return .BGE,
+                        0b110 => return .BLTU,
+                        0b111 => return .BGEU,
                         else => if (unimplemented_is_fatal) {
                             std.log.err("unimplemented BRANCH 1100011/{b:0>3}", .{funct3});
                         },

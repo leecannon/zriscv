@@ -86,7 +86,64 @@ fn execute(
             return;
         };
 
+    // Order of the branches loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
     switch (instruction_type) {
+        .BNE => {
+            const z = lib.traceNamed(@src(), "BNE");
+            defer z.end();
+
+            // B-type
+            const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
+
+            const rs2 = instruction.rs2();
+            const rs2_value = hart.x[@enumToInt(rs2)];
+
+            if (rs1_value != rs2_value) {
+                const imm = instruction.b_imm.read();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\BNE - src1: {}<{x}>, src2: {}<{x}>, offset: <{x}>
+                        \\  true
+                        \\  setting pc to current pc<{x}> + <{x}>
+                        \\
+                    , .{
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        imm,
+                        hart.pc,
+                        imm,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.pc = addSignedToUnsignedWrap(hart.pc, imm);
+                }
+            } else {
+                if (has_writer) {
+                    const imm = instruction.b_imm.read();
+
+                    try writer.print(
+                        \\BNE - src1: {}<{x}>, src2: {}<{x}>, offset: <{x}>
+                        \\  false
+                        \\
+                    , .{
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs1_value,
+                        imm,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.pc += 4;
+                }
+            }
+        },
         .ADDI => {
             const z = lib.traceNamed(@src(), "ADDI");
             defer z.end();
@@ -248,7 +305,7 @@ fn execute(
             if (has_writer) {
                 try writer.print(
                     \\C.J - offset: <{x}>
-                    \\  setting pc to current pc(<{x}>) + <{x}>
+                    \\  setting pc to current pc<{x}> + <{x}>
                     \\
                 , .{
                     imm,

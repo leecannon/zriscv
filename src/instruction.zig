@@ -4,6 +4,9 @@ const lib = @import("lib.zig");
 
 // Order of the instruction types loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
 pub const InstructionType = enum {
+    // LUI
+    LUI,
+
     // BRANCH
     BEQ,
     BNE,
@@ -62,6 +65,7 @@ pub const Instruction = extern union {
     i_imm: IImm,
     s_imm: SImm,
     b_imm: BImm,
+    u_imm: UImm,
     compressed_jump_target: CompressedJumpTarget,
 
     compressed_backing: CompressedBacking,
@@ -94,14 +98,14 @@ pub const Instruction = extern union {
 
             return @bitCast(
                 i64,
-                (@as(u64, self.imm11.read()) << 11 + shift_amount |
-                    @as(u64, self.imm10.read()) << 10 + shift_amount |
-                    @as(u64, self.imm9_8.read()) << 8 + shift_amount |
-                    @as(u64, self.imm7.read()) << 7 + shift_amount |
-                    @as(u64, self.imm6.read()) << 6 + shift_amount |
-                    @as(u64, self.imm5.read()) << 5 + shift_amount |
-                    @as(u64, self.imm4.read()) << 4 + shift_amount |
-                    @as(u64, self.imm3_1.read()) << 1 + shift_amount),
+                (@as(u64, self.imm11.read()) << (11 + shift_amount) |
+                    @as(u64, self.imm10.read()) << (10 + shift_amount) |
+                    @as(u64, self.imm9_8.read()) << (8 + shift_amount) |
+                    @as(u64, self.imm7.read()) << (7 + shift_amount) |
+                    @as(u64, self.imm6.read()) << (6 + shift_amount) |
+                    @as(u64, self.imm5.read()) << (5 + shift_amount) |
+                    @as(u64, self.imm4.read()) << (4 + shift_amount) |
+                    @as(u64, self.imm3_1.read()) << (1 + shift_amount)),
             ) >> shift_amount;
         }
 
@@ -137,7 +141,7 @@ pub const Instruction = extern union {
             const shift_amount = 20 + 32;
             return @bitCast(
                 i64,
-                @as(u64, self.imm11_5.read()) << 5 + shift_amount |
+                @as(u64, self.imm11_5.read()) << (5 + shift_amount) |
                     @as(u64, self.imm4_0.read()) << shift_amount,
             ) >> shift_amount;
         }
@@ -161,16 +165,34 @@ pub const Instruction = extern union {
 
             return @bitCast(
                 i64,
-                @as(u64, self.imm12.read()) << 12 + shift_amount |
-                    @as(u64, self.imm11.read()) << 11 + shift_amount |
-                    @as(u64, self.imm10_5.read()) << 5 + shift_amount |
-                    @as(u64, self.imm4_1.read()) << 1 + shift_amount,
+                @as(u64, self.imm12.read()) << (12 + shift_amount) |
+                    @as(u64, self.imm11.read()) << (11 + shift_amount) |
+                    @as(u64, self.imm10_5.read()) << (5 + shift_amount) |
+                    @as(u64, self.imm4_1.read()) << (1 + shift_amount),
             ) >> shift_amount;
         }
 
         comptime {
             std.debug.assert(@sizeOf(BImm) == @sizeOf(u32));
             std.debug.assert(@bitSizeOf(BImm) == @bitSizeOf(u32));
+        }
+    };
+
+    pub const UImm = extern union {
+        imm31_12: bitjuggle.Bitfield(u32, 12, 20),
+
+        backing: u32,
+
+        pub fn read(self: UImm) i64 {
+            return @bitCast(
+                i64,
+                @as(u64, self.imm31_12.read()) << (12 + 32),
+            ) >> 32;
+        }
+
+        comptime {
+            std.debug.assert(@sizeOf(UImm) == @sizeOf(u32));
+            std.debug.assert(@bitSizeOf(UImm) == @bitSizeOf(u32));
         }
     };
 
@@ -368,11 +390,7 @@ pub const Instruction = extern union {
                         },
                     },
                     // LUI
-                    0b0110111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented LUI 0110111/{b:0>3}", .{funct3});
-                        },
-                    },
+                    0b0110111 => return .LUI,
                     // OP-V
                     0b1010111 => switch (funct3) {
                         else => if (unimplemented_is_fatal) {

@@ -88,6 +88,51 @@ fn execute(
 
     // Order of the branches loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
     switch (instruction_type) {
+        .LUI => {
+            const z = lib.traceNamed(@src(), "LUI");
+            defer z.end();
+
+            // U-type
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const imm = instruction.u_imm.read();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\LUI - dest: {}, value: <{x}>
+                        \\  setting {} to <{x}>
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        imm,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = @bitCast(u64, imm);
+                }
+            } else {
+                if (has_writer) {
+                    const imm = instruction.u_imm.read();
+
+                    try writer.print(
+                        \\LUI - dest: {}, value: <{x}>
+                        \\  nop
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .BNE => {
             const z = lib.traceNamed(@src(), "BNE");
             defer z.end();

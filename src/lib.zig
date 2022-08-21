@@ -7,7 +7,6 @@ pub usingnamespace @import("types.zig");
 const execution = @import("execution.zig");
 pub const ExecutionOptions = execution.ExecutionOptions;
 pub const step = execution.step;
-pub const run = execution.run;
 
 const machine = @import("machine.zig");
 pub const Machine = machine.Machine;

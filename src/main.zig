@@ -106,10 +106,12 @@ fn systemMode(
     }
 
     // TODO: Support multiple harts
-    lib.run(.system, &machine.harts[0], stderr, execution_options) catch |err| {
-        stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
-        return err;
-    };
+    while (true) {
+        lib.step(.system, &machine.harts[0], stderr, execution_options, true) catch |err| {
+            stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+            return err;
+        };
+    }
 }
 
 fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
@@ -165,6 +167,15 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
             '?', 'h' => {
                 user_input_z.addText("help");
                 stdout.writeAll("\n" ++ interactive_help_menu) catch unreachable;
+            },
+            'p' => {
+                user_input_z.addText("print");
+
+                stdout.writeByte('\n') catch unreachable;
+
+                lib.step(.system, hart, stdout, execution_options, false) catch |err| {
+                    stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+                };
             },
             '0' => {
                 user_input_z.addText("reset");
@@ -228,12 +239,12 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 if (opt_break_point) |break_point| {
                     while (hart.pc != break_point) {
                         if (output) {
-                            lib.step(.system, hart, stdout, execution_options) catch |err| {
+                            lib.step(.system, hart, stdout, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break;
                             };
                         } else {
-                            lib.step(.system, hart, {}, execution_options) catch |err| {
+                            lib.step(.system, hart, {}, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break;
                             };
@@ -243,15 +254,19 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                     }
                 } else {
                     if (output) {
-                        lib.run(.system, hart, stdout, execution_options) catch |err| {
-                            stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
-                            break;
-                        };
+                        while (true) {
+                            lib.step(.system, hart, stdout, execution_options, true) catch |err| {
+                                stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+                                break;
+                            };
+                        }
                     } else {
-                        lib.run(.system, hart, {}, execution_options) catch |err| {
-                            stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
-                            break;
-                        };
+                        while (true) {
+                            lib.step(.system, hart, {}, execution_options, true) catch |err| {
+                                stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+                                break;
+                            };
+                        }
                     }
                 }
 
@@ -268,11 +283,11 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 timer.reset();
 
                 if (output) {
-                    lib.step(.system, hart, stdout, execution_options) catch |err| {
+                    lib.step(.system, hart, stdout, execution_options, true) catch |err| {
                         stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                     };
                 } else {
-                    lib.step(.system, hart, {}, execution_options) catch |err| {
+                    lib.step(.system, hart, {}, execution_options, true) catch |err| {
                         stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                     };
                 }
@@ -372,9 +387,10 @@ const interactive_help_menu =
     \\ ?|h|Enter|Esc - this help menu
     \\             r - run without output (this will not stop unless a breakpoint is hit, or an error)
     \\             e - run with output (this will not stop unless a breakpoint is hit, or an error)
-    \\       b[addr] - set breakpoint, [addr] must be in hex, blank [addr] clears the breakpoint
     \\             s - single step with output
     \\             n - single step without output
+    \\             p - display what the next instruction will do, without executing it
+    \\       b[addr] - set breakpoint, [addr] must be in hex, blank [addr] clears the breakpoint
     \\             d - dump machine state
     \\             0 - reset machine
     \\             q - quit
@@ -388,7 +404,7 @@ fn setRawMode(previous: std.os.termios, handle: std.os.fd_t) !void {
     // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
     current_settings.iflag &= ~(std.os.linux.IXON | std.os.linux.BRKINT | std.os.linux.INPCK | std.os.linux.ISTRIP);
     current_settings.cflag |= std.os.linux.CS8;
-    current_settings.lflag &= ~(std.os.linux.ICANON | std.os.linux.ISIG | std.os.linux.IEXTEN);
+    current_settings.lflag &= ~(std.os.linux.ICANON | std.os.linux.IEXTEN);
     current_settings.cc[std.os.linux.V.MIN] = 0;
 
     try std.os.tcsetattr(handle, .FLUSH, current_settings);

@@ -11,20 +11,16 @@ pub const ExecutionOptions = struct {
     always_print_pc: bool = true,
 };
 
-/// Execute instructions until an exception is encountered
-///
-/// Note: `writer` may be void (`{}`) in order to suppress output
-pub inline fn run(comptime mode: lib.Mode, hart: *lib.Hart(mode), writer: anytype, comptime options: ExecutionOptions) !void {
-    const z = lib.traceNamed(@src(), "execute run");
-    defer z.end();
-
-    while (true) try step(mode, hart, writer, options);
-}
-
 /// Execute a single instruction
 ///
 /// Note: `writer` may be void (`{}`) in order to suppress output
-pub fn step(comptime mode: lib.Mode, hart: *lib.Hart(mode), writer: anytype, comptime options: ExecutionOptions) !void {
+pub fn step(
+    comptime mode: lib.Mode,
+    hart: *lib.Hart(mode),
+    writer: anytype,
+    comptime options: ExecutionOptions,
+    comptime actually_execute: bool,
+) !void {
     const execute_z = lib.traceNamed(@src(), "execute step");
     defer execute_z.end();
 
@@ -47,7 +43,7 @@ pub fn step(comptime mode: lib.Mode, hart: *lib.Hart(mode), writer: anytype, com
                                 switch (compressed_err) {
                                     // TODO: Pass `InstructionAccessFault` once `throw` is implemented
                                     error.ExecutionOutOfBounds => {
-                                        try throw(mode, hart, {}, 0, writer);
+                                        try throw(mode, hart, {}, 0, writer, actually_execute);
                                         return;
                                     },
                                     else => |e| return e,
@@ -65,7 +61,7 @@ pub fn step(comptime mode: lib.Mode, hart: *lib.Hart(mode), writer: anytype, com
         try writer.print("pc: 0x{x:0>16}\n", .{hart.pc});
     }
 
-    try execute(mode, hart, instruction, writer, options);
+    try execute(mode, hart, instruction, writer, options, actually_execute);
 }
 
 fn execute(
@@ -74,6 +70,7 @@ fn execute(
     instruction: lib.Instruction,
     writer: anytype,
     comptime options: ExecutionOptions,
+    comptime actually_execute: bool,
 ) !void {
     const execute_z = lib.traceNamed(@src(), "execute");
     defer execute_z.end();
@@ -85,7 +82,7 @@ fn execute(
     else
         instruction.decode(options.unrecognised_instruction_is_fatal) catch {
             // TODO: Pass `IllegalInstruction` once `throw` is implemented
-            try throw(mode, hart, {}, instruction.full_backing, writer);
+            try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
             return;
         };
 
@@ -119,7 +116,9 @@ fn execute(
                     });
                 }
 
-                hart.x[@enumToInt(rd)] = addSignedToUnsignedIgnoreOverflow(rs1_value, imm);
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = addSignedToUnsignedIgnoreOverflow(rs1_value, imm);
+                }
             } else {
                 if (has_writer) {
                     const rs1 = instruction.rs1();
@@ -137,7 +136,9 @@ fn execute(
                 }
             }
 
-            hart.pc += 4;
+            if (actually_execute) {
+                hart.pc += 4;
+            }
         },
         .ADD => {
             const z = lib.traceNamed(@src(), "ADD");
@@ -170,7 +171,9 @@ fn execute(
                     });
                 }
 
-                _ = @addWithOverflow(u64, rs1_value, rs2_value, &hart.x[@enumToInt(rd)]);
+                if (actually_execute) {
+                    _ = @addWithOverflow(u64, rs1_value, rs2_value, &hart.x[@enumToInt(rd)]);
+                }
             } else {
                 if (has_writer) {
                     const rs1 = instruction.rs1();
@@ -187,8 +190,9 @@ fn execute(
                     });
                 }
             }
-
-            hart.pc += 4;
+            if (actually_execute) {
+                hart.pc += 4;
+            }
         },
         .C_J => {
             const z = lib.traceNamed(@src(), "C_J");
@@ -210,13 +214,22 @@ fn execute(
                 });
             }
 
-            hart.pc = addSignedToUnsignedWrap(hart.pc, imm);
+            if (actually_execute) {
+                hart.pc = addSignedToUnsignedWrap(hart.pc, imm);
+            }
         },
         else => |e| std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)}),
     }
 }
 
-fn throw(comptime mode: lib.Mode, hart: *lib.Hart(mode), exception: void, value: u64, writer: anytype) !void {
+fn throw(
+    comptime mode: lib.Mode,
+    hart: *lib.Hart(mode),
+    exception: void,
+    value: u64,
+    writer: anytype,
+    comptime actually_execute: bool,
+) !void {
     const z = lib.traceNamed(@src(), "throw");
     defer z.end();
 
@@ -225,6 +238,7 @@ fn throw(comptime mode: lib.Mode, hart: *lib.Hart(mode), exception: void, value:
     _ = hart;
     _ = exception;
     _ = value;
+    _ = actually_execute;
     @panic("UNIMPLEMENTED"); // TODO: Exceptions
 }
 

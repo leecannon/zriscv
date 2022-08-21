@@ -58,7 +58,7 @@ pub fn step(
     };
 
     if (has_writer and options.always_print_pc) {
-        try writer.print("pc: 0x{x:0>16}\n", .{hart.pc});
+        try writer.print("pc: {x:0>16}\n", .{hart.pc});
     }
 
     try execute(mode, hart, instruction, writer, options, actually_execute);
@@ -102,8 +102,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\ADDI - src: {}, dest: {}, imm: <0x{x}>
-                        \\  set {} to {}<0x{x}> + <0x{x}>
+                        \\ADDI - src: {}, dest: {}, imm: <{x}>
+                        \\  set {} to {}<{x}> + <{x}>
                         \\
                     , .{
                         rs1,
@@ -125,7 +125,7 @@ fn execute(
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\ADDI - src: {}, dest: {}, imm: 0x{x}
+                        \\ADDI - src: {}, dest: {}, imm: <{x}>
                         \\  nop
                         \\
                     , .{
@@ -157,7 +157,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\ADD - src1: {}, src2: {}, dest: {}
-                        \\  set {} to {}<0x{x}> + {}<0x{x}>
+                        \\  set {} to {}<{x}> + {}<{x}>
                         \\
                     , .{
                         rs1,
@@ -194,6 +194,49 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .SD => {
+            const z = lib.traceNamed(@src(), "SD");
+            defer z.end();
+
+            // S-Type
+            const rs1 = instruction.rs1();
+            const rs2 = instruction.rs2();
+            const imm = instruction.s_imm.read();
+
+            if (has_writer) {
+                try writer.print(
+                    \\SD - base: {}, src: {}, imm: <{x}>
+                    \\  store 8 bytes from {} into memory {} + <{x}>
+                    \\
+                , .{
+                    rs1,
+                    rs2,
+                    imm,
+                    rs2,
+                    rs1,
+                    imm,
+                });
+            }
+
+            if (actually_execute) {
+                const address = addSignedToUnsignedWrap(hart.x[@enumToInt(rs1)], imm);
+
+                if (options.execution_out_of_bounds_is_fatal) {
+                    try hart.storeMemory(64, address, hart.x[@enumToInt(rs2)]);
+                } else {
+                    hart.storeMemory(64, address, hart.x[@enumToInt(rs2)]) catch |err| switch (err) {
+                        error.ExecutionOutOfBounds => {
+                            // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
+                            try throw(mode, hart, {}, 0, writer, true);
+                            return;
+                        },
+                        else => |e| return e,
+                    };
+                }
+
+                hart.pc += 4;
+            }
+        },
         .C_J => {
             const z = lib.traceNamed(@src(), "C_J");
             defer z.end();
@@ -204,8 +247,8 @@ fn execute(
 
             if (has_writer) {
                 try writer.print(
-                    \\C.J - offset: 0x{x}
-                    \\  setting pc to current pc (0x{x}) + 0x{x}
+                    \\C.J - offset: <{x}>
+                    \\  setting pc to current pc(<{x}>) + <{x}>
                     \\
                 , .{
                     imm,

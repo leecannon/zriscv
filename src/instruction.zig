@@ -3,6 +3,12 @@ const bitjuggle = @import("bitjuggle");
 const lib = @import("lib.zig");
 
 pub const InstructionType = enum {
+    // STORE
+    SB,
+    SH,
+    SW,
+    SD,
+
     // OP-IMM
     ADDI,
     SLTI,
@@ -45,6 +51,7 @@ pub const Instruction = extern union {
     _rs2: bitjuggle.Bitfield(u32, 20, 5),
 
     i_imm: IImm,
+    s_imm: SImm,
     compressed_jump_target: CompressedJumpTarget,
 
     compressed_backing: CompressedBacking,
@@ -110,6 +117,27 @@ pub const Instruction = extern union {
         }
     };
 
+    pub const SImm = extern union {
+        imm4_0: bitjuggle.Bitfield(u32, 7, 5),
+        imm11_5: bitjuggle.Bitfield(u32, 25, 7),
+
+        backing: u32,
+
+        pub fn read(self: SImm) i64 {
+            const shift_amount = 20 + 32;
+            return @bitCast(
+                i64,
+                @as(u64, self.imm11_5.read()) << 5 + shift_amount |
+                    @as(u64, self.imm4_0.read()) << shift_amount,
+            ) >> shift_amount;
+        }
+
+        comptime {
+            std.debug.assert(@sizeOf(SImm) == @sizeOf(u32));
+            std.debug.assert(@bitSizeOf(SImm) == @bitSizeOf(u32));
+        }
+    };
+
     pub inline fn rd(self: Instruction) lib.IntegerRegister {
         return lib.IntegerRegister.getIntegerRegister(self._rd.read());
     }
@@ -160,6 +188,10 @@ pub const Instruction = extern union {
                     },
                     // STORE
                     0b0100011 => switch (funct3) {
+                        0b000 => return .SB,
+                        0b001 => return .SH,
+                        0b010 => return .SW,
+                        0b011 => return .SD,
                         else => if (unimplemented_is_fatal) {
                             std.log.err("unimplemented STORE 0100011/{b:0>3}", .{funct3});
                         },

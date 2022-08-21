@@ -13,6 +13,11 @@ const LoadError = error{
     Unimplemented,
 };
 
+const StoreError = error{
+    ExecutionOutOfBounds,
+    Unimplemented,
+};
+
 pub const SystemHart = struct {
     hart_id: usize,
     machine: *lib.SystemMachine,
@@ -41,6 +46,29 @@ pub const SystemHart = struct {
         }
 
         return std.mem.readIntSlice(MemoryType, memory.memory[address..], .Little);
+    }
+
+    pub fn storeMemory(
+        self: *SystemHart,
+        comptime number_of_bits: comptime_int,
+        virtual_address: u64,
+        value: std.meta.Int(.unsigned, number_of_bits),
+    ) StoreError!void {
+        const z = lib.traceNamed(@src(), "system store memory");
+        defer z.end();
+
+        const MemoryType = std.meta.Int(.unsigned, number_of_bits);
+        const number_of_bytes = @divExact(@typeInfo(MemoryType).Int.bits, 8);
+
+        const address = try self.translateAddress(virtual_address);
+
+        const memory = &self.machine.memory;
+
+        if (address + @sizeOf(MemoryType) >= memory.memory.len) {
+            return StoreError.ExecutionOutOfBounds;
+        }
+
+        std.mem.writeInt(MemoryType, @ptrCast(*[number_of_bytes]u8, memory.memory[address..].ptr), value, .Little);
     }
 
     fn translateAddress(self: *SystemHart, virtual_address: u64) !u64 {
@@ -79,6 +107,24 @@ pub const UserHart = struct {
         _ = self;
         _ = virtual_address;
         @panic("UNIMPLEMENTED"); // TODO: User load memory
+    }
+
+    pub fn storeMemory(
+        self: *SystemHart,
+        comptime number_of_bits: comptime_int,
+        virtual_address: u64,
+        value: std.meta.Int(.unsigned, number_of_bits),
+    ) StoreError!void {
+        const z = lib.traceNamed(@src(), "user store memory");
+        defer z.end();
+
+        const MemoryType = std.meta.Int(.unsigned, number_of_bits);
+        _ = MemoryType;
+
+        _ = self;
+        _ = virtual_address;
+        _ = value;
+        @panic("UNIMPLEMENTED"); // TODO: User store memory
     }
 };
 

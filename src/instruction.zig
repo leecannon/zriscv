@@ -208,222 +208,190 @@ pub const Instruction = extern union {
         return lib.IntegerRegister.getIntegerRegister(self._rs2.read());
     }
 
-    pub fn decode(instruction: Instruction, comptime unimplemented_is_fatal: bool) !InstructionType {
+    pub const DecodeError = error{
+        IllegalInstruction,
+        UnimplementedInstruction,
+    };
+
+    pub fn decode(instruction: Instruction) DecodeError!InstructionType {
         const z = lib.traceNamed(@src(), "instruction decode");
         defer z.end();
 
-        switch (instruction.op.read()) {
+        const compressed_funct3 = instruction.compressed_funct3.read();
+        const funct3 = instruction.non_compressed_funct3.read();
+
+        return switch (instruction.op.read()) {
             // compressed instruction
-            0b00 => switch (instruction.compressed_funct3.read()) {
-                0b000 => return if (instruction.compressed_backing.low == 0) error.IllegalInstruction else .C_ADDI4SPN,
-                else => |funct3| if (unimplemented_is_fatal) {
-                    std.log.err("unimplemented compressed instruction 00/{b:0>3}", .{funct3});
-                },
+            0b00 => switch (compressed_funct3) {
+                0b000 => if (instruction.compressed_backing.low == 0) error.IllegalInstruction else InstructionType.C_ADDI4SPN,
+                else => error.UnimplementedInstruction,
             },
             // compressed instruction
-            0b01 => switch (instruction.compressed_funct3.read()) {
-                0b101 => return .C_J,
-                else => |funct3| if (unimplemented_is_fatal) {
-                    std.log.err("unimplemented compressed instruction 01/{b:0>3}", .{funct3});
-                },
+            0b01 => switch (compressed_funct3) {
+                0b101 => InstructionType.C_J,
+                else => error.UnimplementedInstruction,
             },
             // compressed instruction
-            0b10 => switch (instruction.compressed_funct3.read()) {
-                0b101 => return .C_J,
-                else => |funct3| if (unimplemented_is_fatal) {
-                    std.log.err("unimplemented compressed instruction 10/{b:0>3}", .{funct3});
-                },
+            0b10 => switch (compressed_funct3) {
+                else => error.UnimplementedInstruction,
             },
             // non-compressed instruction
-            0b11 => {
-                const funct3 = instruction.non_compressed_funct3.read();
-                switch (instruction.opcode.read()) {
-                    // LOAD
-                    0b0000011 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented LOAD 0000011/{b:0>3}", .{funct3});
-                        },
+            0b11 => switch (instruction.opcode.read()) {
+                // LOAD
+                0b0000011 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // STORE
+                0b0100011 => switch (funct3) {
+                    0b000 => InstructionType.SB,
+                    0b001 => InstructionType.SH,
+                    0b010 => InstructionType.SW,
+                    0b011 => InstructionType.SD,
+                    else => error.UnimplementedInstruction,
+                },
+                // MADD
+                0b1000011 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // BRANCH
+                0b1100011 => switch (funct3) {
+                    0b000 => InstructionType.BEQ,
+                    0b001 => InstructionType.BNE,
+                    0b100 => InstructionType.BLT,
+                    0b101 => InstructionType.BGE,
+                    0b110 => InstructionType.BLTU,
+                    0b111 => InstructionType.BGEU,
+                    else => error.UnimplementedInstruction,
+                },
+                // LOAD-FP
+                0b0000111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // STORE-FP
+                0b0100111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // MSUB
+                0b1000111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // JALR
+                0b1100111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // NMSUB
+                0b1001011 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // MISC-MEM
+                0b0001111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // AMO
+                0b0101111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // NMADD
+                0b1001111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // JAL
+                0b1101111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // OP-IMM
+                0b0010011 => switch (funct3) {
+                    0b000 => InstructionType.ADDI,
+                    0b001 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SLLI,
+                        else => error.UnimplementedInstruction,
                     },
-                    // STORE
-                    0b0100011 => switch (funct3) {
-                        0b000 => return .SB,
-                        0b001 => return .SH,
-                        0b010 => return .SW,
-                        0b011 => return .SD,
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented STORE 0100011/{b:0>3}", .{funct3});
-                        },
+                    0b010 => InstructionType.SLTI,
+                    0b011 => InstructionType.SLTIU,
+                    0b100 => InstructionType.XORI,
+                    0b101 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SRLI,
+                        0b0100000 => InstructionType.SRAI,
+                        else => error.UnimplementedInstruction,
                     },
-                    // MADD
-                    0b1000011 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented MADD 1000011/{b:0>3}", .{funct3});
-                        },
+                    0b110 => InstructionType.ORI,
+                    0b111 => InstructionType.ANDI,
+                },
+                // OP
+                0b0110011 => switch (funct3) {
+                    0b000 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.ADD,
+                        0b0100000 => InstructionType.SUB,
+                        else => error.UnimplementedInstruction,
                     },
-                    // BRANCH
-                    0b1100011 => switch (funct3) {
-                        0b000 => return .BEQ,
-                        0b001 => return .BNE,
-                        0b100 => return .BLT,
-                        0b101 => return .BGE,
-                        0b110 => return .BLTU,
-                        0b111 => return .BGEU,
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented BRANCH 1100011/{b:0>3}", .{funct3});
-                        },
+                    0b001 => InstructionType.SLL,
+                    0b010 => InstructionType.SLT,
+                    0b011 => InstructionType.SLTU,
+                    0b100 => InstructionType.XOR,
+                    0b101 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SRL,
+                        0b0100000 => InstructionType.SRA,
+                        else => error.UnimplementedInstruction,
                     },
-                    // LOAD-FP
-                    0b0000111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented LOAD-FP 0000111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // STORE-FP
-                    0b0100111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented STORE-FP 0100111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // MSUB
-                    0b1000111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented MSUB 1000111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // JALR
-                    0b1100111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented JALR 1100111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // NMSUB
-                    0b1001011 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented NMSUB 1001011/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // MISC-MEM
-                    0b0001111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented MISC-MEM 0001111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // AMO
-                    0b0101111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented MISC-MEM 0101111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // NMADD
-                    0b1001111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented MISC-MEM 1001111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // JAL
-                    0b1101111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented MISC-MEM 1101111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // OP-IMM
-                    0b0010011 => switch (funct3) {
-                        0b000 => return .ADDI,
-                        0b001 => switch (instruction.funct7.read()) {
-                            0b0000000 => return .SLLI,
-                            else => |funct7| if (unimplemented_is_fatal) {
-                                std.log.err("unimplemented OP-IMM 0010011/001/{b:0>7}", .{funct7});
-                            },
-                        },
-                        0b010 => return .SLTI,
-                        0b011 => return .SLTIU,
-                        0b100 => return .XORI,
-                        0b101 => switch (instruction.funct7.read()) {
-                            0b0000000 => return .SRLI,
-                            0b0100000 => return .SRAI,
-                            else => |funct7| if (unimplemented_is_fatal) {
-                                std.log.err("unimplemented OP-IMM 0010011/101/{b:0>7}", .{funct7});
-                            },
-                        },
-                        0b110 => return .ORI,
-                        0b111 => return .ANDI,
-                    },
-                    // OP
-                    0b0110011 => switch (funct3) {
-                        0b000 => switch (instruction.funct7.read()) {
-                            0b0000000 => return .ADD,
-                            0b0100000 => return .SUB,
-                            else => |funct7| if (unimplemented_is_fatal) {
-                                std.log.err("unimplemented OP 0110011/000/{b:0>7}", .{funct7});
-                            },
-                        },
-                        0b001 => return .SLL,
-                        0b010 => return .SLT,
-                        0b011 => return .SLTU,
-                        0b100 => return .XOR,
-                        0b101 => switch (instruction.funct7.read()) {
-                            0b0000000 => return .SRL,
-                            0b0100000 => return .SRA,
-                            else => |funct7| if (unimplemented_is_fatal) {
-                                std.log.err("unimplemented OP 0110011/101/{b:0>7}", .{funct7});
-                            },
-                        },
-                        0b110 => return .OR,
-                        0b111 => return .AND,
-                    },
-                    // OP-FP
-                    0b1010011 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented OP-FP 1010011/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // SYSTEM
-                    0b1110011 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented SYSTEM 1110011/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // AUIPC
-                    0b0010111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented AUIPC 0010111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // LUI
-                    0b0110111 => return .LUI,
-                    // OP-V
-                    0b1010111 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented OP-V 1010111/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // OP-IMM-32
-                    0b0011011 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented OP-IMM-32 0011011/{b:0>3}", .{funct3});
-                        },
-                    },
-                    // OP-32
-                    0b0111011 => switch (funct3) {
-                        else => if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented OP-32 0111011/{b:0>3}", .{funct3});
-                        },
-                    },
-                    0b1111111 => {
-                        if (instruction.full_backing == ~@as(u32, 0)) return error.IllegalInstruction;
+                    0b110 => InstructionType.OR,
+                    0b111 => InstructionType.AND,
+                },
+                // OP-FP
+                0b1010011 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // SYSTEM
+                0b1110011 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // AUIPC
+                0b0010111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // LUI
+                0b0110111 => InstructionType.LUI,
+                // OP-V
+                0b1010111 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // OP-IMM-32
+                0b0011011 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                // OP-32
+                0b0111011 => switch (funct3) {
+                    else => error.UnimplementedInstruction,
+                },
+                0b1111111 => blk: {
+                    if (instruction.full_backing == ~@as(u32, 0)) break :blk error.IllegalInstruction;
 
-                        if (unimplemented_is_fatal) {
-                            std.log.err("unimplemented opcode 1111111", .{});
-                        }
-                    },
-                    else => |opcode| if (unimplemented_is_fatal) {
-                        std.log.err("unimplemented opcode {b:0>7}", .{opcode});
-                    },
-                }
+                    break :blk error.UnimplementedInstruction;
+                },
+                else => error.UnimplementedInstruction,
             },
-        }
+        };
+    }
 
-        return error.UnimplementedOpcode;
+    pub fn printUnimplementedInstruction(instruction: Instruction) void {
+        const op = instruction.op.read();
+
+        if (op == 0b11) {
+            // non-compressed
+            const opcode = instruction.opcode.read();
+            const funct3 = instruction.non_compressed_funct3.read();
+            const funct7 = instruction.funct7.read();
+            std.log.err(
+                "UNIMPLEMENTED non-compressed instruction: opcode<{b:0>7}>/funct3<{b:0>3}>/funct7<{b:0>7}>",
+                .{ opcode, funct3, funct7 },
+            );
+        } else {
+            // compressed
+            const compressed_funct3 = instruction.compressed_funct3.read();
+            std.log.err(
+                "UNIMPLEMENTED compressed instruction: quadrant<{b:0>2}>/funct3<{b:0>3}>",
+                .{ op, compressed_funct3 },
+            );
+        }
     }
 
     comptime {

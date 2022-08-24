@@ -3,6 +3,7 @@ const lib = @import("lib.zig");
 
 pub const ExecutionOptions = struct {
     unrecognised_instruction_is_fatal: bool = true,
+    illegal_instruction_is_fatal: bool = true,
     unrecognised_csr_is_fatal: bool = true,
     ebreak_is_fatal: bool = false,
     execution_out_of_bounds_is_fatal: bool = true,
@@ -77,14 +78,18 @@ fn execute(
 
     const has_writer = comptime isWriter(@TypeOf(writer));
 
-    const instruction_type = if (options.unrecognised_instruction_is_fatal)
-        try instruction.decode(options.unrecognised_instruction_is_fatal)
-    else
-        instruction.decode(options.unrecognised_instruction_is_fatal) catch {
-            // TODO: Pass `IllegalInstruction` once `throw` is implemented
-            try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
-            return;
-        };
+    const instruction_type = instruction.decode() catch |err| {
+        if (options.unrecognised_instruction_is_fatal and err == error.UnimplementedInstruction) {
+            instruction.printUnimplementedInstruction();
+            return err;
+        }
+
+        if (options.illegal_instruction_is_fatal and err == error.IllegalInstruction) return err;
+
+        // TODO: Pass `IllegalInstruction` once `throw` is implemented
+        try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
+        return;
+    };
 
     // Order of the branches loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
     switch (instruction_type) {
@@ -388,6 +393,7 @@ fn throw(
 }
 
 fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {
+    @setRuntimeSafety(false);
     return if (signed < 0)
         unsigned -% @bitCast(u64, -signed)
     else

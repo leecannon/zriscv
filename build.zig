@@ -25,6 +25,9 @@ pub fn build(b: *std.build.Builder) !void {
         zriscv.addPackage(args_pkg);
         zriscv.addPackage(bitjuggle_pkg);
 
+        // We use the c allocator in debug modes
+        if (mode != .Debug) zriscv.linkLibC();
+
         if (trace) {
             includeTracy(zriscv);
         }

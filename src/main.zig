@@ -6,8 +6,6 @@ const lib = @import("lib.zig");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
-var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-
 const execution_options: lib.ExecutionOptions = .{};
 
 pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
@@ -15,13 +13,16 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     // this causes the frame to start with our main instead of `std.start`
     lib.traceFrameMark();
 
+    var gpa = if (is_debug_or_test) std.heap.GeneralPurposeAllocator(.{}){} else {};
+
     defer {
-        _ = gpa.deinit();
+        if (is_debug_or_test) _ = gpa.deinit();
         main_z.end();
     }
 
-    var tracy_allocator = if (build_options.trace) lib.tracyAllocator(gpa.allocator()) else {};
-    const allocator: std.mem.Allocator = if (build_options.trace) tracy_allocator.allocator() else gpa.allocator();
+    const gpa_allocator = if (is_debug_or_test) gpa.allocator() else std.heap.c_allocator;
+    var tracy_allocator = if (build_options.trace) lib.tracyAllocator(gpa_allocator) else {};
+    const allocator: std.mem.Allocator = if (build_options.trace) tracy_allocator.allocator() else gpa_allocator;
 
     const stderr = std.io.getStdErr().writer();
 
@@ -107,6 +108,7 @@ fn systemMode(
 
     // TODO: Support multiple harts
     while (true) {
+        // TODO: Don't output
         lib.step(.system, &machine.harts[0], stderr, execution_options, true) catch |err| {
             stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
             return err;

@@ -179,12 +179,12 @@ const ElfHeader = struct {
 
         const machine = if (need_bswap) blk: {
             const value = @enumToInt(hdr32.e_machine);
-            break :blk @intToEnum(std.elf.EM, @byteSwap(@TypeOf(value), value));
+            break :blk @intToEnum(std.elf.EM, @byteSwap(value));
         } else hdr32.e_machine;
 
         const @"type" = if (need_bswap) blk: {
             const value = @enumToInt(hdr32.e_type);
-            break :blk @intToEnum(std.elf.ET, @byteSwap(@TypeOf(value), value));
+            break :blk @intToEnum(std.elf.ET, @byteSwap(value));
         } else hdr32.e_type;
 
         return ElfHeader{

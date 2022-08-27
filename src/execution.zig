@@ -76,6 +76,10 @@ fn execute(
     const execute_z = lib.traceNamed(@src(), "execute");
     defer execute_z.end();
 
+    defer if (actually_execute) {
+        hart.cycle += 1;
+    };
+
     const has_writer = comptime isWriter(@TypeOf(writer));
 
     // Order of the branches loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
@@ -371,6 +375,23 @@ fn execute(
             }
         },
         else => |e| std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)}),
+    }
+}
+
+fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u64 {
+    return switch (csr) {
+        .cycle => hart.cycle,
+        .mhartid => hart.hart_id,
+    };
+}
+
+fn writeCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr, value: u64) !void {
+    _ = hart;
+    _ = value;
+
+    switch (csr) {
+        .cycle => unreachable, // Read-Only CSR
+        .mhartid => unreachable, // Read-Only CSR
     }
 }
 

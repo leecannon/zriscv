@@ -70,6 +70,7 @@ pub const Instruction = extern union {
     non_compressed_funct3: bitjuggle.Bitfield(u32, 12, 3),
     compressed_funct3: bitjuggle.Bitfield(u32, 13, 3),
     funct7: bitjuggle.Bitfield(u32, 25, 7),
+    csr: bitjuggle.Bitfield(u32, 20, 12),
 
     _rd: bitjuggle.Bitfield(u32, 7, 5),
     _rs1: bitjuggle.Bitfield(u32, 15, 5),

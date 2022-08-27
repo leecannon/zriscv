@@ -4,6 +4,9 @@ pub usingnamespace @import("tracy.zig");
 
 pub usingnamespace @import("types.zig");
 
+const csr = @import("csr.zig");
+pub const Csr = csr.Csr;
+
 const execution = @import("execution.zig");
 pub const ExecutionOptions = execution.ExecutionOptions;
 pub const step = execution.step;

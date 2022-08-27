@@ -19,13 +19,15 @@ const StoreError = error{
 };
 
 pub const SystemHart = struct {
-    hart_id: usize,
+    hart_id: u64,
     machine: *lib.SystemMachine,
 
     pc: usize = 0,
     x: [32]u64 = [_]u64{0} ** 32,
+    cycle: u64 = 0,
 
     address_translation_mode: lib.AddressTranslationMode = .Bare,
+    privilege_level: lib.PrivilegeLevel = .Machine,
 
     pub fn loadMemory(
         self: *SystemHart,
@@ -92,6 +94,7 @@ pub const UserHart = struct {
 
     pc: usize = 0,
     x: [32]u64 = [_]u64{0} ** 32,
+    cycle: u64 = 0,
 
     pub fn loadMemory(
         self: *UserHart,

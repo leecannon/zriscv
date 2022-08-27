@@ -350,6 +350,80 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .CSRRW => {
+            const z = lib.traceNamed(@src(), "CSRRW");
+            defer z.end();
+
+            // I-type
+
+            const csr: lib.Csr = if (options.unrecognised_csr_is_fatal)
+                try lib.Csr.getCsr(instruction.csr.read())
+            else
+                lib.Csr.getCsr(instruction.csr.read()) catch {
+                    // TODO: Pass `IllegalInstruction` once `throw` is implemented
+                    try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
+                    return;
+                };
+
+            const rd = instruction.rd();
+            const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
+
+            if (rd != .zero) {
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRW - csr: {}, dest: {}, source: {}
+                        \\  read csr {} into {}
+                        \\  set csr {} to {}<{x}>
+                        \\
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rd,
+                        csr,
+                        rs1,
+                        rs1_value,
+                    });
+                }
+
+                if (!csr.canWrite(hart.privilege_level)) {
+                    // TODO: Pass `IllegalInstruction` once `throw` is implemented
+                    try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
+                    return;
+                }
+
+                const initial_csr = readCsr(mode, hart, csr);
+                try writeCsr(mode, hart, csr, rs1_value);
+                hart.x[@enumToInt(rd)] = initial_csr;
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\CSRRW - csr: {}, dest: {}, source: {}
+                        \\  set csr {} to {}<{x}>
+                        \\
+                    , .{
+                        csr,
+                        rd,
+                        rs1,
+                        csr,
+                        rs1,
+                        rs1_value,
+                    });
+                }
+
+                if (!csr.canWrite(hart.privilege_level)) {
+                    // TODO: Pass `IllegalInstruction` once `throw` is implemented
+                    try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
+                    return;
+                }
+
+                try writeCsr(mode, hart, csr, rs1_value);
+            }
+
+            hart.pc += 4;
+        },
         .C_J => {
             const z = lib.traceNamed(@src(), "C_J");
             defer z.end();

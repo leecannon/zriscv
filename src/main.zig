@@ -27,7 +27,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     const stderr = std.io.getStdErr().writer();
 
     const options = parseArguments(allocator, stderr);
-    defer options.deinit();
+    defer if (is_debug_or_test) options.deinit();
 
     const executable = lib.Executable.load(
         allocator,
@@ -37,7 +37,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
         if (is_debug_or_test) return err;
         return 1;
     };
-    defer executable.unload(allocator);
+    defer if (is_debug_or_test) executable.unload(allocator);
 
     // `parseArguments` ensures a verb was given
     _ = switch (options.verb.?) {
@@ -100,7 +100,7 @@ fn systemMode(
             return e;
         },
     };
-    defer machine.destroy();
+    defer if (is_debug_or_test) machine.destroy();
 
     if (system_mode_options.interactive) {
         return interactiveSystemMode(machine, stderr);

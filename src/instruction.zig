@@ -4,6 +4,9 @@ const lib = @import("lib.zig");
 
 // Order of the instruction types loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
 pub const InstructionType = enum {
+    Illegal,
+    Unimplemented,
+
     // LUI
     LUI,
 
@@ -208,12 +211,7 @@ pub const Instruction = extern union {
         return lib.IntegerRegister.getIntegerRegister(self._rs2.read());
     }
 
-    pub const DecodeError = error{
-        IllegalInstruction,
-        UnimplementedInstruction,
-    };
-
-    pub fn decode(instruction: Instruction) DecodeError!InstructionType {
+    pub fn decode(instruction: Instruction) InstructionType {
         const z = lib.traceNamed(@src(), "instruction decode");
         defer z.end();
 
@@ -223,23 +221,23 @@ pub const Instruction = extern union {
         return switch (instruction.op.read()) {
             // compressed instruction
             0b00 => switch (compressed_funct3) {
-                0b000 => if (instruction.compressed_backing.low == 0) error.IllegalInstruction else InstructionType.C_ADDI4SPN,
-                else => error.UnimplementedInstruction,
+                0b000 => if (instruction.compressed_backing.low == 0) InstructionType.Illegal else InstructionType.C_ADDI4SPN,
+                else => InstructionType.Unimplemented,
             },
             // compressed instruction
             0b01 => switch (compressed_funct3) {
                 0b101 => InstructionType.C_J,
-                else => error.UnimplementedInstruction,
+                else => InstructionType.Unimplemented,
             },
             // compressed instruction
             0b10 => switch (compressed_funct3) {
-                else => error.UnimplementedInstruction,
+                else => InstructionType.Unimplemented,
             },
             // non-compressed instruction
             0b11 => switch (instruction.opcode.read()) {
                 // LOAD
                 0b0000011 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // STORE
                 0b0100011 => switch (funct3) {
@@ -247,11 +245,11 @@ pub const Instruction = extern union {
                     0b001 => InstructionType.SH,
                     0b010 => InstructionType.SW,
                     0b011 => InstructionType.SD,
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // MADD
                 0b1000011 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // BRANCH
                 0b1100011 => switch (funct3) {
@@ -261,50 +259,50 @@ pub const Instruction = extern union {
                     0b101 => InstructionType.BGE,
                     0b110 => InstructionType.BLTU,
                     0b111 => InstructionType.BGEU,
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // LOAD-FP
                 0b0000111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // STORE-FP
                 0b0100111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // MSUB
                 0b1000111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // JALR
                 0b1100111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // NMSUB
                 0b1001011 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // MISC-MEM
                 0b0001111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // AMO
                 0b0101111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // NMADD
                 0b1001111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // JAL
                 0b1101111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // OP-IMM
                 0b0010011 => switch (funct3) {
                     0b000 => InstructionType.ADDI,
                     0b001 => switch (instruction.funct7.read()) {
                         0b0000000 => InstructionType.SLLI,
-                        else => error.UnimplementedInstruction,
+                        else => InstructionType.Unimplemented,
                     },
                     0b010 => InstructionType.SLTI,
                     0b011 => InstructionType.SLTIU,
@@ -312,7 +310,7 @@ pub const Instruction = extern union {
                     0b101 => switch (instruction.funct7.read()) {
                         0b0000000 => InstructionType.SRLI,
                         0b0100000 => InstructionType.SRAI,
-                        else => error.UnimplementedInstruction,
+                        else => InstructionType.Unimplemented,
                     },
                     0b110 => InstructionType.ORI,
                     0b111 => InstructionType.ANDI,
@@ -322,7 +320,7 @@ pub const Instruction = extern union {
                     0b000 => switch (instruction.funct7.read()) {
                         0b0000000 => InstructionType.ADD,
                         0b0100000 => InstructionType.SUB,
-                        else => error.UnimplementedInstruction,
+                        else => InstructionType.Unimplemented,
                     },
                     0b001 => InstructionType.SLL,
                     0b010 => InstructionType.SLT,
@@ -331,43 +329,42 @@ pub const Instruction = extern union {
                     0b101 => switch (instruction.funct7.read()) {
                         0b0000000 => InstructionType.SRL,
                         0b0100000 => InstructionType.SRA,
-                        else => error.UnimplementedInstruction,
+                        else => InstructionType.Unimplemented,
                     },
                     0b110 => InstructionType.OR,
                     0b111 => InstructionType.AND,
                 },
                 // OP-FP
                 0b1010011 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // SYSTEM
                 0b1110011 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // AUIPC
                 0b0010111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // LUI
                 0b0110111 => InstructionType.LUI,
                 // OP-V
                 0b1010111 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // OP-IMM-32
                 0b0011011 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 // OP-32
                 0b0111011 => switch (funct3) {
-                    else => error.UnimplementedInstruction,
+                    else => InstructionType.Unimplemented,
                 },
                 0b1111111 => blk: {
-                    if (instruction.full_backing == ~@as(u32, 0)) break :blk error.IllegalInstruction;
-
-                    break :blk error.UnimplementedInstruction;
+                    if (instruction.full_backing == ~@as(u32, 0)) break :blk InstructionType.Illegal;
+                    break :blk InstructionType.Unimplemented;
                 },
-                else => error.UnimplementedInstruction,
+                else => InstructionType.Unimplemented,
             },
         };
     }

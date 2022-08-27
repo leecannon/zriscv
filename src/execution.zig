@@ -78,21 +78,23 @@ fn execute(
 
     const has_writer = comptime isWriter(@TypeOf(writer));
 
-    const instruction_type = instruction.decode() catch |err| {
-        if (options.unrecognised_instruction_is_fatal and err == error.UnimplementedInstruction) {
-            instruction.printUnimplementedInstruction();
-            return err;
-        }
-
-        if (options.illegal_instruction_is_fatal and err == error.IllegalInstruction) return err;
-
-        // TODO: Pass `IllegalInstruction` once `throw` is implemented
-        try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
-        return;
-    };
-
     // Order of the branches loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
-    switch (instruction_type) {
+    switch (instruction.decode()) {
+        .Unimplemented => {
+            if (options.unrecognised_instruction_is_fatal) {
+                instruction.printUnimplementedInstruction();
+                return error.UnimplementedInstruction;
+            }
+
+            // TODO: Pass `IllegalInstruction` once `throw` is implemented
+            try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
+        },
+        .Illegal => {
+            if (options.illegal_instruction_is_fatal) return error.IllegalInstruction;
+
+            // TODO: Pass `IllegalInstruction` once `throw` is implemented
+            try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
+        },
         .LUI => {
             const z = lib.traceNamed(@src(), "LUI");
             defer z.end();

@@ -5,14 +5,16 @@ const zriscv_version = std.builtin.Version{ .major = 0, .minor = 0, .patch = 2 }
 pub fn build(b: *std.build.Builder) !void {
     b.prominent_compile_errors = true;
 
-    // TODO: Check if this is still needed, was hitting issue when using tracy
-    b.use_stage1 = true;
-
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 
     const trace = b.option(bool, "trace", "enable tracy tracing") orelse false;
     const trace_callstack = b.option(bool, "trace-callstack", "enable tracy callstack (does nothing without trace option)") orelse false;
+
+    if (trace) {
+        // TODO: For some reason self-hosted and tracy don't get along
+        b.use_stage1 = true;
+    }
 
     const options_step = try getOptionsStep(b, trace, trace_callstack);
 

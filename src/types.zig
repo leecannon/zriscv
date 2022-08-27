@@ -1,6 +1,19 @@
 const std = @import("std");
 const lib = @import("lib.zig");
 
+pub const PrivilegeLevel = enum(u2) {
+    User = 0,
+    Supervisor = 1,
+    Machine = 3,
+
+    pub fn getPrivilegeLevel(value: u2) !PrivilegeLevel {
+        return std.meta.intToEnum(PrivilegeLevel, value) catch {
+            std.log.emerg("invalid privlege mode {b}", .{value});
+            return error.InvalidPrivilegeLevel;
+        };
+    }
+};
+
 pub const AddressTranslationMode = enum(u4) {
     Bare = 0,
     Sv39 = 8,

@@ -47,6 +47,16 @@ pub const InstructionType = enum {
     OR,
     AND,
 
+    // SYSTEM
+    ECALL,
+    EBREAK,
+    CSRRW,
+    CSRRS,
+    CSRRC,
+    CSRRWI,
+    CSRRSI,
+    CSRRCI,
+
     // Compressed - Quadrant 0
     C_ADDI4SPN,
 
@@ -340,6 +350,17 @@ pub const Instruction = extern union {
                 },
                 // SYSTEM
                 0b1110011 => switch (funct3) {
+                    0b000 => switch (instruction.i_imm.read()) {
+                        0b000000000000 => InstructionType.ECALL,
+                        0b000000000001 => InstructionType.EBREAK,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b001 => InstructionType.CSRRW,
+                    0b010 => InstructionType.CSRRS,
+                    0b011 => InstructionType.CSRRC,
+                    0b101 => InstructionType.CSRRWI,
+                    0b110 => InstructionType.CSRRSI,
+                    0b111 => InstructionType.CSRRCI,
                     else => InstructionType.Unimplemented,
                 },
                 // AUIPC

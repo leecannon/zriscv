@@ -4,7 +4,7 @@ const pkgs = @import("deps.zig").pkgs;
 
 pub const zriscv_pkg = std.build.Pkg{
     .name = "zriscv",
-    .path = .{ .path = "lib/index.zig" },
+    .source = .{ .path = "lib/index.zig" },
     .dependencies = &.{pkgs.bitjuggle},
 };
 
@@ -13,6 +13,8 @@ pub fn build(b: *std.build.Builder) void {
 
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
+
+    b.use_stage1 = true;
 
     // Runner
     {

@@ -1,9 +1,8 @@
 const std = @import("std");
 const zriscv = @import("zriscv");
-const clap = @import("clap");
 
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-const allocator = &gpa.allocator;
+const allocator = gpa.allocator();
 
 const stdin = std.io.getStdIn();
 const stdin_reader = stdin.reader();
@@ -16,36 +15,7 @@ const OutputCpu = zriscv.Cpu(.{ .writer_type = @TypeOf(stdout_writer) });
 pub fn main() !u8 {
     defer _ = gpa.deinit();
 
-    const params = comptime [_]clap.Param(clap.Help){
-        clap.parseParam("-h, --help    Display this help and exit.") catch unreachable,
-        clap.parseParam("<FILE>") catch unreachable,
-    };
-
-    var diag = clap.Diagnostic{};
-    var args = clap.parse(clap.Help, &params, .{ .diagnostic = &diag }) catch |err| {
-        // Report useful error and exit
-        diag.report(stderr_writer, err) catch {};
-        return err;
-    };
-    defer args.deinit();
-
-    if (args.flag("--help")) {
-        try clap.help(stdout_writer, &params);
-        return 0;
-    }
-
-    const file_path = blk: {
-        if (args.positionals().len < 1) {
-            try stderr_writer.writeAll("no file path provided\n");
-            return 1;
-        }
-        if (args.positionals().len > 1) {
-            try stderr_writer.writeAll("multiple files are not supported\n");
-            return 1;
-        }
-
-        break :blk args.positionals()[0];
-    };
+    const file_path = "sss";
 
     const file_contents = blk: {
         var file = std.fs.cwd().openFile(file_path, .{}) catch |err| switch (err) {
@@ -137,7 +107,7 @@ pub fn main() !u8 {
         if (input == 'r') {
             try stdout_writer.writeByte('\n');
 
-            const timer = try std.time.Timer.start();
+            var timer = try std.time.Timer.start();
 
             if (opt_break_point) |break_point| {
                 while (cpu_state.pc != break_point) {
@@ -164,7 +134,7 @@ pub fn main() !u8 {
         if (input == 'e') {
             try stdout_writer.writeByte('\n');
 
-            const timer = try std.time.Timer.start();
+            var timer = try std.time.Timer.start();
 
             if (opt_break_point) |break_point| {
                 while (cpu_state.pc != break_point) {

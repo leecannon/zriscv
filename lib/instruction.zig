@@ -199,7 +199,7 @@ pub const Instruction = extern union {
                 0b011 => InstructionType.SD,
                 else => {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented STORE {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                        std.log.err("unimplemented STORE {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     }
                     return error.UnimplementedOpcode;
                 },
@@ -215,7 +215,7 @@ pub const Instruction = extern union {
                 0b011 => InstructionType.LD,
                 else => {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented LOAD {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                        std.log.err("unimplemented LOAD {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     }
                     return error.UnimplementedOpcode;
                 },
@@ -234,7 +234,7 @@ pub const Instruction = extern union {
                 0b111 => InstructionType.BGEU,
                 else => {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented BRANCH {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                        std.log.err("unimplemented BRANCH {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     }
                     return error.UnimplementedOpcode;
                 },
@@ -246,7 +246,7 @@ pub const Instruction = extern union {
                 0b011 => InstructionType.SLTIU,
                 0b001 => if (instruction.funct7_shift.read() == 0) InstructionType.SLLI else {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}/{b:0>6}", .{ opcode, funct3, instruction.funct7_shift.read() });
+                        std.log.err("unimplemented OP-IMM {b:0>7}/{b:0>3}/{b:0>6}", .{ opcode, funct3, instruction.funct7_shift.read() });
                     }
                     return error.UnimplementedOpcode;
                 },
@@ -258,7 +258,7 @@ pub const Instruction = extern union {
                     0b010000 => InstructionType.SRAI,
                     else => |funct7_shift| {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-IMM {b:0>7}/{b:0>3}/{b:0>6}", .{ opcode, funct3, funct7_shift });
+                            std.log.err("unimplemented OP-IMM {b:0>7}/{b:0>3}/{b:0>6}", .{ opcode, funct3, funct7_shift });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -272,7 +272,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.MUL,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -282,7 +282,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.REM,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -292,7 +292,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.REMU,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -302,7 +302,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.MULH,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -312,7 +312,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.MULHSU,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -322,7 +322,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.MULHU,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -332,7 +332,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.DIV,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -343,7 +343,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.DIVU,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -358,7 +358,7 @@ pub const Instruction = extern union {
                     0b0011000 => InstructionType.MRET,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented SYSTEM {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented SYSTEM {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -369,7 +369,7 @@ pub const Instruction = extern union {
                 0b101 => InstructionType.CSRRWI,
                 else => {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented SYSTEM {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                        std.log.err("unimplemented SYSTEM {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     }
                     return error.UnimplementedOpcode;
                 },
@@ -381,7 +381,7 @@ pub const Instruction = extern union {
                     0b0000000 => InstructionType.SLLIW,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -391,14 +391,14 @@ pub const Instruction = extern union {
                     0b0100000 => InstructionType.SRAIW,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
                 },
                 else => {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                        std.log.err("unimplemented OP-IMM-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     }
                     return error.UnimplementedOpcode;
                 },
@@ -411,7 +411,7 @@ pub const Instruction = extern union {
                     0b0100000 => InstructionType.SUBW,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -420,7 +420,7 @@ pub const Instruction = extern union {
                     0b0000000 => InstructionType.SLLW,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -429,7 +429,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.DIVW,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -438,7 +438,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.REMW,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -447,7 +447,7 @@ pub const Instruction = extern union {
                     0b0000001 => InstructionType.REMUW,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
@@ -458,21 +458,21 @@ pub const Instruction = extern union {
                     0b0100000 => InstructionType.SRAW,
                     else => {
                         if (unimplemented_is_fatal) {
-                            std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
+                            std.log.err("unimplemented OP-32 {b:0>7}/{b:0>3}/{b:0>7}", .{ opcode, funct3, funct7 });
                         }
                         return error.UnimplementedOpcode;
                     },
                 },
                 else => {
                     if (unimplemented_is_fatal) {
-                        std.log.emerg("unimplemented OP-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
+                        std.log.err("unimplemented OP-32 {b:0>7}/{b:0>3}", .{ opcode, funct3 });
                     }
                     return error.UnimplementedOpcode;
                 },
             },
             else => {
                 if (unimplemented_is_fatal) {
-                    std.log.emerg("unimplemented opcode {b:0>7}", .{opcode});
+                    std.log.err("unimplemented opcode {b:0>7}", .{opcode});
                 }
                 return error.UnimplementedOpcode;
             },

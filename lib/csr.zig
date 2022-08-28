@@ -131,7 +131,7 @@ pub const Csr = enum(u12) {
 
     pub fn getCsr(value: u12) !Csr {
         return std.meta.intToEnum(Csr, value) catch {
-            std.log.emerg("invalid csr 0x{X}", .{value});
+            std.log.err("invalid csr 0x{X}", .{value});
             return error.InvalidCsr;
         };
     }

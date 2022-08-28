@@ -108,7 +108,7 @@ fn loadMemory(state: *CpuState, comptime number_of_bits: comptime_int, address: 
             return std.mem.readIntSlice(MemoryType, state.memory[address..], .Little);
         },
         else => {
-            std.log.emerg("Unimplemented address translation mode", .{});
+            std.log.err("Unimplemented address translation mode", .{});
             return LoadError.Unimplemented;
         },
     }
@@ -139,7 +139,7 @@ fn storeMemory(
             std.mem.copy(u8, state.memory[address..], &result);
         },
         else => {
-            std.log.emerg("Unimplemented address translation mode", .{});
+            std.log.err("Unimplemented address translation mode", .{});
             return StoreError.Unimplemented;
         },
     }
@@ -3612,7 +3612,7 @@ fn writeCsr(state: *CpuState, csr: Csr, value: u64) !void {
 
             const address_translation_mode = try AddressTranslationMode.getAddressTranslationMode(pending_satp.mode.read());
             if (address_translation_mode != .Bare) {
-                std.log.emerg("unsupported address_translation_mode given: {s}", .{@tagName(address_translation_mode)});
+                std.log.err("unsupported address_translation_mode given: {s}", .{@tagName(address_translation_mode)});
                 return error.UnsupportedAddressTranslationMode;
             }
 

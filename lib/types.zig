@@ -7,7 +7,7 @@ pub const PrivilegeLevel = enum(u2) {
 
     pub fn getPrivilegeLevel(value: u2) !PrivilegeLevel {
         return std.meta.intToEnum(PrivilegeLevel, value) catch {
-            std.log.emerg("invalid privlege mode {b}", .{value});
+            std.log.err("invalid privlege mode {b}", .{value});
             return error.InvalidPrivilegeLevel;
         };
     }
@@ -131,7 +131,7 @@ pub const ContextStatus = enum(u2) {
 
     pub fn getContextStatus(value: u2) !ContextStatus {
         return std.meta.intToEnum(ContextStatus, value) catch {
-            std.log.emerg("invalid context status {b}", .{value});
+            std.log.err("invalid context status {b}", .{value});
             return error.InvalidContextStatus;
         };
     }
@@ -143,7 +143,7 @@ pub const VectorMode = enum(u2) {
 
     pub fn getVectorMode(value: u2) !VectorMode {
         return std.meta.intToEnum(VectorMode, value) catch {
-            std.log.emerg("invalid vector mode {b}", .{value});
+            std.log.err("invalid vector mode {b}", .{value});
             return error.InvalidVectorMode;
         };
     }
@@ -156,7 +156,7 @@ pub const AddressTranslationMode = enum(u4) {
 
     pub fn getAddressTranslationMode(value: u4) !AddressTranslationMode {
         return std.meta.intToEnum(AddressTranslationMode, value) catch {
-            std.log.emerg("invalid address translation mode {b}", .{value});
+            std.log.err("invalid address translation mode {b}", .{value});
             return error.InvalidAddressTranslationMode;
         };
     }

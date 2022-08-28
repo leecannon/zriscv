@@ -155,14 +155,15 @@ fn execute(
             const rs2 = instruction.rs2();
             const rs2_value = hart.x[@enumToInt(rs2)];
 
-            if (rs1_value != rs2_value) {
-                const imm = instruction.b_imm.read();
+            const imm = instruction.b_imm.read();
+            const result = addSignedToUnsignedWrap(hart.pc, imm);
 
+            if (rs1_value != rs2_value) {
                 if (has_writer) {
                     try writer.print(
                         \\BNE - src1: {}<{x}>, src2: {}<{x}>, offset: <{x}>
                         \\  true
-                        \\  setting pc to current pc<{x}> + <{x}>
+                        \\  setting pc to current ( pc<{x}> + <{x}> ) = <{x}>
                         \\
                     , .{
                         rs1,
@@ -172,16 +173,15 @@ fn execute(
                         imm,
                         hart.pc,
                         imm,
+                        result,
                     });
                 }
 
                 if (actually_execute) {
-                    hart.pc = addSignedToUnsignedWrap(hart.pc, imm);
+                    hart.pc = result;
                 }
             } else {
                 if (has_writer) {
-                    const imm = instruction.b_imm.read();
-
                     try writer.print(
                         \\BNE - src1: {}<{x}>, src2: {}<{x}>, offset: <{x}>
                         \\  false
@@ -213,10 +213,12 @@ fn execute(
 
                 const rs1_value = hart.x[@enumToInt(rs1)];
 
+                const result = addSignedToUnsignedIgnoreOverflow(rs1_value, imm);
+
                 if (has_writer) {
                     try writer.print(
                         \\ADDI - src: {}, dest: {}, imm: <{x}>
-                        \\  set {} to {}<{x}> + <{x}>
+                        \\  set {} to ( {}<{x}> + <{x}> ) = <{x}>
                         \\
                     , .{
                         rs1,
@@ -226,11 +228,12 @@ fn execute(
                         rs1,
                         rs1_value,
                         imm,
+                        result,
                     });
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = addSignedToUnsignedIgnoreOverflow(rs1_value, imm);
+                    hart.x[@enumToInt(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -267,10 +270,13 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const rs2_value = hart.x[@enumToInt(rs2)];
 
+                var result: u64 = undefined;
+                _ = @addWithOverflow(u64, rs1_value, rs2_value, &result);
+
                 if (has_writer) {
                     try writer.print(
                         \\ADD - src1: {}, src2: {}, dest: {}
-                        \\  set {} to {}<{x}> + {}<{x}>
+                        \\  set {} to ( {}<{x}> + {}<{x}> ) = <{x}>
                         \\
                     , .{
                         rs1,
@@ -281,11 +287,12 @@ fn execute(
                         rs1_value,
                         rs2,
                         rs2_value,
+                        result,
                     });
                 }
 
                 if (actually_execute) {
-                    _ = @addWithOverflow(u64, rs1_value, rs2_value, &hart.x[@enumToInt(rd)]);
+                    hart.x[@enumToInt(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -313,31 +320,36 @@ fn execute(
 
             // S-Type
             const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
             const rs2 = instruction.rs2();
+            const rs2_value = hart.x[@enumToInt(rs2)];
             const imm = instruction.s_imm.read();
+
+            const address = addSignedToUnsignedWrap(rs1_value, imm);
 
             if (has_writer) {
                 try writer.print(
                     \\SD - base: {}, src: {}, imm: <{x}>
-                    \\  store 8 bytes from {} into memory {} + <{x}>
+                    \\  store 8 bytes from {}<{x}> into memory ( {}<{x}> + <{x}> ) = <{x}>
                     \\
                 , .{
                     rs1,
                     rs2,
                     imm,
                     rs2,
+                    rs2_value,
                     rs1,
+                    rs1_value,
                     imm,
+                    address,
                 });
             }
 
             if (actually_execute) {
-                const address = addSignedToUnsignedWrap(hart.x[@enumToInt(rs1)], imm);
-
                 if (options.execution_out_of_bounds_is_fatal) {
-                    try hart.storeMemory(64, address, hart.x[@enumToInt(rs2)]);
+                    try hart.storeMemory(64, address, rs2_value);
                 } else {
-                    hart.storeMemory(64, address, hart.x[@enumToInt(rs2)]) catch |err| switch (err) {
+                    hart.storeMemory(64, address, rs2_value) catch |err| switch (err) {
                         error.ExecutionOutOfBounds => {
                             // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
                             try throw(mode, hart, {}, 0, writer, true);
@@ -362,10 +374,12 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const shmt = instruction.i_specialization.fullShift();
 
+                const result = rs1_value << shmt;
+
                 if (has_writer) {
                     try writer.print(
                         \\SLLI - src: {}, dest: {}, shmt: <{x}>
-                        \\  set {} to {}<{x}> << <{x}>
+                        \\  set {} to ( {}<{x}> << <{x}> ) = <{x}>
                         \\
                     , .{
                         rs1,
@@ -375,11 +389,12 @@ fn execute(
                         rs1,
                         rs1_value,
                         shmt,
+                        result,
                     });
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = rs1_value << shmt;
+                    hart.x[@enumToInt(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -483,21 +498,23 @@ fn execute(
             // CJ Type
 
             const imm = instruction.compressed_jump_target.read();
+            const result = addSignedToUnsignedWrap(hart.pc, imm);
 
             if (has_writer) {
                 try writer.print(
                     \\C.J - offset: <{x}>
-                    \\  setting pc to current pc<{x}> + <{x}>
+                    \\  setting pc to ( pc<{x}> + <{x}> ) = <{x}>
                     \\
                 , .{
                     imm,
                     hart.pc,
                     imm,
+                    result,
                 });
             }
 
             if (actually_execute) {
-                hart.pc = addSignedToUnsignedWrap(hart.pc, imm);
+                hart.pc = result;
             }
         },
         else => |e| std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)}),

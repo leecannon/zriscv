@@ -82,6 +82,8 @@ pub const Instruction = extern union {
     u_imm: UImm,
     compressed_jump_target: CompressedJumpTarget,
 
+    i_specialization: ISpecialization,
+
     compressed_backing: CompressedBacking,
     full_backing: u32,
 
@@ -126,6 +128,22 @@ pub const Instruction = extern union {
         comptime {
             std.debug.assert(@sizeOf(CompressedJumpTarget) == @sizeOf(u32));
             std.debug.assert(@bitSizeOf(CompressedJumpTarget) == @bitSizeOf(u32));
+        }
+    };
+
+    pub const ISpecialization = extern union {
+        shmt4_0: bitjuggle.Bitfield(u32, 20, 5),
+        shmt5: bitjuggle.Bitfield(u32, 25, 1),
+        shift_type: bitjuggle.Bitfield(u32, 26, 6),
+
+        backing: u32,
+
+        pub fn smallShift(self: ISpecialization) u5 {
+            return @truncate(u5, self.shmt4_0.read());
+        }
+
+        pub fn fullShift(self: ISpecialization) u6 {
+            return @truncate(u6, @as(u64, self.shmt5.read()) << 5 | self.shmt4_0.read());
         }
     };
 

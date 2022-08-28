@@ -350,6 +350,58 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .SLLI => {
+            const z = lib.traceNamed(@src(), "SLLI");
+            defer z.end();
+
+            // I-type specialization
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const shmt = instruction.i_specialization.fullShift();
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLLI - src: {}, dest: {}, shmt: <{x}>
+                        \\  set {} to {}<{x}> << <{x}>
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        shmt,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = rs1_value << shmt;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SLLI - src: {}, dest: {}, shmt: <{x}>
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .CSRRW => {
             const z = lib.traceNamed(@src(), "CSRRW");
             defer z.end();

@@ -109,7 +109,7 @@ pub const UserHart = struct {
 
         _ = self;
         _ = virtual_address;
-        @panic("UNIMPLEMENTED"); // TODO: User load memory
+        @panic("UNIMPLEMENTED: user load memory"); // TODO: user load memory
     }
 
     pub fn storeMemory(
@@ -127,7 +127,7 @@ pub const UserHart = struct {
         _ = self;
         _ = virtual_address;
         _ = value;
-        @panic("UNIMPLEMENTED"); // TODO: User store memory
+        @panic("UNIMPLEMENTED: user store memory"); // TODO: user store memory
     }
 };
 

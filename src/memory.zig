@@ -65,18 +65,13 @@ pub const UserMemory = struct {
 
     pub fn deinit(self: *UserMemory) void {
         _ = self;
-        @panic("UNIMPLEMENTED");
-    }
-
-    pub fn reset(self: *UserMemory) void {
-        _ = self;
-        @panic("UNIMPLEMENTED");
+        @panic("UNIMPLEMENTED: user memory deinit"); // TODO: user memory deinit
     }
 
     pub fn loadExecutable(self: *UserMemory, executable: lib.Executable) !void {
         _ = self;
         _ = executable;
-        @panic("UNIMPLEMENTED");
+        @panic("UNIMPLEMENTED: user memory load executable"); // TODO: user memory load executable
     }
 };
 

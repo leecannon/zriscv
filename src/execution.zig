@@ -555,7 +555,7 @@ fn throw(
     _ = exception;
     _ = value;
     _ = actually_execute;
-    @panic("UNIMPLEMENTED"); // TODO: Exceptions
+    @panic("UNIMPLEMENTED: throw"); // TODO: Exceptions
 }
 
 fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {

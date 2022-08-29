@@ -94,12 +94,12 @@ pub const UserMachine = struct {
 
         _ = self;
         _ = clear_memory;
-        @panic("UNIMPLEMENTED");
+        @panic("UNIMPLEMENTED: user machine reset"); // TODO: user machine reset
     }
 
     pub fn destroy(self: *UserMachine) !void {
         _ = self;
-        @panic("UNIMPLEMENTED");
+        @panic("UNIMPLEMENTED: user machine destroy"); // TODO: user machine destroy
     }
 };
 

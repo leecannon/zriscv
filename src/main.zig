@@ -83,7 +83,7 @@ fn systemMode(
 
     // TODO: Support multiple harts
     if (system_mode_options.harts > 1) {
-        @panic("UNIMPLEMENTED: multiple harts");
+        @panic("UNIMPLEMENTED: multiple harts"); // TODO: multiple harts
     }
 
     const machine = lib.SystemMachine.create(
@@ -214,7 +214,7 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
             .dump => {
                 user_input_z.addText("dump");
 
-                @panic("UNIMPLEMENTED"); // TODO: dump machine state
+                @panic("UNIMPLEMENTED: dump machine state"); // TODO: dump machine state
             },
             .reset => {
                 user_input_z.addText("reset");
@@ -256,7 +256,7 @@ fn userMode(
     _ = executable;
     _ = user_mode_options;
     _ = stderr;
-    @panic("UNIMPLEMENTED"); // TODO: Implement user mode
+    @panic("UNIMPLEMENTED: user mode"); // TODO: user mode
 }
 
 /// This function parses the arguments from the user.

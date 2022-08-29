@@ -8,6 +8,8 @@ pub fn build(b: *std.build.Builder) !void {
     const target = b.standardTargetOptions(.{});
     const mode = b.standardReleaseOptions();
 
+    const output = b.option(bool, "output", "output when run in non-interactive system mode") orelse false;
+
     const trace = b.option(bool, "trace", "enable tracy tracing") orelse false;
     const trace_callstack = b.option(bool, "trace-callstack", "enable tracy callstack (does nothing without trace option)") orelse false;
 
@@ -16,7 +18,7 @@ pub fn build(b: *std.build.Builder) !void {
         b.use_stage1 = true;
     }
 
-    const options_step = try getOptionsStep(b, trace, trace_callstack);
+    const options_step = try getOptionsStep(b, trace, trace_callstack, output);
 
     // Exe
     {
@@ -61,9 +63,10 @@ pub fn build(b: *std.build.Builder) !void {
     }
 }
 
-fn getOptionsStep(b: *std.build.Builder, trace: bool, trace_callstack: bool) !*std.build.OptionsStep {
+fn getOptionsStep(b: *std.build.Builder, trace: bool, trace_callstack: bool, output: bool) !*std.build.OptionsStep {
     const options = b.addOptions();
 
+    options.addOption(bool, "output", output);
     options.addOption(bool, "trace", trace);
     options.addOption(bool, "trace_callstack", trace_callstack);
 

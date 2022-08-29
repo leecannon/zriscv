@@ -108,8 +108,7 @@ fn systemMode(
 
     // TODO: Support multiple harts
     while (true) {
-        // TODO: Don't output
-        lib.step(.system, &machine.harts[0], stderr, execution_options, true) catch |err| {
+        lib.step(.system, &machine.harts[0], if (build_options.output) stderr else {}, execution_options, true) catch |err| {
             stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
             return err;
         };

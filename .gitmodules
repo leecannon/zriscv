@@ -10,3 +10,6 @@
 [submodule "external/bestline"]
 	path = external/bestline
 	url = https://github.com/jart/bestline.git
+[submodule "external/known-folders"]
+	path = external/known-folders
+	url = https://github.com/ziglibs/known-folders.git

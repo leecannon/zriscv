@@ -54,6 +54,7 @@ pub fn build(b: *std.build.Builder) !void {
 fn setupLinksAndPackages(exe: *std.build.LibExeObjStep, options_step: *std.build.OptionsStep, include_tracy: bool) void {
     exe.addOptions("build_options", options_step);
     exe.addPackage(args_pkg);
+    exe.addPackage(known_folders_pkg);
     exe.addPackage(bitjuggle_pkg);
     exe.linkLibC();
 
@@ -152,6 +153,11 @@ fn getOptionsStep(b: *std.build.Builder, trace: bool, trace_callstack: bool, out
 const args_pkg: std.build.Pkg = .{
     .name = "args",
     .source = .{ .path = "external/zig-args/args.zig" },
+};
+
+const known_folders_pkg: std.build.Pkg = .{
+    .name = "known_folders",
+    .source = .{ .path = "external/known-folders/known-folders.zig" },
 };
 
 const bitjuggle_pkg: std.build.Pkg = .{

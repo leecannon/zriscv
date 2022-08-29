@@ -20,6 +20,7 @@ pub const RegionDescriptor = struct {
 contents: []align(std.mem.page_size) const u8,
 region_description: []const RegionDescriptor,
 start_address: u64,
+file_path: []const u8,
 
 pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8) !Executable {
     const z = lib.traceNamed(@src(), "executable loading");
@@ -130,6 +131,7 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
         .contents = contents,
         .region_description = regions.toOwnedSlice(allocator),
         .start_address = elf_header.entry,
+        .file_path = file_path,
     };
 }
 

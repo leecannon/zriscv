@@ -1,15 +1,51 @@
 const std = @import("std");
+const known_folders = @import("known_folders");
 const c_bestline = @cImport(@cInclude("bestline.h"));
 
-pub fn setup() !void {
+const Self = @This();
+
+allocator: std.mem.Allocator,
+history_path: [:0]const u8,
+
+pub fn init(allocator: std.mem.Allocator, file_path: []const u8) !Self {
+    const history_path = try getHistoryPathAndEnsureExists(allocator, file_path);
+
     bestlineSetCompletionCallback(completionCallback);
     bestlineSetHintsCallback(hintsCallback);
-    // TODO: history per executable
-    // Discard any failures
-    _ = c_bestline.bestlineHistoryLoad("history.txt");
+    _ = c_bestline.bestlineHistoryLoad(history_path.ptr);
+
+    return Self{
+        .allocator = allocator,
+        .history_path = history_path,
+    };
 }
 
-pub fn getInput(stdout: anytype, stderr: anytype) ?Input {
+fn getHistoryPathAndEnsureExists(allocator: std.mem.Allocator, file_path: []const u8) ![:0]const u8 {
+    const opt_cache_path = known_folders.getPath(allocator, .cache) catch null;
+    const file_name = std.fs.path.basename(file_path);
+
+    if (opt_cache_path) |cache_folder| {
+        defer allocator.free(cache_folder);
+
+        const history_file_name = try std.fmt.allocPrint(allocator, "{s}.log", .{file_name});
+        defer allocator.free(history_file_name);
+
+        const zriscv_cache_folder = try std.fs.path.join(allocator, &.{ cache_folder, "zriscv" });
+        defer allocator.free(zriscv_cache_folder);
+
+        std.fs.cwd().makePath(zriscv_cache_folder) catch {};
+
+        return try std.fs.path.joinZ(allocator, &.{ zriscv_cache_folder, history_file_name });
+    } else {
+        return try std.fmt.allocPrintZ(allocator, ".{s}.log", .{file_name});
+    }
+}
+
+pub fn deinit(self: Self) void {
+    self.allocator.free(self.history_path);
+}
+
+pub fn getInput(self: Self, stdout: anytype, stderr: anytype) ?Input {
     while (true) {
         const c_line = c_bestline.bestline("> ") orelse return null;
         defer std.c.free(c_line);
@@ -26,18 +62,18 @@ pub fn getInput(stdout: anytype, stderr: anytype) ?Input {
 
             // We only need to check with `endsWith` to hit both "orun" and "output run"
             if (std.mem.endsWith(u8, line, "run")) {
-                history(c_line);
+                self.history(c_line);
                 return .output_run;
             }
 
             // same as above
             if (std.mem.endsWith(u8, line, "step")) {
-                history(c_line);
+                self.history(c_line);
                 return .output_step;
             }
         } else {
             if (std.mem.eql(u8, line, "h") or std.mem.eql(u8, line, "?") or std.mem.eql(u8, line, "help")) {
-                history(c_line);
+                self.history(c_line);
                 stdout.writeAll(help_menu) catch unreachable;
                 continue;
             }
@@ -45,32 +81,32 @@ pub fn getInput(stdout: anytype, stderr: anytype) ?Input {
             if (std.mem.eql(u8, line, "q") or std.mem.eql(u8, line, "quit")) return null;
 
             if (std.mem.eql(u8, line, "run")) {
-                history(c_line);
+                self.history(c_line);
                 return .run;
             }
 
             if (std.mem.eql(u8, line, "step")) {
-                history(c_line);
+                self.history(c_line);
                 return .step;
             }
 
             if (std.mem.eql(u8, line, "whatif")) {
-                history(c_line);
+                self.history(c_line);
                 return .whatif;
             }
 
             if (std.mem.eql(u8, line, "dump")) {
-                history(c_line);
+                self.history(c_line);
                 return .dump;
             }
 
             if (std.mem.eql(u8, line, "reset")) {
-                history(c_line);
+                self.history(c_line);
                 return .reset;
             }
 
             if (std.mem.startsWith(u8, line, "break")) {
-                history(c_line);
+                self.history(c_line);
 
                 // break must be of the form "break H+" where H+ is one or more hex digits
                 // which means it must have a minimum length of 7
@@ -101,16 +137,16 @@ pub fn getInput(stdout: anytype, stderr: anytype) ?Input {
             }
         }
 
-        history(c_line);
+        self.history(c_line);
         stderr.writeAll("ERROR: unknown option\n") catch unreachable;
         stdout.writeAll(help_menu) catch unreachable;
     }
 }
 
-fn history(c_line: [*c]u8) void {
+fn history(self: Self, c_line: [*c]u8) void {
     // FIXME: Is it a good idea to save the history after *every* keypress?
     if (c_bestline.bestlineHistoryAdd(c_line) == 1) {
-        _ = c_bestline.bestlineHistorySave("history.txt");
+        _ = c_bestline.bestlineHistorySave(self.history_path.ptr);
     }
 }
 

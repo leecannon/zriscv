@@ -3,7 +3,7 @@ const builtin = @import("builtin");
 const build_options = @import("build_options");
 const args = @import("args");
 const lib = @import("lib.zig");
-const interactive = @import("interactive.zig");
+const Interactive = @import("Interactive.zig");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
@@ -104,7 +104,7 @@ fn systemMode(
     defer if (is_debug_or_test) machine.destroy();
 
     if (system_mode_options.interactive) {
-        return interactiveSystemMode(machine, stderr);
+        return interactiveSystemMode(allocator, machine, stderr);
     }
 
     // TODO: Support multiple harts
@@ -116,7 +116,7 @@ fn systemMode(
     }
 }
 
-fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
+fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachine, stderr: anytype) !void {
     const z = lib.traceNamed(@src(), "interactive system mode");
     defer z.end();
 
@@ -131,7 +131,8 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
         return err;
     };
 
-    try interactive.setup();
+    const interactive = try Interactive.init(allocator, machine.executable.file_path);
+    defer if (is_debug_or_test) interactive.deinit();
 
     var opt_break_point: ?u64 = null;
 

@@ -3,6 +3,7 @@ const builtin = @import("builtin");
 const build_options = @import("build_options");
 const args = @import("args");
 const lib = @import("lib.zig");
+const interactive = @import("interactive.zig");
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
@@ -123,117 +124,26 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
 
     const hart: *lib.SystemHart = &machine.harts[0];
 
-    const raw_stdin = std.io.getStdIn();
-    const stdin = raw_stdin.reader();
     const stdout = std.io.getStdOut().writer();
-
-    const previous_terminal_settings = std.os.tcgetattr(raw_stdin.handle) catch |err| {
-        stderr.print("ERROR: failed to capture termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
-        return err;
-    };
-    setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
-        stderr.print("ERROR: failed to set raw console mode: {s}\n", .{@errorName(err)}) catch unreachable;
-        return err;
-    };
-    defer {
-        std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
-            stderr.print("ERROR: failed to restore termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
-        };
-        stdout.writeByte('\n') catch unreachable;
-    }
 
     var timer = std.time.Timer.start() catch |err| {
         stderr.print("ERROR: failed to start timer: {s}\n", .{@errorName(err)}) catch unreachable;
         return err;
     };
 
+    try interactive.setup();
+
     var opt_break_point: ?u64 = null;
 
-    while (true) {
-        stdout.writeAll("> ") catch unreachable;
-
-        const input = readCharFromRaw(stdin) catch |err| {
-            stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
-            return err;
-        };
-
-        const user_input_z = lib.traceNamed(@src(), "user input");
+    while (interactive.getInput(stdout, stderr)) |input| {
+        const user_input_z = lib.traceNamed(@src(), "action user input");
         defer user_input_z.end();
 
         switch (input) {
-            '\n' => {
-                user_input_z.addText("help");
-                stdout.writeAll(interactive_help_menu) catch unreachable;
-            },
-            '?', 'h' => {
-                user_input_z.addText("help");
-                stdout.writeAll("\n" ++ interactive_help_menu) catch unreachable;
-            },
-            'p' => {
-                user_input_z.addText("print");
-
-                stdout.writeByte('\n') catch unreachable;
-
-                lib.step(.system, hart, stdout, execution_options, false) catch |err| {
-                    stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
-                };
-            },
-            '0' => {
-                user_input_z.addText("reset");
-
-                machine.reset(true) catch |err| {
-                    stderr.print("\nERROR: failed to reset machine state: {s}\n", .{@errorName(err)}) catch unreachable;
-                    return err;
-                };
-
-                stdout.writeAll("\nreset machine state\n") catch unreachable;
-            },
-            'b' => {
-                user_input_z.addText("breakpoint");
-
-                // disable raw mode to enable user to enter hex string
-                std.os.tcsetattr(raw_stdin.handle, .FLUSH, previous_terminal_settings) catch |err| {
-                    stderr.print("\nERROR: failed to restore termios settings: {s}\n", .{@errorName(err)}) catch unreachable;
-                    return err;
-                };
-                defer setRawMode(previous_terminal_settings, raw_stdin.handle) catch |err| {
-                    stderr.print("ERROR: failed to set raw console mode: {s}\n", .{@errorName(err)}) catch unreachable;
-                };
-
-                var hex_buffer: [86]u8 = undefined;
-
-                const hex_str: []const u8 = stdin.readUntilDelimiterOrEof(&hex_buffer, '\n') catch |err| {
-                    stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
-                    return err;
-                } orelse "";
-
-                if (hex_str.len == 0) {
-                    opt_break_point = null;
-                    stdout.writeAll("cleared breakpoint\n") catch unreachable;
-                    continue;
-                }
-
-                const addr = std.fmt.parseUnsigned(u64, hex_str, 16) catch |err| {
-                    stderr.print("ERROR: unable to parse '{s}' as hex: {s}\n", .{ hex_str, @errorName(err) }) catch unreachable;
-                    continue;
-                };
-
-                const memory_size = machine.memory.memory.len;
-                if (addr >= memory_size) {
-                    stderr.print("ERROR: breakpoint 0x{x} overflows memory size 0x{x}\n", .{ addr, memory_size }) catch unreachable;
-                    continue;
-                }
-
-                stdout.print("set breakpoint to 0x{x}\n", .{addr}) catch unreachable;
-
-                opt_break_point = addr;
-            },
-            'r', 'e' => {
+            .run, .output_run => {
                 user_input_z.addText("run");
 
-                const output = input == 'e';
-
-                stdout.writeByte('\n') catch unreachable;
+                const output = input == .output_run;
 
                 timer.reset();
 
@@ -274,12 +184,10 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 const elapsed = timer.read();
                 stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch unreachable;
             },
-            's', 'n' => {
+            .step, .output_step => {
                 user_input_z.addText("step");
 
-                const output = input == 's';
-
-                stdout.writeByte('\n') catch unreachable;
+                const output = input == .output_step;
 
                 timer.reset();
 
@@ -296,119 +204,43 @@ fn interactiveSystemMode(machine: *lib.SystemMachine, stderr: anytype) !void {
                 const elapsed = timer.read();
                 stdout.print("execution took: {} ({} ns)\n", .{ std.fmt.fmtDuration(elapsed), elapsed }) catch unreachable;
             },
-            'd' => {
+            .whatif => {
+                user_input_z.addText("whatif");
+
+                lib.step(.system, hart, stdout, execution_options, false) catch |err| {
+                    stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+                };
+            },
+            .dump => {
                 user_input_z.addText("dump");
 
-                stdout.writeByte('\n') catch unreachable;
                 @panic("UNIMPLEMENTED"); // TODO: dump machine state
             },
-            'q' => {
-                user_input_z.addText("quit");
-                return;
-            },
-            0x1b => {
-                user_input_z.addText("invalid");
+            .reset => {
+                user_input_z.addText("reset");
 
-                // escape, arrow keys, etc
-                const key = readEscapeCode(raw_stdin) catch |err| {
-                    stderr.print("ERROR: failed to read from stdin: {s}\n", .{@errorName(err)}) catch unreachable;
+                machine.reset(true) catch |err| {
+                    stderr.print("\nERROR: failed to reset machine state: {s}\n", .{@errorName(err)}) catch unreachable;
                     return err;
                 };
 
-                if (key == .escape) return;
-
-                stderr.writeAll("\ninvalid option\n") catch unreachable;
+                stdout.writeAll("reset machine state\n") catch unreachable;
             },
-            else => {
-                user_input_z.addText("invalid");
+            .breakpoint => |addr| {
+                user_input_z.addText("breakpoint");
 
-                stderr.writeAll("\ninvalid option\n") catch unreachable;
-            },
-        }
-    }
-}
-
-fn readEscapeCode(stdin: std.fs.File) !EscapeKey {
-    var seq: [3]u8 = undefined;
-
-    if ((try stdin.read(seq[0..1])) != 1) return .escape;
-
-    if ((try stdin.read(seq[1..2])) != 1) return .escape;
-
-    if (seq[0] == '[') {
-        if (seq[1] >= '0' and seq[1] <= '9') {
-            if ((try stdin.read(seq[2..3])) != 1) return .escape;
-
-            if (seq[2] == '~') {
-                switch (seq[1]) {
-                    '5' => return .page_up,
-                    '6' => return .page_down,
-                    else => {},
+                const memory_size = machine.memory.memory.len;
+                if (addr >= memory_size) {
+                    stderr.print("ERROR: breakpoint 0x{x} overflows memory size 0x{x}\n", .{ addr, memory_size }) catch unreachable;
+                    continue;
                 }
-            }
-        } else {
-            switch (seq[1]) {
-                'A' => return .up_arrow,
-                'B' => return .down_arrow,
-                'C' => return .right_arrow,
-                'D' => return .left_arrow,
-                else => {},
-            }
+
+                stdout.print("set breakpoint to 0x{x}\n", .{addr}) catch unreachable;
+
+                opt_break_point = addr;
+            },
         }
     }
-
-    return .escape;
-}
-
-const EscapeKey = union(enum) {
-    up_arrow,
-    left_arrow,
-    right_arrow,
-    down_arrow,
-
-    page_up,
-    page_down,
-
-    escape,
-
-    key: u8,
-};
-
-fn readCharFromRaw(reader: anytype) !u8 {
-    while (true) {
-        return reader.readByte() catch |err| switch (err) {
-            error.EndOfStream => continue,
-            else => |e| return e,
-        };
-    }
-}
-
-const interactive_help_menu =
-    \\help:
-    \\ ?|h|Enter|Esc - this help menu
-    \\             r - run without output (this will not stop unless a breakpoint is hit, or an error)
-    \\             e - run with output (this will not stop unless a breakpoint is hit, or an error)
-    \\             s - single step with output
-    \\             n - single step without output
-    \\             p - display what the next instruction will do, without executing it
-    \\       b[addr] - set breakpoint, [addr] must be in hex, blank [addr] clears the breakpoint
-    \\             d - dump machine state
-    \\             0 - reset machine
-    \\             q - quit
-    \\
-;
-
-fn setRawMode(previous: std.os.termios, handle: std.os.fd_t) !void {
-    var current_settings = previous;
-
-    // Raw mode with no signals and some other stuff disabled
-    // https://viewsourcecode.org/snaptoken/kilo/02.enteringRawMode.html
-    current_settings.iflag &= ~(std.os.linux.IXON | std.os.linux.BRKINT | std.os.linux.INPCK | std.os.linux.ISTRIP);
-    current_settings.cflag |= std.os.linux.CS8;
-    current_settings.lflag &= ~(std.os.linux.ICANON | std.os.linux.IEXTEN);
-    current_settings.cc[std.os.linux.V.MIN] = 0;
-
-    try std.os.tcsetattr(handle, .FLUSH, current_settings);
 }
 
 fn userMode(

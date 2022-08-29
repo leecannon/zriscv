@@ -25,17 +25,7 @@ pub fn build(b: *std.build.Builder) !void {
         const zriscv = b.addExecutable("zriscv", "src/main.zig");
         zriscv.setTarget(target);
         zriscv.setBuildMode(mode);
-        zriscv.addOptions("build_options", options_step);
-        zriscv.addPackage(args_pkg);
-        zriscv.addPackage(bitjuggle_pkg);
-
-        // We use the c allocator in debug modes
-        if (mode != .Debug) zriscv.linkLibC();
-
-        if (trace) {
-            includeTracy(zriscv);
-        }
-
+        setupLinksAndPackages(zriscv, options_step, trace);
         zriscv.install();
 
         const run_cmd = zriscv.run();
@@ -52,14 +42,41 @@ pub fn build(b: *std.build.Builder) !void {
     {
         const zriscv_test_exe = b.addTest("src/main.zig");
         zriscv_test_exe.setBuildMode(mode);
-        zriscv_test_exe.addOptions("build_options", options_step);
-        zriscv_test_exe.addPackage(args_pkg);
-        zriscv_test_exe.addPackage(bitjuggle_pkg);
+        setupLinksAndPackages(zriscv_test_exe, options_step, false);
 
         const test_step = b.step("test", "Run the tests");
         test_step.dependOn(&zriscv_test_exe.step);
 
         b.default_step = test_step;
+    }
+}
+
+fn setupLinksAndPackages(exe: *std.build.LibExeObjStep, options_step: *std.build.OptionsStep, include_tracy: bool) void {
+    exe.addOptions("build_options", options_step);
+    exe.addPackage(args_pkg);
+    exe.addPackage(bitjuggle_pkg);
+    exe.linkLibC();
+
+    exe.addIncludeDir("external/bestline");
+    exe.addCSourceFile("external/bestline/bestline.c", &.{});
+
+    if (include_tracy) {
+        exe.linkLibCpp();
+        exe.addIncludeDir("external/tracy/public");
+
+        const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
+            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
+        else
+            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
+
+        exe.addCSourceFile("external/tracy/public/TracyClient.cpp", tracy_c_flags);
+
+        if (exe.target.isWindows()) {
+            exe.linkSystemLibrary("Advapi32");
+            exe.linkSystemLibrary("User32");
+            exe.linkSystemLibrary("Ws2_32");
+            exe.linkSystemLibrary("DbgHelp");
+        }
     }
 }
 
@@ -130,26 +147,6 @@ fn getOptionsStep(b: *std.build.Builder, trace: bool, trace_callstack: bool, out
     options.addOption([:0]const u8, "version", try b.allocator.dupeZ(u8, version));
 
     return options;
-}
-
-fn includeTracy(exe: *std.build.LibExeObjStep) void {
-    exe.linkLibC();
-    exe.linkLibCpp();
-    exe.addIncludeDir("external/tracy/public");
-
-    const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
-        &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
-    else
-        &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
-
-    exe.addCSourceFile("external/tracy/public/TracyClient.cpp", tracy_c_flags);
-
-    if (exe.target.isWindows()) {
-        exe.linkSystemLibrary("Advapi32");
-        exe.linkSystemLibrary("User32");
-        exe.linkSystemLibrary("Ws2_32");
-        exe.linkSystemLibrary("DbgHelp");
-    }
 }
 
 const args_pkg: std.build.Pkg = .{

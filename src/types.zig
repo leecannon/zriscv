@@ -8,7 +8,7 @@ pub const PrivilegeLevel = enum(u2) {
 
     pub fn getPrivilegeLevel(value: u2) !PrivilegeLevel {
         return std.meta.intToEnum(PrivilegeLevel, value) catch {
-            std.log.emerg("invalid privlege mode {b}", .{value});
+            std.log.err("invalid privlege mode {b}", .{value});
             return error.InvalidPrivilegeLevel;
         };
     }

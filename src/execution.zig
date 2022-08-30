@@ -192,6 +192,61 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .JAL => {
+            const z = lib.traceNamed(@src(), "JAL");
+            defer z.end();
+
+            // J-type
+
+            const rd = instruction.rd();
+            const imm = instruction.j_imm.read();
+
+            const target_address = addSignedToUnsignedWrap(hart.pc, imm);
+
+            if (rd != .zero) {
+                const return_address = hart.pc + 4;
+
+                if (has_writer) {
+                    try writer.print(
+                        \\JAL - dest: {}, offset: 0x{x}
+                        \\  setting {} to ( pc<0x{x}> + 0x4 ) = 0x{x}
+                        \\  setting pc ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        hart.pc,
+                        return_address,
+                        hart.pc,
+                        imm,
+                        target_address,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = return_address;
+                }
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\JAL - dest: {}, offset: 0x{x}
+                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                        hart.pc,
+                        imm,
+                        target_address,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc = target_address;
+            }
+        },
         .JALR => {
             const z = lib.traceNamed(@src(), "JALR");
             defer z.end();

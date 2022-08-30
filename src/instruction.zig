@@ -13,6 +13,9 @@ pub const InstructionType = enum {
     // AUIPC
     AUIPC,
 
+    // JAL
+    JAL,
+
     // JALR
     JALR,
 
@@ -86,6 +89,8 @@ pub const Instruction = extern union {
     s_imm: SImm,
     b_imm: BImm,
     u_imm: UImm,
+    j_imm: JImm,
+
     compressed_jump_target: CompressedJumpTarget,
 
     i_specialization: ISpecialization,
@@ -234,6 +239,27 @@ pub const Instruction = extern union {
         }
     };
 
+    pub const JImm = extern union {
+        imm19_12: bitjuggle.Bitfield(u32, 12, 8),
+        imm11: bitjuggle.Bitfield(u32, 20, 1),
+        imm10_1: bitjuggle.Bitfield(u32, 21, 10),
+        imm20: bitjuggle.Bitfield(u32, 31, 1),
+
+        backing: u32,
+
+        pub fn read(self: JImm) i64 {
+            const shift_amount = 11 + 32;
+
+            return @bitCast(
+                i64,
+                @as(u64, self.imm20.read()) << 20 + shift_amount |
+                    @as(u64, self.imm19_12.read()) << 12 + shift_amount |
+                    @as(u64, self.imm11.read()) << 11 + shift_amount |
+                    @as(u64, self.imm10_1.read()) << 1 + shift_amount,
+            ) >> shift_amount;
+        }
+    };
+
     pub inline fn rd(self: Instruction) lib.IntegerRegister {
         return lib.IntegerRegister.getIntegerRegister(self._rd.read());
     }
@@ -330,9 +356,7 @@ pub const Instruction = extern union {
                     else => InstructionType.Unimplemented,
                 },
                 // JAL
-                0b1101111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
+                0b1101111 => InstructionType.JAL,
                 // OP-IMM
                 0b0010011 => switch (funct3) {
                     0b000 => InstructionType.ADDI,

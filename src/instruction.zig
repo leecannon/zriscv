@@ -27,6 +27,15 @@ pub const InstructionType = enum {
     BLTU,
     BGEU,
 
+    // LOAD
+    LB,
+    LH,
+    LW,
+    LD,
+    LBU,
+    LHU,
+    LWU,
+
     // STORE
     SB,
     SH,
@@ -298,6 +307,13 @@ pub const Instruction = extern union {
             0b11 => switch (instruction.opcode.read()) {
                 // LOAD
                 0b0000011 => switch (funct3) {
+                    0b000 => InstructionType.LB,
+                    0b001 => InstructionType.LH,
+                    0b010 => InstructionType.LW,
+                    0b011 => InstructionType.LD,
+                    0b100 => InstructionType.LBU,
+                    0b101 => InstructionType.LHU,
+                    0b110 => InstructionType.LWU,
                     else => InstructionType.Unimplemented,
                 },
                 // STORE

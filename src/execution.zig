@@ -477,6 +477,75 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .LD => {
+            const z = lib.traceNamed(@src(), "LD");
+            defer z.end();
+
+            // I-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const imm = instruction.i_imm.read();
+
+                const address = addSignedToUnsignedWrap(rs1_value, imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\LD - base: {}, dest: {}, imm: 0x{x}
+                        \\  load 8 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                        address,
+                    });
+                }
+
+                if (actually_execute) {
+                    const memory = if (options.execution_out_of_bounds_is_fatal)
+                        try hart.loadMemory(64, address)
+                    else blk: {
+                        break :blk hart.loadMemory(64, address) catch |err| switch (err) {
+                            error.ExecutionOutOfBounds => {
+                                // TODO: Pass `.LoadAccessFault` once `throw` is implemented
+                                try throw(mode, hart, {}, 0, writer, true);
+                                return;
+                            },
+                            else => |e| return e,
+                        };
+                    };
+
+                    hart.x[@enumToInt(rd)] = memory;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\LD - base: {}, dest: {}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SD => {
             const z = lib.traceNamed(@src(), "SD");
             defer z.end();

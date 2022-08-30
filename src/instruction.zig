@@ -10,6 +10,9 @@ pub const InstructionType = enum {
     // LUI
     LUI,
 
+    // AUIPC
+    AUIPC,
+
     // BRANCH
     BEQ,
     BNE,
@@ -383,9 +386,7 @@ pub const Instruction = extern union {
                     else => InstructionType.Unimplemented,
                 },
                 // AUIPC
-                0b0010111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
+                0b0010111 => InstructionType.AUIPC,
                 // LUI
                 0b0110111 => InstructionType.LUI,
                 // OP-V

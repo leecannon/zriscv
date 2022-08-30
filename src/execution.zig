@@ -144,6 +144,54 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .AUIPC => {
+            const z = lib.traceNamed(@src(), "AUIPC");
+            defer z.end();
+
+            // U-type
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const imm = instruction.u_imm.read();
+                const result = addSignedToUnsignedWrap(hart.pc, imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\AUIPC - dest: {}, offset: 0x{x}
+                        \\  setting {} to  ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                        rd,
+                        hart.pc,
+                        imm,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const imm = instruction.u_imm.read();
+
+                    try writer.print(
+                        \\AUIPC - dest: {}, offset: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .BNE => {
             const z = lib.traceNamed(@src(), "BNE");
             defer z.end();

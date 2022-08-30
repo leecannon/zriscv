@@ -192,6 +192,66 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .JALR => {
+            const z = lib.traceNamed(@src(), "JALR");
+            defer z.end();
+
+            // I-type
+            const imm = instruction.i_imm.read();
+            const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rd = instruction.rd();
+
+            const target_address = addSignedToUnsignedWrap(rs1_value, imm) & ~@as(u64, 1);
+
+            if (rd != .zero) {
+                const return_address = hart.pc + 4;
+
+                if (has_writer) {
+                    try writer.print(
+                        \\JALR - dest: {}, base: {}, offset: 0x{x}
+                        \\  setting {} to ( pc<0x{x}> + 0x4 ) = 0x{x}
+                        \\  setting pc to ( {}<0x{x}> + 0x{x} ) & ~1 = 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        rs1,
+                        imm,
+                        rd,
+                        hart.pc,
+                        return_address,
+                        rs1,
+                        rs1_value,
+                        imm,
+                        target_address,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = return_address;
+                }
+            } else {
+                if (has_writer) {
+                    try writer.print(
+                        \\JALR - dest: {}, base: {}, offset: 0x{x}
+                        \\  setting pc to ( {}<0x{x}> + 0x{x} ) & ~1 = 0x{x}
+                        \\
+                    , .{
+                        rd,
+                        rs1,
+                        imm,
+                        rs1,
+                        rs1_value,
+                        imm,
+                        target_address,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc = target_address;
+            }
+        },
         .BNE => {
             const z = lib.traceNamed(@src(), "BNE");
             defer z.end();

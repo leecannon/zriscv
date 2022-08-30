@@ -13,6 +13,9 @@ pub const InstructionType = enum {
     // AUIPC
     AUIPC,
 
+    // JALR
+    JALR,
+
     // BRANCH
     BEQ,
     BNE,
@@ -307,6 +310,7 @@ pub const Instruction = extern union {
                 },
                 // JALR
                 0b1100111 => switch (funct3) {
+                    0b000 => InstructionType.JALR,
                     else => InstructionType.Unimplemented,
                 },
                 // NMSUB

@@ -522,6 +522,9 @@ fn execute(
 }
 
 fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u64 {
+    const read_csr_z = lib.traceNamed(@src(), "read csr");
+    defer read_csr_z.end();
+
     return switch (csr) {
         .cycle => hart.cycle,
         .mhartid => hart.hart_id,
@@ -529,6 +532,9 @@ fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u
 }
 
 fn writeCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr, value: u64) !void {
+    const write_csr_z = lib.traceNamed(@src(), "write csr");
+    defer write_csr_z.end();
+
     _ = hart;
     _ = value;
 

@@ -649,6 +649,61 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .ADDIW => {
+            const z = lib.traceNamed(@src(), "ADDIW");
+            defer z.end();
+
+            // I-type
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const imm = instruction.i_imm.read();
+
+                const result = signExtend32bit(addSignedToUnsignedIgnoreOverflow(rs1_value, imm) & 0xFFFFFFFF);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\ADDIW - src: {}, dest: {}, imm: {}
+                        \\  set {} to 32bit( {}<{}> + {} ) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\ADDIW - src: {}, dest: {}, imm: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .CSRRW => {
             const z = lib.traceNamed(@src(), "CSRRW");
             defer z.end();
@@ -835,6 +890,22 @@ test "addSignedToUnsignedIgnoreOverflow" {
         @as(u64, std.math.maxInt(u64)),
         addSignedToUnsignedIgnoreOverflow(5, -6),
     );
+}
+
+inline fn signExtend64bit(value: u64) i128 {
+    return @bitCast(i128, @as(u128, value) << 64) >> 64;
+}
+
+inline fn signExtend32bit(value: u64) u64 {
+    return @bitCast(u64, @bitCast(i64, value << 32) >> 32);
+}
+
+inline fn signExtend16bit(value: u64) u64 {
+    return @bitCast(u64, @bitCast(i64, value << 48) >> 48);
+}
+
+inline fn signExtend8bit(value: u64) u64 {
+    return @bitCast(u64, @bitCast(i64, value << 56) >> 56);
 }
 
 inline fn isWriter(comptime T: type) bool {

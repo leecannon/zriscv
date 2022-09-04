@@ -65,6 +65,12 @@ pub const InstructionType = enum {
     OR,
     AND,
 
+    // OP-IMM-32
+    ADDIW,
+    SLLIW,
+    SRLIW,
+    SRAIW,
+
     // SYSTEM
     ECALL,
     EBREAK,
@@ -439,6 +445,13 @@ pub const Instruction = extern union {
                 },
                 // OP-IMM-32
                 0b0011011 => switch (funct3) {
+                    0b000 => InstructionType.ADDIW,
+                    0b001 => InstructionType.SLLIW,
+                    0b101 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SRLIW,
+                        0b0100000 => InstructionType.SRAIW,
+                        else => InstructionType.Unimplemented,
+                    },
                     else => InstructionType.Unimplemented,
                 },
                 // OP-32

@@ -73,7 +73,7 @@ pub const IntegerRegister = enum(u5) {
     t6 = 31,
 
     pub inline fn getIntegerRegister(value: usize) IntegerRegister {
-        return std.meta.intToEnum(IntegerRegister, value) catch unreachable;
+        return @intToEnum(IntegerRegister, value);
     }
 
     pub fn format(value: IntegerRegister, comptime fmt: []const u8, options: std.fmt.FormatOptions, writer: anytype) !void {

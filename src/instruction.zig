@@ -94,6 +94,7 @@ pub const Instruction = extern union {
     non_compressed_funct3: bitjuggle.Bitfield(u32, 12, 3),
     compressed_funct3: bitjuggle.Bitfield(u32, 13, 3),
     funct7: bitjuggle.Bitfield(u32, 25, 7),
+    funct7_shift: bitjuggle.Bitfield(u32, 26, 6),
     csr: bitjuggle.Bitfield(u32, 20, 12),
 
     _rd: bitjuggle.Bitfield(u32, 7, 5),
@@ -382,16 +383,16 @@ pub const Instruction = extern union {
                 // OP-IMM
                 0b0010011 => switch (funct3) {
                     0b000 => InstructionType.ADDI,
-                    0b001 => switch (instruction.funct7.read()) {
-                        0b0000000 => InstructionType.SLLI,
+                    0b001 => switch (instruction.funct7_shift.read()) {
+                        0b000000 => InstructionType.SLLI,
                         else => InstructionType.Unimplemented,
                     },
                     0b010 => InstructionType.SLTI,
                     0b011 => InstructionType.SLTIU,
                     0b100 => InstructionType.XORI,
-                    0b101 => switch (instruction.funct7.read()) {
-                        0b0000000 => InstructionType.SRLI,
-                        0b0100000 => InstructionType.SRAI,
+                    0b101 => switch (instruction.funct7_shift.read()) {
+                        0b000000 => InstructionType.SRLI,
+                        0b010000 => InstructionType.SRAI,
                         else => InstructionType.Unimplemented,
                     },
                     0b110 => InstructionType.ORI,

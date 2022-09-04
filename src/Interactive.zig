@@ -128,7 +128,7 @@ pub fn getInput(self: Self, stdout: anytype, stderr: anytype) ?Input {
                     target_slice = target_slice[2..];
                 }
 
-                return .{
+                return Input{
                     .breakpoint = std.fmt.parseUnsigned(u64, target_slice, 16) catch |err| {
                         stderr.print("ERROR: unable to parse '{s}' as hex: {s}\n", .{ target_slice, @errorName(err) }) catch unreachable;
                         continue;
@@ -293,11 +293,11 @@ const Completions = extern struct {
 
 const CompletionCallback = fn (buf: [*:0]const u8, completions: *Completions) callconv(.C) void;
 
-extern fn bestlineSetCompletionCallback(callback: ?*const CompletionCallback) void;
+extern fn bestlineSetCompletionCallback(callback: std.meta.FnPtr(CompletionCallback)) void;
 
 const HintsCallback = fn (buf: [*:0]const u8, ansi1: *[*:0]const u8, ansi2: *[*:0]const u8) callconv(.C) ?[*:0]const u8;
 
-extern fn bestlineSetHintsCallback(callback: ?*const HintsCallback) void;
+extern fn bestlineSetHintsCallback(callback: std.meta.FnPtr(HintsCallback)) void;
 
 comptime {
     refAllDeclsRecursive(@This());

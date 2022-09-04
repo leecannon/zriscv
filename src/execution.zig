@@ -546,6 +546,54 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .SW => {
+            const z = lib.traceNamed(@src(), "SW");
+            defer z.end();
+
+            // S-Type
+            const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs2 = instruction.rs2();
+            const rs2_value = hart.x[@enumToInt(rs2)];
+            const imm = instruction.s_imm.read();
+
+            const address = addSignedToUnsignedWrap(rs1_value, imm);
+
+            if (has_writer) {
+                try writer.print(
+                    \\SW - base: {}, src: {}, imm: 0x{x}
+                    \\  store 4 bytes from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\
+                , .{
+                    rs1,
+                    rs2,
+                    imm,
+                    rs2,
+                    rs2_value,
+                    rs1,
+                    rs1_value,
+                    imm,
+                    address,
+                });
+            }
+
+            if (actually_execute) {
+                if (options.execution_out_of_bounds_is_fatal) {
+                    try hart.storeMemory(32, address, @truncate(u32, rs2_value));
+                } else {
+                    hart.storeMemory(32, address, @truncate(u32, rs2_value)) catch |err| switch (err) {
+                        error.ExecutionOutOfBounds => {
+                            // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
+                            try throw(mode, hart, {}, 0, writer, true);
+                            return;
+                        },
+                        else => |e| return e,
+                    };
+                }
+
+                hart.pc += 4;
+            }
+        },
         .SD => {
             const z = lib.traceNamed(@src(), "SD");
             defer z.end();
@@ -562,7 +610,7 @@ fn execute(
             if (has_writer) {
                 try writer.print(
                     \\SD - base: {}, src: {}, imm: 0x{x}
-                    \\  store 8 bytes from {}<0x{x}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\  store 8 bytes from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
                     \\
                 , .{
                     rs1,

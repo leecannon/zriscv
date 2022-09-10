@@ -30,4 +30,4 @@ The focus is on correctness not performance, I'm expecting practically every exe
 - [ ] CSRs
 
 ## Spec
-The version of the riscv spec used is draft-20220825-1237e31 released 25/08/2022
+The version of the riscv spec used is draft-20220831-bf5a151 released 31/08/2022

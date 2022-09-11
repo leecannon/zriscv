@@ -27,4 +27,5 @@ else
     git -C $TEST_DIR pull &>/dev/null || die "couldn't update riscv-arch-test"
 fi
 
-riscof run --config=config.ini --suite=riscv-arch-test/riscv-test-suite/ --env=riscv-arch-test/riscv-test-suite/env --no-ref-run --no-dut-run
+export PATH=$ZRISCV_BIN_DIR:$PATH
+riscof run --config=config.ini --suite=riscv-arch-test/riscv-test-suite/ --env=riscv-arch-test/riscv-test-suite/env

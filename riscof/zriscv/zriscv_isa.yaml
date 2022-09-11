@@ -1,6 +1,6 @@
 hart_ids: [0]
 hart0:
-  ISA: RV64I_Zicsr
+  ISA: RV64IZicsr
   physical_addr_sz: 48
   User_Spec_Version: '2.3'
   Privilege_Spec_Version: '1.11'

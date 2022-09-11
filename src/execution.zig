@@ -1,5 +1,6 @@
 const std = @import("std");
 const lib = @import("lib.zig");
+const build_options = @import("build_options");
 
 pub const ExecutionOptions = struct {
     unrecognised_instruction_is_fatal: bool = true,
@@ -19,9 +20,10 @@ pub fn step(
     comptime mode: lib.Mode,
     hart: *lib.Hart(mode),
     writer: anytype,
+    riscof_mode: bool,
     comptime options: ExecutionOptions,
     comptime actually_execute: bool,
-) !void {
+) !bool {
     const execute_z = lib.traceNamed(@src(), "execute step");
     defer execute_z.end();
 
@@ -45,7 +47,7 @@ pub fn step(
                                     // TODO: Pass `InstructionAccessFault` once `throw` is implemented
                                     error.ExecutionOutOfBounds => {
                                         try throw(mode, hart, {}, 0, writer, actually_execute);
-                                        return;
+                                        return true;
                                     },
                                     else => |e| return e,
                                 }
@@ -62,7 +64,7 @@ pub fn step(
         try writer.print("pc: {x:0>16}\n", .{hart.pc});
     }
 
-    try execute(mode, hart, instruction, writer, options, actually_execute);
+    return try execute(mode, hart, instruction, writer, riscof_mode, options, actually_execute);
 }
 
 fn execute(
@@ -70,9 +72,10 @@ fn execute(
     hart: *lib.Hart(mode),
     instruction: lib.Instruction,
     writer: anytype,
+    riscof_mode: bool,
     comptime options: ExecutionOptions,
     comptime actually_execute: bool,
-) !void {
+) !bool {
     const execute_z = lib.traceNamed(@src(), "execute");
     defer execute_z.end();
 
@@ -517,7 +520,7 @@ fn execute(
                             error.ExecutionOutOfBounds => {
                                 // TODO: Pass `.LoadAccessFault` once `throw` is implemented
                                 try throw(mode, hart, {}, 0, writer, true);
-                                return;
+                                return true;
                             },
                             else => |e| return e,
                         };
@@ -578,6 +581,14 @@ fn execute(
             }
 
             if (actually_execute) {
+                // TODO: Should this be made comptime?
+                if (riscof_mode) {
+                    // Check if the memory being written to is the 'tohost' symbol
+                    if (hart.machine.executable.tohost == address) {
+                        return false;
+                    }
+                }
+
                 if (options.execution_out_of_bounds_is_fatal) {
                     try hart.storeMemory(32, address, @truncate(u32, rs2_value));
                 } else {
@@ -585,7 +596,7 @@ fn execute(
                         error.ExecutionOutOfBounds => {
                             // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
                             try throw(mode, hart, {}, 0, writer, true);
-                            return;
+                            return true;
                         },
                         else => |e| return e,
                     };
@@ -633,7 +644,7 @@ fn execute(
                         error.ExecutionOutOfBounds => {
                             // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
                             try throw(mode, hart, {}, 0, writer, true);
-                            return;
+                            return true;
                         },
                         else => |e| return e,
                     };
@@ -764,7 +775,7 @@ fn execute(
                 lib.Csr.getCsr(instruction.csr.read()) catch {
                     // TODO: Pass `IllegalInstruction` once `throw` is implemented
                     try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
-                    return;
+                    return true;
                 };
 
             const rd = instruction.rd();
@@ -793,7 +804,7 @@ fn execute(
                 if (!csr.canWrite(hart.privilege_level)) {
                     // TODO: Pass `IllegalInstruction` once `throw` is implemented
                     try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
-                    return;
+                    return true;
                 }
 
                 const initial_csr = readCsr(mode, hart, csr);
@@ -818,7 +829,7 @@ fn execute(
                 if (!csr.canWrite(hart.privilege_level)) {
                     // TODO: Pass `IllegalInstruction` once `throw` is implemented
                     try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
-                    return;
+                    return true;
                 }
 
                 try writeCsr(mode, hart, csr, rs1_value);
@@ -852,8 +863,16 @@ fn execute(
                 hart.pc = result;
             }
         },
-        else => |e| std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)}),
+        else => |e| {
+            if (build_options.dont_panic_on_unimplemented) {
+                instruction.printUnimplementedInstruction();
+                return error.UnimplementedInstruction;
+            }
+            std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)});
+        },
     }
+
+    return true;
 }
 
 fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u64 {

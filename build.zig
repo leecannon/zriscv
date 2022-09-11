@@ -9,6 +9,7 @@ pub fn build(b: *std.build.Builder) !void {
     const mode = b.standardReleaseOptions();
 
     const output = b.option(bool, "output", "output when run in non-interactive system mode") orelse false;
+    const dont_panic_on_unimplemented = b.option(bool, "unimp", "*don't* panic on unimplemented instruction execution") orelse false;
 
     const trace = b.option(bool, "trace", "enable tracy tracing") orelse false;
     const trace_callstack = b.option(bool, "trace-callstack", "enable tracy callstack (does nothing without trace option)") orelse false;
@@ -18,7 +19,7 @@ pub fn build(b: *std.build.Builder) !void {
         b.use_stage1 = true;
     }
 
-    const options_step = try getOptionsStep(b, trace, trace_callstack, output);
+    const options_step = try getOptionsStep(b, trace, trace_callstack, output, dont_panic_on_unimplemented);
 
     // Exe
     {
@@ -49,6 +50,17 @@ pub fn build(b: *std.build.Builder) !void {
         test_step.dependOn(&zriscv_test_exe.step);
 
         b.default_step = test_step;
+    }
+
+    // Riscof
+    {
+        const build_path = comptime std.fs.path.dirname(@src().file).?;
+        const run_riscof_step = b.addSystemCommand(&.{build_path ++ "/riscof/run_tests.sh"});
+        run_riscof_step.expected_exit_code = null;
+        run_riscof_step.step.dependOn(b.getInstallStep());
+
+        const riscof_step = b.step("riscof", "Run the riscof tests");
+        riscof_step.dependOn(&run_riscof_step.step);
     }
 }
 
@@ -82,9 +94,10 @@ fn setupLinksAndPackages(exe: *std.build.LibExeObjStep, options_step: *std.build
     }
 }
 
-fn getOptionsStep(b: *std.build.Builder, trace: bool, trace_callstack: bool, output: bool) !*std.build.OptionsStep {
+fn getOptionsStep(b: *std.build.Builder, trace: bool, trace_callstack: bool, output: bool, dont_panic_on_unimplemented: bool) !*std.build.OptionsStep {
     const options = b.addOptions();
 
+    options.addOption(bool, "dont_panic_on_unimplemented", dont_panic_on_unimplemented);
     options.addOption(bool, "output", output);
     options.addOption(bool, "trace", trace);
     options.addOption(bool, "trace_callstack", trace_callstack);

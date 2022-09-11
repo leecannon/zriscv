@@ -28,6 +28,9 @@ begin_signature: u64 = undefined,
 /// End of the riscof signature, only defined in riscof mode
 end_signature: u64 = undefined,
 
+/// The 'tohost' symbol used for riscof test to tell the runner to stop, only defined in riscof mode
+tohost: u64 = undefined,
+
 pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8, riscof_mode: bool) !Executable {
     const z = lib.traceNamed(@src(), "executable loading");
     defer z.end();
@@ -60,7 +63,10 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
     }
 
     const section_headers = try elf_header.getSectionHeaders(allocator, contents);
+    defer allocator.free(section_headers);
+
     const program_headers = try elf_header.getProgramHeaders(allocator, contents);
+    defer allocator.free(program_headers);
 
     var opt_symbol_section: ?std.elf.Elf64_Shdr = null;
 
@@ -172,6 +178,7 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
     if (riscof_mode) {
         try symbols_to_find.append("begin_signature");
         try symbols_to_find.append("end_signature");
+        try symbols_to_find.append("tohost");
     }
 
     var symbols = try elf_header.findSymbols(allocator, symbol_section, string_section, contents, symbols_to_find.items);
@@ -265,6 +272,12 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
         } else {
             stderr.writeAll("ERROR: ELF file does not contain 'end_signature' section required for riscof mode\n") catch unreachable;
             return error.NoEndSignatureInElf;
+        }
+        if (symbols.get("tohost")) |tohost| {
+            executable.tohost = tohost;
+        } else {
+            stderr.writeAll("ERROR: ELF file does not contain 'tohost' section required for riscof mode\n") catch unreachable;
+            return error.NoToHostInElf;
         }
     }
 

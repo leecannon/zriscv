@@ -74,8 +74,11 @@ fn systemMode(
     const z = lib.traceNamed(@src(), "system mode");
     defer z.end();
 
-    if (system_mode_options.signature) |sig| {
-        std.debug.print("{s}\n", .{sig});
+    const riscof_mode = system_mode_options.signature != null;
+
+    if (riscof_mode and system_mode_options.interactive) {
+        stderr.writeAll("ERROR: interactive mode is not supported with riscof mode\n") catch unreachable;
+        return error.InteractiveDoesNotSupportRiscofMode;
     }
 
     if (system_mode_options.interactive and system_mode_options.harts > 1) {
@@ -114,12 +117,44 @@ fn systemMode(
         return interactiveSystemMode(allocator, machine, stderr);
     }
 
+    if (riscof_mode) {
+        // TODO: Support multiple harts
+        loop: while (true) {
+            const cont = lib.step(.system, &machine.harts[0], if (build_options.output) stderr else {}, riscof_mode, execution_options, true) catch |err| {
+                stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+                break :loop;
+            };
+            if (!cont) {
+                if (build_options.output) {
+                    stderr.writeAll("execution requested stop\n") catch unreachable;
+                }
+                break :loop;
+            }
+        }
+
+        // if all has gone well then the signature section of memory has been filled in
+        writeOutSignature(system_mode_options.signature.?, machine.memory, executable) catch |err| {
+            stderr.print("failed to output signature file: {s}\n", .{@errorName(err)}) catch unreachable;
+        };
+
+        // in riscof mode we always return success and leave it up to the signature to tell if
+        // it actually is a success
+        return;
+    }
+
     // TODO: Support multiple harts
     while (true) {
-        lib.step(.system, &machine.harts[0], if (build_options.output) stderr else {}, execution_options, true) catch |err| {
+        const cont = lib.step(.system, &machine.harts[0], if (build_options.output) stderr else {}, riscof_mode, execution_options, true) catch |err| {
             stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
             return err;
         };
+
+        if (!cont) {
+            if (build_options.output) {
+                stderr.writeAll("execution requested stop\n") catch unreachable;
+            }
+            break;
+        }
     }
 }
 
@@ -156,35 +191,51 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
                 timer.reset();
 
                 if (opt_break_point) |break_point| {
-                    while (hart.pc != break_point) {
+                    run_loop: while (hart.pc != break_point) {
                         if (output) {
-                            lib.step(.system, hart, stdout, execution_options, true) catch |err| {
+                            const cont = lib.step(.system, hart, stdout, false, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
-                                break;
+                                break :run_loop;
                             };
+                            if (!cont) {
+                                stdout.writeAll("execution requested stop\n") catch unreachable;
+                                break :run_loop;
+                            }
                         } else {
-                            lib.step(.system, hart, {}, execution_options, true) catch |err| {
+                            const cont = lib.step(.system, hart, {}, false, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
-                                break;
+                                break :run_loop;
                             };
+                            if (!cont) {
+                                stdout.writeAll("execution requested stop\n") catch unreachable;
+                                break :run_loop;
+                            }
                         }
                     } else {
                         stdout.writeAll("hit breakpoint\n") catch unreachable;
                     }
                 } else {
                     if (output) {
-                        while (true) {
-                            lib.step(.system, hart, stdout, execution_options, true) catch |err| {
+                        run_loop: while (true) {
+                            const cont = lib.step(.system, hart, stdout, false, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
-                                break;
+                                break :run_loop;
                             };
+                            if (!cont) {
+                                stdout.writeAll("execution requested stop\n") catch unreachable;
+                                break :run_loop;
+                            }
                         }
                     } else {
-                        while (true) {
-                            lib.step(.system, hart, {}, execution_options, true) catch |err| {
+                        run_loop: while (true) {
+                            const cont = lib.step(.system, hart, {}, false, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
-                                break;
+                                break :run_loop;
                             };
+                            if (!cont) {
+                                stdout.writeAll("execution requested stop\n") catch unreachable;
+                                break :run_loop;
+                            }
                         }
                     }
                 }
@@ -200,13 +251,17 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
                 timer.reset();
 
                 if (output) {
-                    lib.step(.system, hart, stdout, execution_options, true) catch |err| {
+                    const cont = lib.step(.system, hart, stdout, false, execution_options, true) catch |err| blk: {
                         stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+                        break :blk true;
                     };
+                    if (!cont) stdout.writeAll("execution requested stop\n") catch unreachable;
                 } else {
-                    lib.step(.system, hart, {}, execution_options, true) catch |err| {
+                    const cont = lib.step(.system, hart, {}, false, execution_options, true) catch |err| blk: {
                         stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+                        break :blk true;
                     };
+                    if (!cont) stdout.writeAll("execution requested stop\n") catch unreachable;
                 }
 
                 const elapsed = timer.read();
@@ -215,9 +270,11 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
             .whatif => {
                 user_input_z.addText("whatif");
 
-                lib.step(.system, hart, stdout, execution_options, false) catch |err| {
+                const cont = lib.step(.system, hart, stdout, false, execution_options, false) catch |err| {
                     stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+                    continue;
                 };
+                if (!cont) stdout.writeAll("execution requested stop\n") catch unreachable;
             },
             .dump => {
                 user_input_z.addText("dump");
@@ -265,6 +322,25 @@ fn userMode(
     _ = user_mode_options;
     _ = stderr;
     @panic("UNIMPLEMENTED: user mode"); // TODO: user mode
+}
+
+fn writeOutSignature(signature_file: []const u8, memory: lib.SystemMemory, executable: lib.Executable) !void {
+    const file = try std.fs.cwd().createFile(signature_file, .{});
+    defer file.close();
+
+    var buffered_writer = std.io.bufferedWriter(file.writer());
+    const writer = buffered_writer.writer();
+
+    const ptr = @ptrCast([*]const u32, &memory.memory[executable.begin_signature]);
+    const len = (executable.end_signature - executable.begin_signature) / @sizeOf(u32);
+    const slice = ptr[0..len];
+
+    for (slice) |value| {
+        try std.fmt.formatInt(value, 16, .lower, .{ .fill = '0', .width = 8 }, writer);
+        try writer.writeByte('\n');
+    }
+
+    try buffered_writer.flush();
 }
 
 /// This function parses the arguments from the user.
@@ -334,7 +410,7 @@ const usage =
     \\System mode options:
     \\    -i, --interactive          run in a interactive repl mode, only supported with a single hart
     \\
-    \\    -m, --memory=[MEMORY]      the amount of memory to make available to the emulated machine (MiB), defaults to 20MiB
+    \\    -m, --memory=[MEMORY]      the amount of memory to make available to the emulated machine (MiB), defaults to 4096MiB
     \\
     \\    --harts=[HARTS]            the number of harts the system has, defaults to 1, must be greater than zero
     \\
@@ -360,8 +436,8 @@ const SharedArguments = struct {
 const UserModeOptions = struct {};
 
 const SystemModeOptions = struct {
-    /// memory size in MiB, defaults to 20MiB
-    memory: usize = 20,
+    /// memory size in MiB, defaults to 4096MiB
+    memory: usize = 4096,
     harts: usize = 1,
     interactive: bool = false,
     signature: ?[]const u8 = null,

@@ -41,6 +41,7 @@ pub fn build(b: *std.build.Builder) !void {
     // Tests
     {
         const zriscv_test_exe = b.addTest("src/main.zig");
+        zriscv_test_exe.setTarget(target);
         zriscv_test_exe.setBuildMode(mode);
         setupLinksAndPackages(zriscv_test_exe, options_step, false);
 

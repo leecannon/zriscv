@@ -30,10 +30,13 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     const options = parseArguments(allocator, stderr);
     defer if (is_debug_or_test) options.deinit();
 
+    const riscof_mode = if (options.verb.? == .system) options.verb.?.system.signature != null else false;
+
     const executable = lib.Executable.load(
         allocator,
         stderr,
         options.positionals[0], // `parseArguments` ensures a single positional is given
+        riscof_mode,
     ) catch |err| {
         if (is_debug_or_test) return err;
         return 1;
@@ -70,6 +73,10 @@ fn systemMode(
 ) !void {
     const z = lib.traceNamed(@src(), "system mode");
     defer z.end();
+
+    if (system_mode_options.signature) |sig| {
+        std.debug.print("{s}\n", .{sig});
+    }
 
     if (system_mode_options.interactive and system_mode_options.harts > 1) {
         stderr.writeAll("ERROR: interactive mode is not supported with multiple harts\n") catch unreachable;
@@ -331,6 +338,8 @@ const usage =
     \\
     \\    --harts=[HARTS]            the number of harts the system has, defaults to 1, must be greater than zero
     \\
+    \\    --signature=[PATH]         runs the emulator in riscof test mode and writes out the signature to [PATH]
+    \\
 ;
 
 const ModeOptions = union(lib.Mode) {
@@ -355,6 +364,7 @@ const SystemModeOptions = struct {
     memory: usize = 20,
     harts: usize = 1,
     interactive: bool = false,
+    signature: ?[]const u8 = null,
 
     pub const shorthands = .{
         .m = "memory",

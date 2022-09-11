@@ -22,7 +22,13 @@ region_description: []const RegionDescriptor,
 start_address: u64,
 file_path: []const u8,
 
-pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8) !Executable {
+/// Start of the riscof signature, only defined in riscof mode
+begin_signature: u64 = undefined,
+
+/// End of the riscof signature, only defined in riscof mode
+end_signature: u64 = undefined,
+
+pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8, riscof_mode: bool) !Executable {
     const z = lib.traceNamed(@src(), "executable loading");
     defer z.end();
 
@@ -53,17 +59,129 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
         return error.ElfNotAnExecutable;
     }
 
+    const section_headers = try elf_header.getSectionHeaders(allocator, contents);
+    const program_headers = try elf_header.getProgramHeaders(allocator, contents);
+
+    var opt_symbol_section: ?std.elf.Elf64_Shdr = null;
+
+    for (section_headers) |section_header| {
+        switch (section_header.sh_type) {
+            std.elf.SHT_SYMTAB, std.elf.SHT_DYNSYM => {
+                if (opt_symbol_section != null) {
+                    stderr.writeAll("ERROR: symbol table already located?\n") catch unreachable;
+                    return error.MultipleSymbolTablesInElf;
+                }
+                opt_symbol_section = section_header;
+            },
+            std.elf.SHT_STRTAB => {}, // these are referenced using the `sh_link`: field https://stackoverflow.com/a/69888949
+            std.elf.SHT_NULL, std.elf.SHT_PROGBITS => {}, // ignored
+            0x70000003 => {
+                // RISCV ATTRIBUTES as specified here: https://github.com/riscv-non-isa/riscv-elf-psabi-doc
+                continue;
+            },
+            std.elf.SHT_RELA => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_RELA\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_HASH => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_HASH\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_DYNAMIC => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_DYNAMIC\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_NOTE => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_NOTE\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_NOBITS => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_NOBITS\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_REL => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_REL\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_SHLIB => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_SHLIB\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_INIT_ARRAY => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_INIT_ARRAY\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_FINI_ARRAY => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_FINI_ARRAY\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_PREINIT_ARRAY => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_PREINIT_ARRAY\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_GROUP => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_GROUP\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            std.elf.SHT_SYMTAB_SHNDX => {
+                stderr.writeAll("ERROR: unsupported program section type in ELF file: SHT_SYMTAB_SHNDX\n") catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+            else => {
+                if (section_header.sh_type >= std.elf.SHT_LOOS and section_header.sh_type <= std.elf.SHT_HIOS) {
+                    stderr.print("unhandled OS specific section header: 0x{x}\n", .{section_header.sh_type}) catch unreachable;
+                    continue;
+                }
+
+                if (section_header.sh_type >= std.elf.SHT_LOPROC and section_header.sh_type <= std.elf.SHT_HIPROC) {
+                    stderr.print("unhandled processor specific section header: 0x{x}\n", .{section_header.sh_type}) catch unreachable;
+                    continue;
+                }
+
+                if (section_header.sh_type >= std.elf.SHT_LOUSER and section_header.sh_type <= std.elf.SHT_HIUSER) {
+                    stderr.print("unhandled user specific section header: 0x{x}\n", .{section_header.sh_type}) catch unreachable;
+                    continue;
+                }
+
+                stderr.print("ERROR: unknown program section type in ELF file: 0x{x}\n", .{section_header.sh_type}) catch unreachable;
+                return error.UnsupportedProgramSectionInElf;
+            },
+        }
+    }
+
+    const symbol_section = opt_symbol_section orelse {
+        stderr.writeAll("ERROR: no symbol section in ELF file\n") catch unreachable;
+        return error.NoSymbolSectionInElf;
+    };
+
+    const string_section = blk: {
+        if (symbol_section.sh_link == 0) {
+            stderr.writeAll("ERROR: no string table in ELF\n") catch unreachable;
+            return error.NoStringTableInElf;
+        }
+        if (symbol_section.sh_link >= section_headers.len) {
+            stderr.print("ERROR: symbol section's link is to header {} but only {} headers are present\n", .{ symbol_section.sh_link, elf_header.shnum }) catch unreachable;
+            return error.NoStringTableInElf;
+        }
+        break :blk section_headers[symbol_section.sh_link];
+    };
+
+    var symbols_to_find = std.ArrayList([]const u8).init(allocator);
+    defer symbols_to_find.deinit();
+
+    if (riscof_mode) {
+        try symbols_to_find.append("begin_signature");
+        try symbols_to_find.append("end_signature");
+    }
+
+    var symbols = try elf_header.findSymbols(allocator, symbol_section, string_section, contents, symbols_to_find.items);
+    defer symbols.deinit();
+
     var regions: std.ArrayListUnmanaged(RegionDescriptor) = .{};
     errdefer regions.deinit(allocator);
 
-    var program_header_iter: ProgramHeaderIterator = .{
-        .elf_header = elf_header,
-        .source = contents,
-    };
-
-    while (program_header_iter.next()) |program_header| {
+    for (program_headers) |program_header| {
         switch (program_header.p_type) {
-            std.elf.PT_NULL, std.elf.PT_NOTE, std.elf.PT_PHDR, std.elf.PT_NUM => {}, // ignored
             std.elf.PT_LOAD => {
                 regions.append(allocator, .{
                     .load_address = program_header.p_vaddr,
@@ -79,36 +197,37 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
                     return err;
                 };
             },
-            std.elf.PT_DYNAMIC => {
-                stderr.writeAll("ERROR: unsupported program section type in ELF file: PT_DYNAMIC\n") catch unreachable;
-                return error.UnsupportedProgramSectionInElf;
-            },
-            std.elf.PT_INTERP => {
-                stderr.writeAll("ERROR: unsupported program section type in ELF file: PT_INTERP\n") catch unreachable;
-                return error.UnsupportedProgramSectionInElf;
-            },
-            std.elf.PT_SHLIB => {
-                stderr.writeAll("ERROR: unsupported program section type in ELF file: PT_SHLIB\n") catch unreachable;
-                return error.UnsupportedProgramSectionInElf;
-            },
-            std.elf.PT_TLS => {
-                stderr.writeAll("ERROR: unsupported program section type in ELF file: PT_TLS\n") catch unreachable;
-                return error.UnsupportedProgramSectionInElf;
-            },
-            std.elf.PT_GNU_EH_FRAME => {
-                stderr.writeAll("ERROR: unsupported program section type in ELF file: PT_GNU_EH_FRAME\n") catch unreachable;
-                return error.UnsupportedProgramSectionInElf;
+            0x70000003 => {
+                // RISCV ATTRIBUTES as specified here: https://github.com/riscv-non-isa/riscv-elf-psabi-doc
+                continue;
             },
             std.elf.PT_GNU_STACK => {
                 // TODO: Support PT_GNU_STACK
             },
-            std.elf.PT_GNU_RELRO => {
-                stderr.writeAll("ERROR: unsupported program section type in ELF file: PT_GNU_RELRO\n") catch unreachable;
-                return error.UnsupportedProgramSectionInElf;
+            std.elf.PT_NULL, std.elf.PT_NOTE, std.elf.PT_PHDR, std.elf.PT_NUM => {}, // ignored
+            std.elf.PT_DYNAMIC => {
+                stderr.writeAll("ERROR: unsupported program header type in ELF file: PT_DYNAMIC\n") catch unreachable;
+                return error.UnsupportedProgramHeaderInElf;
             },
-            0x70000003 => {
-                // RISCV ATTRIBUTES as specified here: https://github.com/riscv-non-isa/riscv-elf-psabi-doc
-                continue;
+            std.elf.PT_INTERP => {
+                stderr.writeAll("ERROR: unsupported program header type in ELF file: PT_INTERP\n") catch unreachable;
+                return error.UnsupportedProgramHeaderInElf;
+            },
+            std.elf.PT_SHLIB => {
+                stderr.writeAll("ERROR: unsupported program header type in ELF file: PT_SHLIB\n") catch unreachable;
+                return error.UnsupportedProgramHeaderInElf;
+            },
+            std.elf.PT_TLS => {
+                stderr.writeAll("ERROR: unsupported program header type in ELF file: PT_TLS\n") catch unreachable;
+                return error.UnsupportedProgramHeaderInElf;
+            },
+            std.elf.PT_GNU_EH_FRAME => {
+                stderr.writeAll("ERROR: unsupported program header type in ELF file: PT_GNU_EH_FRAME\n") catch unreachable;
+                return error.UnsupportedProgramHeaderInElf;
+            },
+            std.elf.PT_GNU_RELRO => {
+                stderr.writeAll("ERROR: unsupported program header type in ELF file: PT_GNU_RELRO\n") catch unreachable;
+                return error.UnsupportedProgramHeaderInElf;
             },
             else => {
                 if (program_header.p_type >= std.elf.PT_LOOS and program_header.p_type <= std.elf.PT_HIOS) {
@@ -121,18 +240,35 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
                     continue;
                 }
 
-                stderr.print("ERROR: unknown program section type in ELF file: 0x{x}\n", .{program_header.p_type}) catch unreachable;
-                return error.UnsupportedProgramSectionInElf;
+                stderr.print("ERROR: unknown program header type in ELF file: 0x{x}\n", .{program_header.p_type}) catch unreachable;
+                return error.UnsupportedProgramHeaderInElf;
             },
         }
     }
 
-    return Executable{
+    var executable = Executable{
         .contents = contents,
         .region_description = regions.toOwnedSlice(allocator),
         .start_address = elf_header.entry,
         .file_path = file_path,
     };
+
+    if (riscof_mode) {
+        if (symbols.get("begin_signature")) |begin_signature| {
+            executable.begin_signature = begin_signature;
+        } else {
+            stderr.writeAll("ERROR: ELF file does not contain 'begin_signature' section required for riscof mode\n") catch unreachable;
+            return error.NoBeginSignatureInElf;
+        }
+        if (symbols.get("end_signature")) |end_signature| {
+            executable.end_signature = end_signature;
+        } else {
+            stderr.writeAll("ERROR: ELF file does not contain 'end_signature' section required for riscof mode\n") catch unreachable;
+            return error.NoEndSignatureInElf;
+        }
+    }
+
+    return executable;
 }
 
 const native_endian = @import("builtin").target.cpu.arch.endian();
@@ -205,59 +341,177 @@ const ElfHeader = struct {
         };
     }
 
-    pub fn program_header_iterator(self: ElfHeader, source: []const u8) ProgramHeaderIterator {
-        return .{
-            .elf_header = self,
-            .source = source,
-        };
+    pub fn getSectionHeaders(self: ElfHeader, allocator: std.mem.Allocator, contents: []const u8) ![]const std.elf.Elf64_Shdr {
+        var sections = try allocator.alloc(std.elf.Elf64_Shdr, self.shnum);
+        errdefer allocator.free(sections);
+
+        var i: usize = 0;
+        while (i < self.shnum) : (i += 1) {
+            if (self.is_64) {
+                const offset = self.shoff + @sizeOf(std.elf.Elf64_Shdr) * i;
+                std.mem.copy(u8, std.mem.asBytes(&sections[i]), contents[offset..(offset + @sizeOf(std.elf.Elf64_Shdr))]);
+
+                // ELF endianness does NOT match native endianness.
+                if (self.endian != native_endian) {
+                    // Convert fields to native endianness.
+                    std.mem.byteSwapAllFields(std.elf.Elf64_Shdr, &sections[i]);
+                }
+            } else {
+                const offset = self.shoff + @sizeOf(std.elf.Elf32_Shdr) * i;
+                var shdr: std.elf.Elf32_Shdr = undefined;
+                std.mem.copy(u8, std.mem.asBytes(&shdr), contents[offset..(offset + @sizeOf(std.elf.Elf32_Shdr))]);
+
+                // ELF endianness does NOT match native endianness.
+                if (self.endian != native_endian) {
+                    // Convert fields to native endianness.
+                    std.mem.byteSwapAllFields(std.elf.Elf32_Shdr, &shdr);
+                }
+
+                sections[i] = .{
+                    .sh_name = shdr.sh_name,
+                    .sh_type = shdr.sh_type,
+                    .sh_flags = shdr.sh_flags,
+                    .sh_addr = shdr.sh_addr,
+                    .sh_offset = shdr.sh_offset,
+                    .sh_size = shdr.sh_size,
+                    .sh_link = shdr.sh_link,
+                    .sh_info = shdr.sh_info,
+                    .sh_addralign = shdr.sh_addralign,
+                    .sh_entsize = shdr.sh_entsize,
+                };
+            }
+        }
+
+        return sections;
     }
+
+    pub fn getProgramHeaders(self: ElfHeader, allocator: std.mem.Allocator, contents: []const u8) ![]const std.elf.Elf64_Phdr {
+        var program_headers = try allocator.alloc(std.elf.Elf64_Phdr, self.phnum);
+        errdefer allocator.free(program_headers);
+
+        var i: usize = 0;
+        while (i < self.phnum) : (i += 1) {
+            if (self.is_64) {
+                const offset = self.phoff + @sizeOf(std.elf.Elf64_Phdr) * i;
+                std.mem.copy(u8, std.mem.asBytes(&program_headers[i]), contents[offset..(offset + @sizeOf(std.elf.Elf64_Phdr))]);
+
+                // ELF endianness does NOT match native endianness.
+                if (self.endian != native_endian) {
+                    // Convert fields to native endianness.
+                    std.mem.byteSwapAllFields(std.elf.Elf64_Phdr, &program_headers[i]);
+                }
+            } else {
+                const offset = self.phoff + @sizeOf(std.elf.Elf32_Phdr) * i;
+                var phdr: std.elf.Elf32_Phdr = undefined;
+                std.mem.copy(u8, std.mem.asBytes(&phdr), contents[offset..(offset + @sizeOf(std.elf.Elf32_Phdr))]);
+
+                // ELF endianness does NOT match native endianness.
+                if (self.endian != native_endian) {
+                    // Convert fields to native endianness.
+                    std.mem.byteSwapAllFields(std.elf.Elf32_Phdr, &phdr);
+                }
+
+                program_headers[i] = .{
+                    .p_type = phdr.p_type,
+                    .p_offset = phdr.p_offset,
+                    .p_vaddr = phdr.p_vaddr,
+                    .p_paddr = phdr.p_paddr,
+                    .p_filesz = phdr.p_filesz,
+                    .p_memsz = phdr.p_memsz,
+                    .p_flags = phdr.p_flags,
+                    .p_align = phdr.p_align,
+                };
+            }
+        }
+
+        return program_headers;
+    }
+
+    pub fn findSymbols(
+        self: ElfHeader,
+        allocator: std.mem.Allocator,
+        symbol_section: std.elf.Elf64_Shdr,
+        string_section: std.elf.Elf64_Shdr,
+        contents: []const u8,
+        symbol_names: []const []const u8,
+    ) !std.StringHashMap(u64) {
+        var symbols = std.StringHashMap(u64).init(allocator);
+        errdefer symbols.deinit();
+
+        try symbols.ensureTotalCapacity(@intCast(u32, symbol_names.len));
+
+        const symbol_section_source = contents[symbol_section.sh_offset..(symbol_section.sh_offset + symbol_section.sh_size)];
+        const string_section_source = contents[string_section.sh_offset..(string_section.sh_offset + string_section.sh_size) :0];
+
+        outer: for (symbol_names) |symbol_name| {
+            var symbol_iter: SymbolIterator = .{
+                .elf_header = self,
+                .symbol_section_source = symbol_section_source,
+            };
+
+            while (symbol_iter.next()) |symbol| {
+                const name = std.mem.sliceTo(string_section_source[symbol.st_name..], 0);
+
+                if (std.mem.eql(u8, symbol_name, name)) {
+                    symbols.putAssumeCapacity(name, symbol.st_value);
+                    continue :outer;
+                }
+            }
+        }
+
+        return symbols;
+    }
+
+    const SymbolIterator = struct {
+        elf_header: ElfHeader,
+        symbol_section_source: []const u8,
+        start: usize = 0,
+
+        pub fn next(self: *@This()) ?std.elf.Elf64_Sym {
+            if (self.elf_header.is_64) {
+                const end = (self.start + @sizeOf(std.elf.Elf64_Sym));
+                if (end > self.symbol_section_source.len) return null;
+
+                var sym: std.elf.Elf64_Sym = undefined;
+                std.mem.copy(u8, std.mem.asBytes(&sym), self.symbol_section_source[self.start..end]);
+                self.start += @sizeOf(std.elf.Elf64_Sym);
+
+                // ELF endianness matches native endianness.
+                if (self.elf_header.endian == native_endian) return sym;
+
+                // Convert fields to native endianness.
+                std.mem.byteSwapAllFields(std.elf.Elf64_Sym, &sym);
+                return sym;
+            }
+
+            const end = (self.start + @sizeOf(std.elf.Elf64_Sym));
+            if (end > self.symbol_section_source.len) return null;
+
+            var sym: std.elf.Elf32_Sym = undefined;
+            std.mem.copy(u8, std.mem.asBytes(&sym), self.symbol_section_source[self.start..end]);
+            self.start += @sizeOf(std.elf.Elf32_Sym);
+
+            // ELF endianness does NOT match native endianness.
+            if (self.elf_header.endian != native_endian) {
+                // Convert fields to native endianness.
+                std.mem.byteSwapAllFields(std.elf.Elf32_Sym, &sym);
+            }
+
+            return std.elf.Elf64_Sym{
+                .st_name = sym.st_name,
+                .st_info = sym.st_info,
+                .st_other = sym.st_other,
+                .st_shndx = sym.st_shndx,
+                .st_value = sym.st_value,
+                .st_size = sym.st_size,
+            };
+        }
+    };
 };
 
-// Copied from `std.elf.Header.ProgramHeaderIterator` but specialised to work on slice instead of a file
-const ProgramHeaderIterator = struct {
-    elf_header: ElfHeader,
-    source: []const u8,
-    index: usize = 0,
-
-    pub fn next(self: *@This()) ?std.elf.Elf64_Phdr {
-        if (self.index >= self.elf_header.phnum) return null;
-        defer self.index += 1;
-
-        if (self.elf_header.is_64) {
-            var phdr: std.elf.Elf64_Phdr = undefined;
-            const offset = self.elf_header.phoff + @sizeOf(@TypeOf(phdr)) * self.index;
-            std.mem.copy(u8, std.mem.asBytes(&phdr), self.source[offset..(offset + @sizeOf(std.elf.Elf64_Phdr))]);
-
-            // ELF endianness matches native endianness.
-            if (self.elf_header.endian == native_endian) return phdr;
-
-            // Convert fields to native endianness.
-            std.mem.byteSwapAllFields(std.elf.Elf64_Phdr, &phdr);
-            return phdr;
-        }
-
-        var phdr: std.elf.Elf32_Phdr = undefined;
-        const offset = self.elf_header.phoff + @sizeOf(@TypeOf(phdr)) * self.index;
-        std.mem.copy(u8, std.mem.asBytes(&phdr), self.source[offset..(offset + @sizeOf(std.elf.Elf32_Phdr))]);
-
-        // ELF endianness does NOT match native endianness.
-        if (self.elf_header.endian != native_endian) {
-            // Convert fields to native endianness.
-            std.mem.byteSwapAllFields(std.elf.Elf32_Phdr, &phdr);
-        }
-
-        // Convert 32-bit header to 64-bit.
-        return std.elf.Elf64_Phdr{
-            .p_type = phdr.p_type,
-            .p_offset = phdr.p_offset,
-            .p_vaddr = phdr.p_vaddr,
-            .p_paddr = phdr.p_paddr,
-            .p_filesz = phdr.p_filesz,
-            .p_memsz = phdr.p_memsz,
-            .p_flags = phdr.p_flags,
-            .p_align = phdr.p_align,
-        };
-    }
+const Symbol = struct {
+    name: []const u8,
+    value: ?u64,
 };
 
 fn mapFile(file_path: []const u8, stderr: anytype) ![]align(std.mem.page_size) u8 {

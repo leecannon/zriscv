@@ -64,12 +64,60 @@ pub const InstructionType = enum {
     SRA,
     OR,
     AND,
+    MUL,
+    MULH,
+    MULHSU,
+    MULHU,
+    DIV,
+    DIVU,
+    REM,
+    REMU,
+
+    // AMO
+    LR_W,
+    SC_W,
+    AMOSWAP_W,
+    AMOADD_W,
+    AMOXOR_W,
+    AMOAND_W,
+    AMOOR_W,
+    AMOMIN_W,
+    AMOMAX_W,
+    AMOMINU_W,
+    AMOMAXU_W,
+    LR_D,
+    SC_D,
+    AMOSWAP_D,
+    AMOADD_D,
+    AMOXOR_D,
+    AMOAND_D,
+    AMOOR_D,
+    AMOMIN_D,
+    AMOMAX_D,
+    AMOMINU_D,
+    AMOMAXU_D,
+
+    // MISC-MEM
+    FENCE,
+    FENCE_I,
 
     // OP-IMM-32
     ADDIW,
     SLLIW,
     SRLIW,
     SRAIW,
+
+    // OP-32
+    ADDW,
+    SUBW,
+    SLLW,
+    SRLW,
+    SRAW,
+    MULW,
+    DIVW,
+    DIVUW,
+    REMW,
+    REMUW,
 
     // SYSTEM
     ECALL,
@@ -80,6 +128,82 @@ pub const InstructionType = enum {
     CSRRWI,
     CSRRSI,
     CSRRCI,
+
+    // LOAD-FP
+    FLW,
+    FLD,
+
+    // STORE-FP
+    FSW,
+    FSD,
+
+    // MADD
+    FMADD_S,
+    FMADD_D,
+
+    // MSUB
+    FMSUB_S,
+    FMSUB_D,
+
+    // NMSUB
+    FNMSUB_S,
+    FNMSUB_D,
+
+    // NMADD
+    FNMADD_S,
+    FNMADD_D,
+
+    // OP-FP
+    FADD_S,
+    FSUB_S,
+    FMUL_S,
+    FDIV_S,
+    FSQRT_S,
+    FSGNJ_S,
+    FSGNJN_S,
+    FSGNJX_S,
+    FMIN_S,
+    FMAX_S,
+    FCVT_W_S,
+    FCVT_WU_S,
+    FMV_X_W,
+    FEQ_S,
+    FLT_S,
+    FLE_S,
+    FCLASS_S,
+    FCVT_S_W,
+    FCVT_S_WU,
+    FMV_W_X,
+    FCVT_L_S,
+    FCVT_LU_S,
+    FCVT_S_L,
+    FCVT_S_LU,
+    FADD_D,
+    FSUB_D,
+    FMUL_D,
+    FDIV_D,
+    FSQRT_D,
+    FSGNJ_D,
+    FSGNJN_D,
+    FSGNJX_D,
+    FMIN_D,
+    FMAX_D,
+    FCVT_S_D,
+    FCVT_D_S,
+    FEQ_D,
+    FLT_D,
+    FLE_D,
+    FCLASS_D,
+    FCVT_W_D,
+    FCVT_WU_D,
+    FCVT_D_W,
+    FCVT_D_WU,
+    FCVT_L_D,
+    FCVT_LU_D,
+    FMV_X_D,
+    FCVT_D_L,
+    FCVT_D_LU,
+    FMV_D_X,
 
     // Compressed - Quadrant 0
     C_ADDI4SPN,
@@ -93,8 +217,10 @@ pub const Instruction = extern union {
     opcode: bitjuggle.Bitfield(u32, 0, 7),
     non_compressed_funct3: bitjuggle.Bitfield(u32, 12, 3),
     compressed_funct3: bitjuggle.Bitfield(u32, 13, 3),
+    funct2: bitjuggle.Bitfield(u32, 25, 2),
     funct7: bitjuggle.Bitfield(u32, 25, 7),
     funct7_shift: bitjuggle.Bitfield(u32, 26, 6),
+    funct7_shift2: bitjuggle.Bitfield(u32, 27, 5),
     csr: bitjuggle.Bitfield(u32, 20, 12),
 
     _rd: bitjuggle.Bitfield(u32, 7, 5),
@@ -113,6 +239,394 @@ pub const Instruction = extern union {
 
     compressed_backing: CompressedBacking,
     full_backing: u32,
+
+    pub fn decode(instruction: Instruction) InstructionType {
+        const z = lib.traceNamed(@src(), "instruction decode");
+        defer z.end();
+
+        const compressed_funct3 = instruction.compressed_funct3.read();
+        const funct3 = instruction.non_compressed_funct3.read();
+
+        return switch (instruction.op.read()) {
+            // compressed instruction
+            0b00 => switch (compressed_funct3) {
+                0b000 => if (instruction.compressed_backing.low == 0) InstructionType.Illegal else InstructionType.C_ADDI4SPN,
+                else => InstructionType.Unimplemented,
+            },
+            // compressed instruction
+            0b01 => switch (compressed_funct3) {
+                0b101 => InstructionType.C_J,
+                else => InstructionType.Unimplemented,
+            },
+            // compressed instruction
+            0b10 => switch (compressed_funct3) {
+                else => InstructionType.Unimplemented,
+            },
+            // non-compressed instruction
+            0b11 => switch (instruction.opcode.read()) {
+                // LOAD
+                0b0000011 => switch (funct3) {
+                    0b000 => InstructionType.LB,
+                    0b001 => InstructionType.LH,
+                    0b010 => InstructionType.LW,
+                    0b011 => InstructionType.LD,
+                    0b100 => InstructionType.LBU,
+                    0b101 => InstructionType.LHU,
+                    0b110 => InstructionType.LWU,
+                    else => InstructionType.Unimplemented,
+                },
+                // STORE
+                0b0100011 => switch (funct3) {
+                    0b000 => InstructionType.SB,
+                    0b001 => InstructionType.SH,
+                    0b010 => InstructionType.SW,
+                    0b011 => InstructionType.SD,
+                    else => InstructionType.Unimplemented,
+                },
+                // MADD
+                0b1000011 => switch (instruction.funct2.read()) {
+                    0b00 => InstructionType.FMADD_S,
+                    else => InstructionType.Unimplemented,
+                },
+                // BRANCH
+                0b1100011 => switch (funct3) {
+                    0b000 => InstructionType.BEQ,
+                    0b001 => InstructionType.BNE,
+                    0b100 => InstructionType.BLT,
+                    0b101 => InstructionType.BGE,
+                    0b110 => InstructionType.BLTU,
+                    0b111 => InstructionType.BGEU,
+                    else => InstructionType.Unimplemented,
+                },
+                // LOAD-FP
+                0b0000111 => switch (funct3) {
+                    0b010 => InstructionType.FLW,
+                    else => InstructionType.Unimplemented,
+                },
+                // STORE-FP
+                0b0100111 => switch (funct3) {
+                    0b010 => InstructionType.FSW,
+                    else => InstructionType.Unimplemented,
+                },
+                // MSUB
+                0b1000111 => switch (instruction.funct2.read()) {
+                    0b00 => InstructionType.FMSUB_S,
+                    else => InstructionType.Unimplemented,
+                },
+                // JALR
+                0b1100111 => switch (funct3) {
+                    0b000 => InstructionType.JALR,
+                    else => InstructionType.Unimplemented,
+                },
+                // NMSUB
+                0b1001011 => switch (instruction.funct2.read()) {
+                    0b00 => InstructionType.FNMSUB_S,
+                    else => InstructionType.Unimplemented,
+                },
+                // MISC-MEM
+                0b0001111 => switch (funct3) {
+                    0b000 => InstructionType.FENCE,
+                    0b001 => InstructionType.FENCE_I,
+                    else => InstructionType.Unimplemented,
+                },
+                // AMO
+                0b0101111 => switch (funct3) {
+                    0b010 => switch (instruction.funct7_shift2.read()) {
+                        0b00010 => InstructionType.LR_W,
+                        0b00011 => InstructionType.SC_W,
+                        0b00001 => InstructionType.AMOSWAP_W,
+                        0b00000 => InstructionType.AMOADD_W,
+                        0b00100 => InstructionType.AMOXOR_W,
+                        0b01100 => InstructionType.AMOAND_W,
+                        0b01000 => InstructionType.AMOOR_W,
+                        0b10000 => InstructionType.AMOMIN_W,
+                        0b10100 => InstructionType.AMOMAX_W,
+                        0b11000 => InstructionType.AMOMINU_W,
+                        0b11100 => InstructionType.AMOMAXU_W,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b011 => switch (instruction.funct7_shift2.read()) {
+                        0b00010 => InstructionType.LR_D,
+                        0b00011 => InstructionType.SC_D,
+                        0b00001 => InstructionType.AMOSWAP_D,
+                        0b00000 => InstructionType.AMOADD_D,
+                        0b00100 => InstructionType.AMOXOR_D,
+                        0b01100 => InstructionType.AMOAND_D,
+                        0b01000 => InstructionType.AMOOR_D,
+                        0b10000 => InstructionType.AMOMIN_D,
+                        0b10100 => InstructionType.AMOMAX_D,
+                        0b11000 => InstructionType.AMOMINU_D,
+                        0b11100 => InstructionType.AMOMAXU_D,
+                        else => InstructionType.Unimplemented,
+                    },
+                    else => InstructionType.Unimplemented,
+                },
+                // NMADD
+                0b1001111 => switch (instruction.funct2.read()) {
+                    0b000 => InstructionType.FNMADD_S,
+                    else => InstructionType.Unimplemented,
+                },
+                // JAL
+                0b1101111 => InstructionType.JAL,
+                // OP-IMM
+                0b0010011 => switch (funct3) {
+                    0b000 => InstructionType.ADDI,
+                    0b001 => switch (instruction.funct7_shift.read()) {
+                        0b000000 => InstructionType.SLLI,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b010 => InstructionType.SLTI,
+                    0b011 => InstructionType.SLTIU,
+                    0b100 => InstructionType.XORI,
+                    0b101 => switch (instruction.funct7_shift.read()) {
+                        0b000000 => InstructionType.SRLI,
+                        0b010000 => InstructionType.SRAI,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b110 => InstructionType.ORI,
+                    0b111 => InstructionType.ANDI,
+                },
+                // OP
+                0b0110011 => switch (funct3) {
+                    0b000 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.ADD,
+                        0b0100000 => InstructionType.SUB,
+                        0b0000001 => InstructionType.MUL,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b001 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SLL,
+                        0b0000001 => InstructionType.MULH,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b010 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SLT,
+                        0b0000001 => InstructionType.MULHSU,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b011 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SLTU,
+                        0b0000001 => InstructionType.MULHU,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b100 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.XOR,
+                        0b0000001 => InstructionType.DIV,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b101 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SRL,
+                        0b0100000 => InstructionType.SRA,
+                        0b0000001 => InstructionType.DIVU,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b110 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.OR,
+                        0b0000001 => InstructionType.REM,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b111 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.AND,
+                        0b0000001 => InstructionType.REMU,
+                        else => InstructionType.Unimplemented,
+                    },
+                },
+                // OP-FP
+                0b1010011 => switch (instruction.funct7.read()) {
+                    0b0000000 => InstructionType.FADD_S,
+                    0b0000001 => InstructionType.FADD_D,
+                    0b0000100 => InstructionType.FSUB_S,
+                    0b0000101 => InstructionType.FSUB_D,
+                    0b0001000 => InstructionType.FMUL_S,
+                    0b0001001 => InstructionType.FMUL_D,
+                    0b0001100 => InstructionType.FDIV_S,
+                    0b0001101 => InstructionType.FDIV_D,
+                    0b0101100 => InstructionType.FSQRT_S,
+                    0b0101101 => InstructionType.FSQRT_D,
+                    0b0010000 => switch (instruction.non_compressed_funct3.read()) {
+                        0b000 => InstructionType.FSGNJ_S,
+                        0b001 => InstructionType.FSGNJN_S,
+                        0b010 => InstructionType.FSGNJX_S,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b0010001 => switch (instruction.non_compressed_funct3.read()) {
+                        0b000 => InstructionType.FSGNJ_D,
+                        0b001 => InstructionType.FSGNJN_D,
+                        0b010 => InstructionType.FSGNJX_D,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b0010100 => switch (instruction.non_compressed_funct3.read()) {
+                        0b000 => InstructionType.FMIN_S,
+                        0b001 => InstructionType.FMAX_S,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b0010101 => switch (instruction.non_compressed_funct3.read()) {
+                        0b000 => InstructionType.FMIN_D,
+                        0b001 => InstructionType.FMAX_D,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1100000 => switch (instruction._rs2.read()) {
+                        0b00000 => InstructionType.FCVT_W_S,
+                        0b00001 => InstructionType.FCVT_WU_S,
+                        0b00010 => InstructionType.FCVT_L_S,
+                        0b00011 => InstructionType.FCVT_LU_S,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1100001 => switch (instruction._rs2.read()) {
+                        0b00000 => InstructionType.FCVT_W_D,
+                        0b00001 => InstructionType.FCVT_WU_D,
+                        0b00010 => InstructionType.FCVT_L_D,
+                        0b00011 => InstructionType.FCVT_LU_D,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1110000 => switch (instruction.non_compressed_funct3.read()) {
+                        0b000 => InstructionType.FMV_X_W,
+                        0b001 => InstructionType.FCLASS_S,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1110001 => switch (instruction.non_compressed_funct3.read()) {
+                        0b000 => InstructionType.FMV_X_D,
+                        0b001 => InstructionType.FCLASS_D,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1010000 => switch (instruction.non_compressed_funct3.read()) {
+                        0b010 => InstructionType.FEQ_S,
+                        0b001 => InstructionType.FLT_S,
+                        0b000 => InstructionType.FLE_S,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1010001 => switch (instruction.non_compressed_funct3.read()) {
+                        0b010 => InstructionType.FEQ_D,
+                        0b001 => InstructionType.FLT_D,
+                        0b000 => InstructionType.FLE_D,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b0100000 => switch (instruction._rs2.read()) {
+                        0b00001 => InstructionType.FCVT_S_D,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b0100001 => switch (instruction._rs2.read()) {
+                        0b00000 => InstructionType.FCVT_D_S,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1101000 => switch (instruction._rs2.read()) {
+                        0b00000 => InstructionType.FCVT_S_W,
+                        0b00001 => InstructionType.FCVT_S_WU,
+                        0b00010 => InstructionType.FCVT_S_L,
+                        0b00011 => InstructionType.FCVT_S_LU,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1101001 => switch (instruction._rs2.read()) {
+                        0b00000 => InstructionType.FCVT_D_W,
+                        0b00001 => InstructionType.FCVT_D_WU,
+                        0b00010 => InstructionType.FCVT_D_L,
+                        0b00011 => InstructionType.FCVT_D_LU,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1111000 => switch (instruction._rs2.read()) {
+                        0b00000 => InstructionType.FMV_W_X,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b1111001 => switch (instruction._rs2.read()) {
+                        0b00000 => InstructionType.FMV_D_X,
+                        else => InstructionType.Unimplemented,
+                    },
+                    else => InstructionType.Unimplemented,
+                },
+                // SYSTEM
+                0b1110011 => switch (funct3) {
+                    0b000 => switch (instruction.i_imm.read()) {
+                        0b000000000000 => InstructionType.ECALL,
+                        0b000000000001 => InstructionType.EBREAK,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b001 => InstructionType.CSRRW,
+                    0b010 => InstructionType.CSRRS,
+                    0b011 => InstructionType.CSRRC,
+                    0b101 => InstructionType.CSRRWI,
+                    0b110 => InstructionType.CSRRSI,
+                    0b111 => InstructionType.CSRRCI,
+                    else => InstructionType.Unimplemented,
+                },
+                // AUIPC
+                0b0010111 => InstructionType.AUIPC,
+                // LUI
+                0b0110111 => InstructionType.LUI,
+                // OP-V
+                0b1010111 => InstructionType.Unimplemented,
+                // OP-IMM-32
+                0b0011011 => switch (funct3) {
+                    0b000 => InstructionType.ADDIW,
+                    0b001 => InstructionType.SLLIW,
+                    0b101 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SRLIW,
+                        0b0100000 => InstructionType.SRAIW,
+                        else => InstructionType.Unimplemented,
+                    },
+                    else => InstructionType.Unimplemented,
+                },
+                // OP-32
+                0b0111011 => switch (funct3) {
+                    0b000 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.ADDW,
+                        0b0100000 => InstructionType.SUBW,
+                        0b0000001 => InstructionType.MULW,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b001 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SLLW,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b100 => switch (instruction.funct7.read()) {
+                        0b0000001 => InstructionType.DIVW,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b101 => switch (instruction.funct7.read()) {
+                        0b0000000 => InstructionType.SRLW,
+                        0b0100000 => InstructionType.SRAW,
+                        0b0000001 => InstructionType.DIVUW,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b110 => switch (instruction.funct7.read()) {
+                        0b0000001 => InstructionType.REMW,
+                        else => InstructionType.Unimplemented,
+                    },
+                    0b111 => switch (instruction.funct7.read()) {
+                        0b0000001 => InstructionType.REMUW,
+                        else => InstructionType.Unimplemented,
+                    },
+                    else => InstructionType.Unimplemented,
+                },
+                0b1111111 => blk: {
+                    if (instruction.full_backing == ~@as(u32, 0)) break :blk InstructionType.Illegal;
+                    break :blk InstructionType.Unimplemented;
+                },
+                else => InstructionType.Unimplemented,
+            },
+        };
+    }
+
+    pub fn printUnimplementedInstruction(instruction: Instruction) void {
+        const op = instruction.op.read();
+
+        if (op == 0b11) {
+            // non-compressed
+            const opcode = instruction.opcode.read();
+            const funct3 = instruction.non_compressed_funct3.read();
+            const funct7 = instruction.funct7.read();
+            std.log.err(
+                "UNIMPLEMENTED non-compressed instruction: opcode<{b:0>7}>/funct3<{b:0>3}>/funct7<{b:0>7}>",
+                .{ opcode, funct3, funct7 },
+            );
+        } else {
+            // compressed
+            const compressed_funct3 = instruction.compressed_funct3.read();
+            std.log.err(
+                "UNIMPLEMENTED compressed instruction: quadrant<{b:0>2}>/funct3<{b:0>3}>",
+                .{ op, compressed_funct3 },
+            );
+        }
+    }
 
     pub const CompressedBacking = extern struct {
         low: u16,
@@ -286,208 +800,6 @@ pub const Instruction = extern union {
 
     pub inline fn rs2(self: Instruction) lib.IntegerRegister {
         return lib.IntegerRegister.getIntegerRegister(self._rs2.read());
-    }
-
-    pub fn decode(instruction: Instruction) InstructionType {
-        const z = lib.traceNamed(@src(), "instruction decode");
-        defer z.end();
-
-        const compressed_funct3 = instruction.compressed_funct3.read();
-        const funct3 = instruction.non_compressed_funct3.read();
-
-        return switch (instruction.op.read()) {
-            // compressed instruction
-            0b00 => switch (compressed_funct3) {
-                0b000 => if (instruction.compressed_backing.low == 0) InstructionType.Illegal else InstructionType.C_ADDI4SPN,
-                else => InstructionType.Unimplemented,
-            },
-            // compressed instruction
-            0b01 => switch (compressed_funct3) {
-                0b101 => InstructionType.C_J,
-                else => InstructionType.Unimplemented,
-            },
-            // compressed instruction
-            0b10 => switch (compressed_funct3) {
-                else => InstructionType.Unimplemented,
-            },
-            // non-compressed instruction
-            0b11 => switch (instruction.opcode.read()) {
-                // LOAD
-                0b0000011 => switch (funct3) {
-                    0b000 => InstructionType.LB,
-                    0b001 => InstructionType.LH,
-                    0b010 => InstructionType.LW,
-                    0b011 => InstructionType.LD,
-                    0b100 => InstructionType.LBU,
-                    0b101 => InstructionType.LHU,
-                    0b110 => InstructionType.LWU,
-                    else => InstructionType.Unimplemented,
-                },
-                // STORE
-                0b0100011 => switch (funct3) {
-                    0b000 => InstructionType.SB,
-                    0b001 => InstructionType.SH,
-                    0b010 => InstructionType.SW,
-                    0b011 => InstructionType.SD,
-                    else => InstructionType.Unimplemented,
-                },
-                // MADD
-                0b1000011 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // BRANCH
-                0b1100011 => switch (funct3) {
-                    0b000 => InstructionType.BEQ,
-                    0b001 => InstructionType.BNE,
-                    0b100 => InstructionType.BLT,
-                    0b101 => InstructionType.BGE,
-                    0b110 => InstructionType.BLTU,
-                    0b111 => InstructionType.BGEU,
-                    else => InstructionType.Unimplemented,
-                },
-                // LOAD-FP
-                0b0000111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // STORE-FP
-                0b0100111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // MSUB
-                0b1000111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // JALR
-                0b1100111 => switch (funct3) {
-                    0b000 => InstructionType.JALR,
-                    else => InstructionType.Unimplemented,
-                },
-                // NMSUB
-                0b1001011 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // MISC-MEM
-                0b0001111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // AMO
-                0b0101111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // NMADD
-                0b1001111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // JAL
-                0b1101111 => InstructionType.JAL,
-                // OP-IMM
-                0b0010011 => switch (funct3) {
-                    0b000 => InstructionType.ADDI,
-                    0b001 => switch (instruction.funct7_shift.read()) {
-                        0b000000 => InstructionType.SLLI,
-                        else => InstructionType.Unimplemented,
-                    },
-                    0b010 => InstructionType.SLTI,
-                    0b011 => InstructionType.SLTIU,
-                    0b100 => InstructionType.XORI,
-                    0b101 => switch (instruction.funct7_shift.read()) {
-                        0b000000 => InstructionType.SRLI,
-                        0b010000 => InstructionType.SRAI,
-                        else => InstructionType.Unimplemented,
-                    },
-                    0b110 => InstructionType.ORI,
-                    0b111 => InstructionType.ANDI,
-                },
-                // OP
-                0b0110011 => switch (funct3) {
-                    0b000 => switch (instruction.funct7.read()) {
-                        0b0000000 => InstructionType.ADD,
-                        0b0100000 => InstructionType.SUB,
-                        else => InstructionType.Unimplemented,
-                    },
-                    0b001 => InstructionType.SLL,
-                    0b010 => InstructionType.SLT,
-                    0b011 => InstructionType.SLTU,
-                    0b100 => InstructionType.XOR,
-                    0b101 => switch (instruction.funct7.read()) {
-                        0b0000000 => InstructionType.SRL,
-                        0b0100000 => InstructionType.SRA,
-                        else => InstructionType.Unimplemented,
-                    },
-                    0b110 => InstructionType.OR,
-                    0b111 => InstructionType.AND,
-                },
-                // OP-FP
-                0b1010011 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // SYSTEM
-                0b1110011 => switch (funct3) {
-                    0b000 => switch (instruction.i_imm.read()) {
-                        0b000000000000 => InstructionType.ECALL,
-                        0b000000000001 => InstructionType.EBREAK,
-                        else => InstructionType.Unimplemented,
-                    },
-                    0b001 => InstructionType.CSRRW,
-                    0b010 => InstructionType.CSRRS,
-                    0b011 => InstructionType.CSRRC,
-                    0b101 => InstructionType.CSRRWI,
-                    0b110 => InstructionType.CSRRSI,
-                    0b111 => InstructionType.CSRRCI,
-                    else => InstructionType.Unimplemented,
-                },
-                // AUIPC
-                0b0010111 => InstructionType.AUIPC,
-                // LUI
-                0b0110111 => InstructionType.LUI,
-                // OP-V
-                0b1010111 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                // OP-IMM-32
-                0b0011011 => switch (funct3) {
-                    0b000 => InstructionType.ADDIW,
-                    0b001 => InstructionType.SLLIW,
-                    0b101 => switch (instruction.funct7.read()) {
-                        0b0000000 => InstructionType.SRLIW,
-                        0b0100000 => InstructionType.SRAIW,
-                        else => InstructionType.Unimplemented,
-                    },
-                    else => InstructionType.Unimplemented,
-                },
-                // OP-32
-                0b0111011 => switch (funct3) {
-                    else => InstructionType.Unimplemented,
-                },
-                0b1111111 => blk: {
-                    if (instruction.full_backing == ~@as(u32, 0)) break :blk InstructionType.Illegal;
-                    break :blk InstructionType.Unimplemented;
-                },
-                else => InstructionType.Unimplemented,
-            },
-        };
-    }
-
-    pub fn printUnimplementedInstruction(instruction: Instruction) void {
-        const op = instruction.op.read();
-
-        if (op == 0b11) {
-            // non-compressed
-            const opcode = instruction.opcode.read();
-            const funct3 = instruction.non_compressed_funct3.read();
-            const funct7 = instruction.funct7.read();
-            std.log.err(
-                "UNIMPLEMENTED non-compressed instruction: opcode<{b:0>7}>/funct3<{b:0>3}>/funct7<{b:0>7}>",
-                .{ opcode, funct3, funct7 },
-            );
-        } else {
-            // compressed
-            const compressed_funct3 = instruction.compressed_funct3.read();
-            std.log.err(
-                "UNIMPLEMENTED compressed instruction: quadrant<{b:0>2}>/funct3<{b:0>3}>",
-                .{ op, compressed_funct3 },
-            );
-        }
     }
 
     comptime {

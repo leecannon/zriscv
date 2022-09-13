@@ -85,7 +85,6 @@ fn execute(
 
     const has_writer = comptime isWriter(@TypeOf(writer));
 
-    // Order of the branches loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
     switch (instruction.decode()) {
         .Unimplemented => {
             if (options.unrecognised_instruction_is_fatal) {

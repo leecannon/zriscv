@@ -2,7 +2,6 @@ const std = @import("std");
 const bitjuggle = @import("bitjuggle");
 const lib = @import("lib.zig");
 
-// Order of the instruction types loosely follows RV32/64G Instruction Set Listings from the RISC-V Unprivledged ISA
 pub const InstructionType = enum {
     Illegal,
     Unimplemented,

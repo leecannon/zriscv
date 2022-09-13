@@ -309,6 +309,7 @@ fn execute(
                 hart.pc = target_address;
             }
         },
+        .BEQ => @panic("unimplemented instruction execution for BEQ"), // TODO: BEQ
         .BNE => {
             const z = lib.traceNamed(@src(), "BNE");
             defer z.end();
@@ -363,6 +364,73 @@ fn execute(
                 if (actually_execute) {
                     hart.pc += 4;
                 }
+            }
+        },
+        .BLT => @panic("unimplemented instruction execution for BLT"), // TODO: BLT
+        .BGE => @panic("unimplemented instruction execution for BGE"), // TODO: BGE
+        .BLTU => @panic("unimplemented instruction execution for BLTU"), // TODO: BLTU
+        .BGEU => @panic("unimplemented instruction execution for BGEU"), // TODO: BGEU
+        .LB => @panic("unimplemented instruction execution for LB"), // TODO: LB
+        .LH => @panic("unimplemented instruction execution for LH"), // TODO: LH
+        .LW => @panic("unimplemented instruction execution for LW"), // TODO: LW
+        .LBU => @panic("unimplemented instruction execution for LBU"), // TODO: LBU
+        .LHU => @panic("unimplemented instruction execution for LHU"), // TODO: LHU
+        .SB => @panic("unimplemented instruction execution for SB"), // TODO: SB
+        .SH => @panic("unimplemented instruction execution for SH"), // TODO: SH
+        .SW => {
+            const z = lib.traceNamed(@src(), "SW");
+            defer z.end();
+
+            // S-Type
+            const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs2 = instruction.rs2();
+            const rs2_value = hart.x[@enumToInt(rs2)];
+            const imm = instruction.s_imm.read();
+
+            const address = addSignedToUnsignedWrap(rs1_value, imm);
+
+            if (has_writer) {
+                try writer.print(
+                    \\SW - base: {}, src: {}, imm: 0x{x}
+                    \\  store 4 bytes from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\
+                , .{
+                    rs1,
+                    rs2,
+                    imm,
+                    rs2,
+                    rs2_value,
+                    rs1,
+                    rs1_value,
+                    imm,
+                    address,
+                });
+            }
+
+            if (actually_execute) {
+                // TODO: Should this be made comptime?
+                if (riscof_mode) {
+                    // Check if the memory being written to is the 'tohost' symbol
+                    if (hart.machine.executable.tohost == address) {
+                        return false;
+                    }
+                }
+
+                if (options.execution_out_of_bounds_is_fatal) {
+                    try hart.storeMemory(32, address, @truncate(u32, rs2_value));
+                } else {
+                    hart.storeMemory(32, address, @truncate(u32, rs2_value)) catch |err| switch (err) {
+                        error.ExecutionOutOfBounds => {
+                            // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
+                            try throw(mode, hart, {}, 0, writer, true);
+                            return true;
+                        },
+                        else => |e| return e,
+                    };
+                }
+
+                hart.pc += 4;
             }
         },
         .ADDI => {
@@ -421,6 +489,68 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .SLTI => @panic("unimplemented instruction execution for SLTI"), // TODO: SLTI
+        .SLTIU => @panic("unimplemented instruction execution for SLTIU"), // TODO: SLTIU
+        .XORI => @panic("unimplemented instruction execution for XORI"), // TODO: XORI
+        .ORI => @panic("unimplemented instruction execution for ORI"), // TODO: ORI
+        .ANDI => @panic("unimplemented instruction execution for ANDI"), // TODO: ANDI
+        .SLLI => {
+            const z = lib.traceNamed(@src(), "SLLI");
+            defer z.end();
+
+            // I-type specialization
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const shmt = instruction.i_specialization.fullShift();
+
+                const result = rs1_value << shmt;
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLLI - src: {}, dest: {}, shmt: {}
+                        \\  set {} to ( {}<{}> << {} ) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        shmt,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SLLI - src: {}, dest: {}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
+        .SRLI => @panic("unimplemented instruction execution for SRLI"), // TODO: SRLI
+        .SRAI => @panic("unimplemented instruction execution for SRAI"), // TODO: SRAI
         .ADD => {
             const z = lib.traceNamed(@src(), "ADD");
             defer z.end();
@@ -479,6 +609,19 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .SUB => @panic("unimplemented instruction execution for SUB"), // TODO: SUB
+        .SLL => @panic("unimplemented instruction execution for SLL"), // TODO: SLL
+        .SLT => @panic("unimplemented instruction execution for SLT"), // TODO: SLT
+        .SLTU => @panic("unimplemented instruction execution for SLTU"), // TODO: SLTU
+        .XOR => @panic("unimplemented instruction execution for XOR"), // TODO: XOR
+        .SRL => @panic("unimplemented instruction execution for SRL"), // TODO: SRL
+        .SRA => @panic("unimplemented instruction execution for SRA"), // TODO: SRA
+        .OR => @panic("unimplemented instruction execution for OR"), // TODO: OR
+        .AND => @panic("unimplemented instruction execution for AND"), // TODO: AND
+        .FENCE => @panic("unimplemented instruction execution for FENCE"), // TODO: FENCE
+        .ECALL => @panic("unimplemented instruction execution for ECALL"), // TODO: ECALL
+        .EBREAK => @panic("unimplemented instruction execution for EBREAK"), // TODO: EBREAK
+        .LWU => @panic("unimplemented instruction execution for LWU"), // TODO: LWU
         .LD => {
             const z = lib.traceNamed(@src(), "LD");
             defer z.end();
@@ -548,62 +691,6 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SW => {
-            const z = lib.traceNamed(@src(), "SW");
-            defer z.end();
-
-            // S-Type
-            const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
-            const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
-            const imm = instruction.s_imm.read();
-
-            const address = addSignedToUnsignedWrap(rs1_value, imm);
-
-            if (has_writer) {
-                try writer.print(
-                    \\SW - base: {}, src: {}, imm: 0x{x}
-                    \\  store 4 bytes from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
-                    \\
-                , .{
-                    rs1,
-                    rs2,
-                    imm,
-                    rs2,
-                    rs2_value,
-                    rs1,
-                    rs1_value,
-                    imm,
-                    address,
-                });
-            }
-
-            if (actually_execute) {
-                // TODO: Should this be made comptime?
-                if (riscof_mode) {
-                    // Check if the memory being written to is the 'tohost' symbol
-                    if (hart.machine.executable.tohost == address) {
-                        return false;
-                    }
-                }
-
-                if (options.execution_out_of_bounds_is_fatal) {
-                    try hart.storeMemory(32, address, @truncate(u32, rs2_value));
-                } else {
-                    hart.storeMemory(32, address, @truncate(u32, rs2_value)) catch |err| switch (err) {
-                        error.ExecutionOutOfBounds => {
-                            // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
-                            try throw(mode, hart, {}, 0, writer, true);
-                            return true;
-                        },
-                        else => |e| return e,
-                    };
-                }
-
-                hart.pc += 4;
-            }
-        },
         .SD => {
             const z = lib.traceNamed(@src(), "SD");
             defer z.end();
@@ -649,61 +736,6 @@ fn execute(
                     };
                 }
 
-                hart.pc += 4;
-            }
-        },
-        .SLLI => {
-            const z = lib.traceNamed(@src(), "SLLI");
-            defer z.end();
-
-            // I-type specialization
-            const rd = instruction.rd();
-
-            if (rd != .zero) {
-                const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
-                const shmt = instruction.i_specialization.fullShift();
-
-                const result = rs1_value << shmt;
-
-                if (has_writer) {
-                    try writer.print(
-                        \\SLLI - src: {}, dest: {}, shmt: {}
-                        \\  set {} to ( {}<{}> << {} ) = {}
-                        \\
-                    , .{
-                        rs1,
-                        rd,
-                        shmt,
-                        rd,
-                        rs1,
-                        rs1_value,
-                        shmt,
-                        result,
-                    });
-                }
-
-                if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
-                }
-            } else {
-                if (has_writer) {
-                    const rs1 = instruction.rs1();
-                    const shmt = instruction.i_specialization.fullShift();
-
-                    try writer.print(
-                        \\SLLI - src: {}, dest: {}, shmt: {}
-                        \\  nop
-                        \\
-                    , .{
-                        rs1,
-                        rd,
-                        shmt,
-                    });
-                }
-            }
-
-            if (actually_execute) {
                 hart.pc += 4;
             }
         },
@@ -762,6 +794,9 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .SLLIW => @panic("unimplemented instruction execution for SLLIW"), // TODO: SLLIW
+        .SRLIW => @panic("unimplemented instruction execution for SRLIW"), // TODO: SRLIW
+        .SRAIW => @panic("unimplemented instruction execution for SRAIW"), // TODO: SRAIW
         .ADDW => {
             const z = lib.traceNamed(@src(), "ADDIW");
             defer z.end();
@@ -820,6 +855,11 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .SUBW => @panic("unimplemented instruction execution for SUBW"), // TODO: SUBW
+        .SLLW => @panic("unimplemented instruction execution for SLLW"), // TODO: SLLW
+        .SRLW => @panic("unimplemented instruction execution for SRLW"), // TODO: SRLW
+        .SRAW => @panic("unimplemented instruction execution for SRAW"), // TODO: SRAW
+        .FENCE_I => @panic("unimplemented instruction execution for FENCE_I"), // TODO: FENCE_I
         .CSRRW => {
             const z = lib.traceNamed(@src(), "CSRRW");
             defer z.end();
@@ -894,6 +934,109 @@ fn execute(
 
             hart.pc += 4;
         },
+        .CSRRS => @panic("unimplemented instruction execution for CSRRS"), // TODO: CSRRS
+        .CSRRC => @panic("unimplemented instruction execution for CSRRC"), // TODO: CSRRC
+        .CSRRWI => @panic("unimplemented instruction execution for CSRRWI"), // TODO: CSRRWI
+        .CSRRSI => @panic("unimplemented instruction execution for CSRRSI"), // TODO: CSRRSI
+        .CSRRCI => @panic("unimplemented instruction execution for CSRRCI"), // TODO: CSRRCI
+        .MUL => @panic("unimplemented instruction execution for MUL"), // TODO: MUL
+        .MULH => @panic("unimplemented instruction execution for MULH"), // TODO: MULH
+        .MULHSU => @panic("unimplemented instruction execution for MULHSU"), // TODO: MULHSU
+        .MULHU => @panic("unimplemented instruction execution for MULHU"), // TODO: MULHU
+        .DIV => @panic("unimplemented instruction execution for DIV"), // TODO: DIV
+        .DIVU => @panic("unimplemented instruction execution for DIVU"), // TODO: DIVU
+        .REM => @panic("unimplemented instruction execution for REM"), // TODO: REM
+        .REMU => @panic("unimplemented instruction execution for REMU"), // TODO: REMU
+        .MULW => @panic("unimplemented instruction execution for MULW"), // TODO: MULW
+        .DIVW => @panic("unimplemented instruction execution for DIVW"), // TODO: DIVW
+        .DIVUW => @panic("unimplemented instruction execution for DIVUW"), // TODO: DIVUW
+        .REMW => @panic("unimplemented instruction execution for REMW"), // TODO: REMW
+        .REMUW => @panic("unimplemented instruction execution for REMUW"), // TODO: REMUW
+        .LR_W => @panic("unimplemented instruction execution for LR_W"), // TODO: LR_W
+        .SC_W => @panic("unimplemented instruction execution for SC_W"), // TODO: SC_W
+        .AMOSWAP_W => @panic("unimplemented instruction execution for AMOSWAP_W"), // TODO: AMOSWAP_W
+        .AMOADD_W => @panic("unimplemented instruction execution for AMOADD_W"), // TODO: AMOADD_W
+        .AMOXOR_W => @panic("unimplemented instruction execution for AMOXOR_W"), // TODO: AMOXOR_W
+        .AMOAND_W => @panic("unimplemented instruction execution for AMOAND_W"), // TODO: AMOAND_W
+        .AMOOR_W => @panic("unimplemented instruction execution for AMOOR_W"), // TODO: AMOOR_W
+        .AMOMIN_W => @panic("unimplemented instruction execution for AMOMIN_W"), // TODO: AMOMIN_W
+        .AMOMAX_W => @panic("unimplemented instruction execution for AMOMAX_W"), // TODO: AMOMAX_W
+        .AMOMINU_W => @panic("unimplemented instruction execution for AMOMINU_W"), // TODO: AMOMINU_W
+        .AMOMAXU_W => @panic("unimplemented instruction execution for AMOMAXU_W"), // TODO: AMOMAXU_W
+        .LR_D => @panic("unimplemented instruction execution for LR_D"), // TODO: LR_D
+        .SC_D => @panic("unimplemented instruction execution for SC_D"), // TODO: SC_D
+        .AMOSWAP_D => @panic("unimplemented instruction execution for AMOSWAP_D"), // TODO: AMOSWAP_D
+        .AMOADD_D => @panic("unimplemented instruction execution for AMOADD_D"), // TODO: AMOADD_D
+        .AMOXOR_D => @panic("unimplemented instruction execution for AMOXOR_D"), // TODO: AMOXOR_D
+        .AMOAND_D => @panic("unimplemented instruction execution for AMOAND_D"), // TODO: AMOAND_D
+        .AMOOR_D => @panic("unimplemented instruction execution for AMOOR_D"), // TODO: AMOOR_D
+        .AMOMIN_D => @panic("unimplemented instruction execution for AMOMIN_D"), // TODO: AMOMIN_D
+        .AMOMAX_D => @panic("unimplemented instruction execution for AMOMAX_D"), // TODO: AMOMAX_D
+        .AMOMINU_D => @panic("unimplemented instruction execution for AMOMINU_D"), // TODO: AMOMINU_D
+        .AMOMAXU_D => @panic("unimplemented instruction execution for AMOMAXU_D"), // TODO: AMOMAXU_D
+        .FLW => @panic("unimplemented instruction execution for FLW"), // TODO: FLW
+        .FSW => @panic("unimplemented instruction execution for FSW"), // TODO: FSW
+        .FMADD_S => @panic("unimplemented instruction execution for FMADD_S"), // TODO: FMADD_S
+        .FMSUB_S => @panic("unimplemented instruction execution for FMSUB_S"), // TODO: FMSUB_S
+        .FNMSUB_S => @panic("unimplemented instruction execution for FNMSUB_S"), // TODO: FNMSUB_S
+        .FNMADD_S => @panic("unimplemented instruction execution for FNMADD_S"), // TODO: FNMADD_S
+        .FADD_S => @panic("unimplemented instruction execution for FADD_S"), // TODO: FADD_S
+        .FSUB_S => @panic("unimplemented instruction execution for FSUB_S"), // TODO: FSUB_S
+        .FMUL_S => @panic("unimplemented instruction execution for FMUL_S"), // TODO: FMUL_S
+        .FDIV_S => @panic("unimplemented instruction execution for FDIV_S"), // TODO: FDIV_S
+        .FSQRT_S => @panic("unimplemented instruction execution for FSQRT_S"), // TODO: FSQRT_S
+        .FSGNJ_S => @panic("unimplemented instruction execution for FSGNJ_S"), // TODO: FSGNJ_S
+        .FSGNJN_S => @panic("unimplemented instruction execution for FSGNJN_S"), // TODO: FSGNJN_S
+        .FSGNJX_S => @panic("unimplemented instruction execution for FSGNJX_S"), // TODO: FSGNJX_S
+        .FMIN_S => @panic("unimplemented instruction execution for FMIN_S"), // TODO: FMIN_S
+        .FMAX_S => @panic("unimplemented instruction execution for FMAX_S"), // TODO: FMAX_S
+        .FCVT_W_S => @panic("unimplemented instruction execution for FCVT_W_S"), // TODO: FCVT_W_S
+        .FCVT_WU_S => @panic("unimplemented instruction execution for FCVT_WU_S"), // TODO: FCVT_WU_S
+        .FMV_X_W => @panic("unimplemented instruction execution for FMV_X_W"), // TODO: FMV_X_W
+        .FEQ_S => @panic("unimplemented instruction execution for FEQ_S"), // TODO: FEQ_S
+        .FLT_S => @panic("unimplemented instruction execution for FLT_S"), // TODO: FLT_S
+        .FLE_S => @panic("unimplemented instruction execution for FLE_S"), // TODO: FLE_S
+        .FCLASS_S => @panic("unimplemented instruction execution for FCLASS_S"), // TODO: FCLASS_S
+        .FCVT_S_W => @panic("unimplemented instruction execution for FCVT_S_W"), // TODO: FCVT_S_W
+        .FCVT_S_WU => @panic("unimplemented instruction execution for FCVT_S_WU"), // TODO: FCVT_S_WU
+        .FMV_W_X => @panic("unimplemented instruction execution for FMV_W_X"), // TODO: FMV_W_X
+        .FCVT_L_S => @panic("unimplemented instruction execution for FCVT_L_S"), // TODO: FCVT_L_S
+        .FCVT_LU_S => @panic("unimplemented instruction execution for FCVT_LU_S"), // TODO: FCVT_LU_S
+        .FCVT_S_L => @panic("unimplemented instruction execution for FCVT_S_L"), // TODO: FCVT_S_L
+        .FCVT_S_LU => @panic("unimplemented instruction execution for FCVT_S_LU"), // TODO: FCVT_S_LU
+        .FLD => @panic("unimplemented instruction execution for FLD"), // TODO: FLD
+        .FSD => @panic("unimplemented instruction execution for FSD"), // TODO: FSD
+        .FMADD_D => @panic("unimplemented instruction execution for FMADD_D"), // TODO: FMADD_D
+        .FMSUB_D => @panic("unimplemented instruction execution for FMSUB_D"), // TODO: FMSUB_D
+        .FNMSUB_D => @panic("unimplemented instruction execution for FNMSUB_D"), // TODO: FNMSUB_D
+        .FNMADD_D => @panic("unimplemented instruction execution for FNMADD_D"), // TODO: FNMADD_D
+        .FADD_D => @panic("unimplemented instruction execution for FADD_D"), // TODO: FADD_D
+        .FSUB_D => @panic("unimplemented instruction execution for FSUB_D"), // TODO: FSUB_D
+        .FMUL_D => @panic("unimplemented instruction execution for FMUL_D"), // TODO: FMUL_D
+        .FDIV_D => @panic("unimplemented instruction execution for FDIV_D"), // TODO: FDIV_D
+        .FSQRT_D => @panic("unimplemented instruction execution for FSQRT_D"), // TODO: FSQRT_D
+        .FSGNJ_D => @panic("unimplemented instruction execution for FSGNJ_D"), // TODO: FSGNJ_D
+        .FSGNJN_D => @panic("unimplemented instruction execution for FSGNJN_D"), // TODO: FSGNJN_D
+        .FSGNJX_D => @panic("unimplemented instruction execution for FSGNJX_D"), // TODO: FSGNJX_D
+        .FMIN_D => @panic("unimplemented instruction execution for FMIN_D"), // TODO: FMIN_D
+        .FMAX_D => @panic("unimplemented instruction execution for FMAX_D"), // TODO: FMAX_D
+        .FCVT_S_D => @panic("unimplemented instruction execution for FCVT_S_D"), // TODO: FCVT_S_D
+        .FCVT_D_S => @panic("unimplemented instruction execution for FCVT_D_S"), // TODO: FCVT_D_S
+        .FEQ_D => @panic("unimplemented instruction execution for FEQ_D"), // TODO: FEQ_D
+        .FLT_D => @panic("unimplemented instruction execution for FLT_D"), // TODO: FLT_D
+        .FLE_D => @panic("unimplemented instruction execution for FLE_D"), // TODO: FLE_D
+        .FCLASS_D => @panic("unimplemented instruction execution for FCLASS_D"), // TODO: FCLASS_D
+        .FCVT_W_D => @panic("unimplemented instruction execution for FCVT_W_D"), // TODO: FCVT_W_D
+        .FCVT_WU_D => @panic("unimplemented instruction execution for FCVT_WU_D"), // TODO: FCVT_WU_D
+        .FCVT_D_W => @panic("unimplemented instruction execution for FCVT_D_W"), // TODO: FCVT_D_W
+        .FCVT_D_WU => @panic("unimplemented instruction execution for FCVT_D_WU"), // TODO: FCVT_D_WU
+        .FCVT_L_D => @panic("unimplemented instruction execution for FCVT_L_D"), // TODO: FCVT_L_D
+        .FCVT_LU_D => @panic("unimplemented instruction execution for FCVT_LU_D"), // TODO: FCVT_LU_D
+        .FMV_X_D => @panic("unimplemented instruction execution for FMV_X_D"), // TODO: FMV_X_D
+        .FCVT_D_L => @panic("unimplemented instruction execution for FCVT_D_L"), // TODO: FCVT_D_L
+        .FCVT_D_LU => @panic("unimplemented instruction execution for FCVT_D_LU"), // TODO: FCVT_D_LU
+        .FMV_D_X => @panic("unimplemented instruction execution for FMV_D_X"), // TODO: FMV_D_X
+        .C_ADDI4SPN => @panic("unimplemented instruction execution for C_ADDI4SPN"), // TODO: C_ADDI4SPN
         .C_J => {
             const z = lib.traceNamed(@src(), "C_J");
             defer z.end();
@@ -919,13 +1062,6 @@ fn execute(
             if (actually_execute) {
                 hart.pc = result;
             }
-        },
-        else => |e| {
-            if (build_options.dont_panic_on_unimplemented) {
-                instruction.printUnimplementedInstruction();
-                return error.UnimplementedInstruction;
-            }
-            std.debug.panic("unimplemented instruction execution for {s}", .{@tagName(e)});
         },
     }
 

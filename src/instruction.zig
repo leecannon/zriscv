@@ -5,43 +5,24 @@ const lib = @import("lib.zig");
 pub const InstructionType = enum {
     Illegal,
     Unimplemented,
-
-    // LUI
     LUI,
-
-    // AUIPC
     AUIPC,
-
-    // JAL
     JAL,
-
-    // JALR
     JALR,
-
-    // BRANCH
     BEQ,
     BNE,
     BLT,
     BGE,
     BLTU,
     BGEU,
-
-    // LOAD
     LB,
     LH,
     LW,
-    LD,
     LBU,
     LHU,
-    LWU,
-
-    // STORE
     SB,
     SH,
     SW,
-    SD,
-
-    // OP-IMM
     ADDI,
     SLTI,
     SLTIU,
@@ -51,8 +32,6 @@ pub const InstructionType = enum {
     SLLI,
     SRLI,
     SRAI,
-
-    // OP
     ADD,
     SUB,
     SLL,
@@ -63,6 +42,28 @@ pub const InstructionType = enum {
     SRA,
     OR,
     AND,
+    FENCE,
+    ECALL,
+    EBREAK,
+    LWU,
+    LD,
+    SD,
+    ADDIW,
+    SLLIW,
+    SRLIW,
+    SRAIW,
+    ADDW,
+    SUBW,
+    SLLW,
+    SRLW,
+    SRAW,
+    FENCE_I,
+    CSRRW,
+    CSRRS,
+    CSRRC,
+    CSRRWI,
+    CSRRSI,
+    CSRRCI,
     MUL,
     MULH,
     MULHSU,
@@ -71,8 +72,11 @@ pub const InstructionType = enum {
     DIVU,
     REM,
     REMU,
-
-    // AMO
+    MULW,
+    DIVW,
+    DIVUW,
+    REMW,
+    REMUW,
     LR_W,
     SC_W,
     AMOSWAP_W,
@@ -95,64 +99,12 @@ pub const InstructionType = enum {
     AMOMAX_D,
     AMOMINU_D,
     AMOMAXU_D,
-
-    // MISC-MEM
-    FENCE,
-    FENCE_I,
-
-    // OP-IMM-32
-    ADDIW,
-    SLLIW,
-    SRLIW,
-    SRAIW,
-
-    // OP-32
-    ADDW,
-    SUBW,
-    SLLW,
-    SRLW,
-    SRAW,
-    MULW,
-    DIVW,
-    DIVUW,
-    REMW,
-    REMUW,
-
-    // SYSTEM
-    ECALL,
-    EBREAK,
-    CSRRW,
-    CSRRS,
-    CSRRC,
-    CSRRWI,
-    CSRRSI,
-    CSRRCI,
-
-    // LOAD-FP
     FLW,
-    FLD,
-
-    // STORE-FP
     FSW,
-    FSD,
-
-    // MADD
     FMADD_S,
-    FMADD_D,
-
-    // MSUB
     FMSUB_S,
-    FMSUB_D,
-
-    // NMSUB
     FNMSUB_S,
-    FNMSUB_D,
-
-    // NMADD
     FNMADD_S,
-    FNMADD_D,
-
-    // OP-FP
     FADD_S,
     FSUB_S,
     FMUL_S,
@@ -177,6 +129,12 @@ pub const InstructionType = enum {
     FCVT_LU_S,
     FCVT_S_L,
     FCVT_S_LU,
+    FLD,
+    FSD,
+    FMADD_D,
+    FMSUB_D,
+    FNMSUB_D,
+    FNMADD_D,
     FADD_D,
     FSUB_D,
     FMUL_D,
@@ -203,11 +161,7 @@ pub const InstructionType = enum {
     FCVT_D_L,
     FCVT_D_LU,
     FMV_D_X,
-
-    // Compressed - Quadrant 0
     C_ADDI4SPN,
-
-    // Compressed - Quadrant 1
     C_J,
 };
 

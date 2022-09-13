@@ -763,6 +763,64 @@ fn execute(
                 hart.pc += 4;
             }
         },
+        .ADDW => {
+            const z = lib.traceNamed(@src(), "ADDIW");
+            defer z.end();
+
+            // R-type
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value_truncated = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs2 = instruction.rs2();
+                const rs2_value_truncated = @truncate(u32, hart.x[@enumToInt(rs2)]);
+
+                var result: u32 = undefined;
+                _ = @addWithOverflow(u32, rs1_value_truncated, rs2_value_truncated, &result);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\ADDW - src1: {}, src2: {}, dest: {}
+                        \\  set {} to 32bit( {}<{}> ) + 32bit( {}<{}> ) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value_truncated,
+                        rs2,
+                        rs2_value_truncated,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = signExtend32bit(result);
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\ADDW - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .CSRRW => {
             const z = lib.traceNamed(@src(), "CSRRW");
             defer z.end();

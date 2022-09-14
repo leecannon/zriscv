@@ -309,7 +309,7 @@ fn execute(
                 hart.pc = target_address;
             }
         },
-        .BEQ => @panic("unimplemented instruction execution for BEQ"), // TODO: BEQ
+        .BEQ => return instructionExecutionUnimplemented("BEQ"), // TODO: BEQ
         .BNE => {
             const z = lib.traceNamed(@src(), "BNE");
             defer z.end();
@@ -366,17 +366,17 @@ fn execute(
                 }
             }
         },
-        .BLT => @panic("unimplemented instruction execution for BLT"), // TODO: BLT
-        .BGE => @panic("unimplemented instruction execution for BGE"), // TODO: BGE
-        .BLTU => @panic("unimplemented instruction execution for BLTU"), // TODO: BLTU
-        .BGEU => @panic("unimplemented instruction execution for BGEU"), // TODO: BGEU
-        .LB => @panic("unimplemented instruction execution for LB"), // TODO: LB
-        .LH => @panic("unimplemented instruction execution for LH"), // TODO: LH
-        .LW => @panic("unimplemented instruction execution for LW"), // TODO: LW
-        .LBU => @panic("unimplemented instruction execution for LBU"), // TODO: LBU
-        .LHU => @panic("unimplemented instruction execution for LHU"), // TODO: LHU
-        .SB => @panic("unimplemented instruction execution for SB"), // TODO: SB
-        .SH => @panic("unimplemented instruction execution for SH"), // TODO: SH
+        .BLT => return instructionExecutionUnimplemented("BLT"), // TODO: BLT
+        .BGE => return instructionExecutionUnimplemented("BGE"), // TODO: BGE
+        .BLTU => return instructionExecutionUnimplemented("BLTU"), // TODO: BLTU
+        .BGEU => return instructionExecutionUnimplemented("BGEU"), // TODO: BGEU
+        .LB => return instructionExecutionUnimplemented("LB"), // TODO: LB
+        .LH => return instructionExecutionUnimplemented("LH"), // TODO: LH
+        .LW => return instructionExecutionUnimplemented("LW"), // TODO: LW
+        .LBU => return instructionExecutionUnimplemented("LBU"), // TODO: LBU
+        .LHU => return instructionExecutionUnimplemented("LHU"), // TODO: LHU
+        .SB => return instructionExecutionUnimplemented("SB"), // TODO: SB
+        .SH => return instructionExecutionUnimplemented("SH"), // TODO: SH
         .SW => {
             const z = lib.traceNamed(@src(), "SW");
             defer z.end();
@@ -489,10 +489,10 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SLTI => @panic("unimplemented instruction execution for SLTI"), // TODO: SLTI
-        .SLTIU => @panic("unimplemented instruction execution for SLTIU"), // TODO: SLTIU
-        .XORI => @panic("unimplemented instruction execution for XORI"), // TODO: XORI
-        .ORI => @panic("unimplemented instruction execution for ORI"), // TODO: ORI
+        .SLTI => return instructionExecutionUnimplemented("SLTI"), // TODO: SLTI
+        .SLTIU => return instructionExecutionUnimplemented("SLTIU"), // TODO: SLTIU
+        .XORI => return instructionExecutionUnimplemented("XORI"), // TODO: XORI
+        .ORI => return instructionExecutionUnimplemented("ORI"), // TODO: ORI
         .ANDI => {
             const z = lib.traceNamed(@src(), "ANDI");
             defer z.end();
@@ -600,8 +600,8 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SRLI => @panic("unimplemented instruction execution for SRLI"), // TODO: SRLI
-        .SRAI => @panic("unimplemented instruction execution for SRAI"), // TODO: SRAI
+        .SRLI => return instructionExecutionUnimplemented("SRLI"), // TODO: SRLI
+        .SRAI => return instructionExecutionUnimplemented("SRAI"), // TODO: SRAI
         .ADD => {
             const z = lib.traceNamed(@src(), "ADD");
             defer z.end();
@@ -660,14 +660,14 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SUB => @panic("unimplemented instruction execution for SUB"), // TODO: SUB
-        .SLL => @panic("unimplemented instruction execution for SLL"), // TODO: SLL
-        .SLT => @panic("unimplemented instruction execution for SLT"), // TODO: SLT
-        .SLTU => @panic("unimplemented instruction execution for SLTU"), // TODO: SLTU
-        .XOR => @panic("unimplemented instruction execution for XOR"), // TODO: XOR
-        .SRL => @panic("unimplemented instruction execution for SRL"), // TODO: SRL
-        .SRA => @panic("unimplemented instruction execution for SRA"), // TODO: SRA
-        .OR => @panic("unimplemented instruction execution for OR"), // TODO: OR
+        .SUB => return instructionExecutionUnimplemented("SUB"), // TODO: SUB
+        .SLL => return instructionExecutionUnimplemented("SLL"), // TODO: SLL
+        .SLT => return instructionExecutionUnimplemented("SLT"), // TODO: SLT
+        .SLTU => return instructionExecutionUnimplemented("SLTU"), // TODO: SLTU
+        .XOR => return instructionExecutionUnimplemented("XOR"), // TODO: XOR
+        .SRL => return instructionExecutionUnimplemented("SRL"), // TODO: SRL
+        .SRA => return instructionExecutionUnimplemented("SRA"), // TODO: SRA
+        .OR => return instructionExecutionUnimplemented("OR"), // TODO: OR
         .AND => {
             const z = lib.traceNamed(@src(), "AND");
             defer z.end();
@@ -725,10 +725,10 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .FENCE => @panic("unimplemented instruction execution for FENCE"), // TODO: FENCE
-        .ECALL => @panic("unimplemented instruction execution for ECALL"), // TODO: ECALL
-        .EBREAK => @panic("unimplemented instruction execution for EBREAK"), // TODO: EBREAK
-        .LWU => @panic("unimplemented instruction execution for LWU"), // TODO: LWU
+        .FENCE => return instructionExecutionUnimplemented("FENCE"), // TODO: FENCE
+        .ECALL => return instructionExecutionUnimplemented("ECALL"), // TODO: ECALL
+        .EBREAK => return instructionExecutionUnimplemented("EBREAK"), // TODO: EBREAK
+        .LWU => return instructionExecutionUnimplemented("LWU"), // TODO: LWU
         .LD => {
             const z = lib.traceNamed(@src(), "LD");
             defer z.end();
@@ -901,9 +901,9 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SLLIW => @panic("unimplemented instruction execution for SLLIW"), // TODO: SLLIW
-        .SRLIW => @panic("unimplemented instruction execution for SRLIW"), // TODO: SRLIW
-        .SRAIW => @panic("unimplemented instruction execution for SRAIW"), // TODO: SRAIW
+        .SLLIW => return instructionExecutionUnimplemented("SLLIW"), // TODO: SLLIW
+        .SRLIW => return instructionExecutionUnimplemented("SRLIW"), // TODO: SRLIW
+        .SRAIW => return instructionExecutionUnimplemented("SRAIW"), // TODO: SRAIW
         .ADDW => {
             const z = lib.traceNamed(@src(), "ADDW");
             defer z.end();
@@ -962,11 +962,11 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SUBW => @panic("unimplemented instruction execution for SUBW"), // TODO: SUBW
-        .SLLW => @panic("unimplemented instruction execution for SLLW"), // TODO: SLLW
-        .SRLW => @panic("unimplemented instruction execution for SRLW"), // TODO: SRLW
-        .SRAW => @panic("unimplemented instruction execution for SRAW"), // TODO: SRAW
-        .FENCE_I => @panic("unimplemented instruction execution for FENCE_I"), // TODO: FENCE_I
+        .SUBW => return instructionExecutionUnimplemented("SUBW"), // TODO: SUBW
+        .SLLW => return instructionExecutionUnimplemented("SLLW"), // TODO: SLLW
+        .SRLW => return instructionExecutionUnimplemented("SRLW"), // TODO: SRLW
+        .SRAW => return instructionExecutionUnimplemented("SRAW"), // TODO: SRAW
+        .FENCE_I => return instructionExecutionUnimplemented("FENCE_I"), // TODO: FENCE_I
         .CSRRW => {
             const z = lib.traceNamed(@src(), "CSRRW");
             defer z.end();
@@ -1041,130 +1041,130 @@ fn execute(
 
             hart.pc += 4;
         },
-        .CSRRS => @panic("unimplemented instruction execution for CSRRS"), // TODO: CSRRS
-        .CSRRC => @panic("unimplemented instruction execution for CSRRC"), // TODO: CSRRC
-        .CSRRWI => @panic("unimplemented instruction execution for CSRRWI"), // TODO: CSRRWI
-        .CSRRSI => @panic("unimplemented instruction execution for CSRRSI"), // TODO: CSRRSI
-        .CSRRCI => @panic("unimplemented instruction execution for CSRRCI"), // TODO: CSRRCI
-        .MUL => @panic("unimplemented instruction execution for MUL"), // TODO: MUL
-        .MULH => @panic("unimplemented instruction execution for MULH"), // TODO: MULH
-        .MULHSU => @panic("unimplemented instruction execution for MULHSU"), // TODO: MULHSU
-        .MULHU => @panic("unimplemented instruction execution for MULHU"), // TODO: MULHU
-        .DIV => @panic("unimplemented instruction execution for DIV"), // TODO: DIV
-        .DIVU => @panic("unimplemented instruction execution for DIVU"), // TODO: DIVU
-        .REM => @panic("unimplemented instruction execution for REM"), // TODO: REM
-        .REMU => @panic("unimplemented instruction execution for REMU"), // TODO: REMU
-        .MULW => @panic("unimplemented instruction execution for MULW"), // TODO: MULW
-        .DIVW => @panic("unimplemented instruction execution for DIVW"), // TODO: DIVW
-        .DIVUW => @panic("unimplemented instruction execution for DIVUW"), // TODO: DIVUW
-        .REMW => @panic("unimplemented instruction execution for REMW"), // TODO: REMW
-        .REMUW => @panic("unimplemented instruction execution for REMUW"), // TODO: REMUW
-        .LR_W => @panic("unimplemented instruction execution for LR_W"), // TODO: LR_W
-        .SC_W => @panic("unimplemented instruction execution for SC_W"), // TODO: SC_W
-        .AMOSWAP_W => @panic("unimplemented instruction execution for AMOSWAP_W"), // TODO: AMOSWAP_W
-        .AMOADD_W => @panic("unimplemented instruction execution for AMOADD_W"), // TODO: AMOADD_W
-        .AMOXOR_W => @panic("unimplemented instruction execution for AMOXOR_W"), // TODO: AMOXOR_W
-        .AMOAND_W => @panic("unimplemented instruction execution for AMOAND_W"), // TODO: AMOAND_W
-        .AMOOR_W => @panic("unimplemented instruction execution for AMOOR_W"), // TODO: AMOOR_W
-        .AMOMIN_W => @panic("unimplemented instruction execution for AMOMIN_W"), // TODO: AMOMIN_W
-        .AMOMAX_W => @panic("unimplemented instruction execution for AMOMAX_W"), // TODO: AMOMAX_W
-        .AMOMINU_W => @panic("unimplemented instruction execution for AMOMINU_W"), // TODO: AMOMINU_W
-        .AMOMAXU_W => @panic("unimplemented instruction execution for AMOMAXU_W"), // TODO: AMOMAXU_W
-        .LR_D => @panic("unimplemented instruction execution for LR_D"), // TODO: LR_D
-        .SC_D => @panic("unimplemented instruction execution for SC_D"), // TODO: SC_D
-        .AMOSWAP_D => @panic("unimplemented instruction execution for AMOSWAP_D"), // TODO: AMOSWAP_D
-        .AMOADD_D => @panic("unimplemented instruction execution for AMOADD_D"), // TODO: AMOADD_D
-        .AMOXOR_D => @panic("unimplemented instruction execution for AMOXOR_D"), // TODO: AMOXOR_D
-        .AMOAND_D => @panic("unimplemented instruction execution for AMOAND_D"), // TODO: AMOAND_D
-        .AMOOR_D => @panic("unimplemented instruction execution for AMOOR_D"), // TODO: AMOOR_D
-        .AMOMIN_D => @panic("unimplemented instruction execution for AMOMIN_D"), // TODO: AMOMIN_D
-        .AMOMAX_D => @panic("unimplemented instruction execution for AMOMAX_D"), // TODO: AMOMAX_D
-        .AMOMINU_D => @panic("unimplemented instruction execution for AMOMINU_D"), // TODO: AMOMINU_D
-        .AMOMAXU_D => @panic("unimplemented instruction execution for AMOMAXU_D"), // TODO: AMOMAXU_D
-        .FLW => @panic("unimplemented instruction execution for FLW"), // TODO: FLW
-        .FSW => @panic("unimplemented instruction execution for FSW"), // TODO: FSW
-        .FMADD_S => @panic("unimplemented instruction execution for FMADD_S"), // TODO: FMADD_S
-        .FMSUB_S => @panic("unimplemented instruction execution for FMSUB_S"), // TODO: FMSUB_S
-        .FNMSUB_S => @panic("unimplemented instruction execution for FNMSUB_S"), // TODO: FNMSUB_S
-        .FNMADD_S => @panic("unimplemented instruction execution for FNMADD_S"), // TODO: FNMADD_S
-        .FADD_S => @panic("unimplemented instruction execution for FADD_S"), // TODO: FADD_S
-        .FSUB_S => @panic("unimplemented instruction execution for FSUB_S"), // TODO: FSUB_S
-        .FMUL_S => @panic("unimplemented instruction execution for FMUL_S"), // TODO: FMUL_S
-        .FDIV_S => @panic("unimplemented instruction execution for FDIV_S"), // TODO: FDIV_S
-        .FSQRT_S => @panic("unimplemented instruction execution for FSQRT_S"), // TODO: FSQRT_S
-        .FSGNJ_S => @panic("unimplemented instruction execution for FSGNJ_S"), // TODO: FSGNJ_S
-        .FSGNJN_S => @panic("unimplemented instruction execution for FSGNJN_S"), // TODO: FSGNJN_S
-        .FSGNJX_S => @panic("unimplemented instruction execution for FSGNJX_S"), // TODO: FSGNJX_S
-        .FMIN_S => @panic("unimplemented instruction execution for FMIN_S"), // TODO: FMIN_S
-        .FMAX_S => @panic("unimplemented instruction execution for FMAX_S"), // TODO: FMAX_S
-        .FCVT_W_S => @panic("unimplemented instruction execution for FCVT_W_S"), // TODO: FCVT_W_S
-        .FCVT_WU_S => @panic("unimplemented instruction execution for FCVT_WU_S"), // TODO: FCVT_WU_S
-        .FMV_X_W => @panic("unimplemented instruction execution for FMV_X_W"), // TODO: FMV_X_W
-        .FEQ_S => @panic("unimplemented instruction execution for FEQ_S"), // TODO: FEQ_S
-        .FLT_S => @panic("unimplemented instruction execution for FLT_S"), // TODO: FLT_S
-        .FLE_S => @panic("unimplemented instruction execution for FLE_S"), // TODO: FLE_S
-        .FCLASS_S => @panic("unimplemented instruction execution for FCLASS_S"), // TODO: FCLASS_S
-        .FCVT_S_W => @panic("unimplemented instruction execution for FCVT_S_W"), // TODO: FCVT_S_W
-        .FCVT_S_WU => @panic("unimplemented instruction execution for FCVT_S_WU"), // TODO: FCVT_S_WU
-        .FMV_W_X => @panic("unimplemented instruction execution for FMV_W_X"), // TODO: FMV_W_X
-        .FCVT_L_S => @panic("unimplemented instruction execution for FCVT_L_S"), // TODO: FCVT_L_S
-        .FCVT_LU_S => @panic("unimplemented instruction execution for FCVT_LU_S"), // TODO: FCVT_LU_S
-        .FCVT_S_L => @panic("unimplemented instruction execution for FCVT_S_L"), // TODO: FCVT_S_L
-        .FCVT_S_LU => @panic("unimplemented instruction execution for FCVT_S_LU"), // TODO: FCVT_S_LU
-        .FLD => @panic("unimplemented instruction execution for FLD"), // TODO: FLD
-        .FSD => @panic("unimplemented instruction execution for FSD"), // TODO: FSD
-        .FMADD_D => @panic("unimplemented instruction execution for FMADD_D"), // TODO: FMADD_D
-        .FMSUB_D => @panic("unimplemented instruction execution for FMSUB_D"), // TODO: FMSUB_D
-        .FNMSUB_D => @panic("unimplemented instruction execution for FNMSUB_D"), // TODO: FNMSUB_D
-        .FNMADD_D => @panic("unimplemented instruction execution for FNMADD_D"), // TODO: FNMADD_D
-        .FADD_D => @panic("unimplemented instruction execution for FADD_D"), // TODO: FADD_D
-        .FSUB_D => @panic("unimplemented instruction execution for FSUB_D"), // TODO: FSUB_D
-        .FMUL_D => @panic("unimplemented instruction execution for FMUL_D"), // TODO: FMUL_D
-        .FDIV_D => @panic("unimplemented instruction execution for FDIV_D"), // TODO: FDIV_D
-        .FSQRT_D => @panic("unimplemented instruction execution for FSQRT_D"), // TODO: FSQRT_D
-        .FSGNJ_D => @panic("unimplemented instruction execution for FSGNJ_D"), // TODO: FSGNJ_D
-        .FSGNJN_D => @panic("unimplemented instruction execution for FSGNJN_D"), // TODO: FSGNJN_D
-        .FSGNJX_D => @panic("unimplemented instruction execution for FSGNJX_D"), // TODO: FSGNJX_D
-        .FMIN_D => @panic("unimplemented instruction execution for FMIN_D"), // TODO: FMIN_D
-        .FMAX_D => @panic("unimplemented instruction execution for FMAX_D"), // TODO: FMAX_D
-        .FCVT_S_D => @panic("unimplemented instruction execution for FCVT_S_D"), // TODO: FCVT_S_D
-        .FCVT_D_S => @panic("unimplemented instruction execution for FCVT_D_S"), // TODO: FCVT_D_S
-        .FEQ_D => @panic("unimplemented instruction execution for FEQ_D"), // TODO: FEQ_D
-        .FLT_D => @panic("unimplemented instruction execution for FLT_D"), // TODO: FLT_D
-        .FLE_D => @panic("unimplemented instruction execution for FLE_D"), // TODO: FLE_D
-        .FCLASS_D => @panic("unimplemented instruction execution for FCLASS_D"), // TODO: FCLASS_D
-        .FCVT_W_D => @panic("unimplemented instruction execution for FCVT_W_D"), // TODO: FCVT_W_D
-        .FCVT_WU_D => @panic("unimplemented instruction execution for FCVT_WU_D"), // TODO: FCVT_WU_D
-        .FCVT_D_W => @panic("unimplemented instruction execution for FCVT_D_W"), // TODO: FCVT_D_W
-        .FCVT_D_WU => @panic("unimplemented instruction execution for FCVT_D_WU"), // TODO: FCVT_D_WU
-        .FCVT_L_D => @panic("unimplemented instruction execution for FCVT_L_D"), // TODO: FCVT_L_D
-        .FCVT_LU_D => @panic("unimplemented instruction execution for FCVT_LU_D"), // TODO: FCVT_LU_D
-        .FMV_X_D => @panic("unimplemented instruction execution for FMV_X_D"), // TODO: FMV_X_D
-        .FCVT_D_L => @panic("unimplemented instruction execution for FCVT_D_L"), // TODO: FCVT_D_L
-        .FCVT_D_LU => @panic("unimplemented instruction execution for FCVT_D_LU"), // TODO: FCVT_D_LU
-        .FMV_D_X => @panic("unimplemented instruction execution for FMV_D_X"), // TODO: FMV_D_X
-        .C_ADDI4SPN => @panic("unimplemented instruction execution for C_ADDI4SPN"), // TODO: C_ADDI4SPN
-        .C_FLD => @panic("unimplemented instruction execution for C_FLD"), // TODO: C_FLD
-        .C_LW => @panic("unimplemented instruction execution for C_LW"), // TODO: C_LW
-        .C_LD => @panic("unimplemented instruction execution for C_LD"), // TODO: C_LD
-        .C_FSD => @panic("unimplemented instruction execution for C_FSD"), // TODO: C_FSD
-        .C_SW => @panic("unimplemented instruction execution for C_SW"), // TODO: C_SW
-        .C_SD => @panic("unimplemented instruction execution for C_SD"), // TODO: C_SD
-        .C_NOP => @panic("unimplemented instruction execution for C_NOP"), // TODO: C_NOP
-        .C_ADDI => @panic("unimplemented instruction execution for C_ADDI"), // TODO: C_ADDI
-        .C_ADDIW => @panic("unimplemented instruction execution for C_ADDIW"), // TODO: C_ADDIW
-        .C_LI => @panic("unimplemented instruction execution for C_LI"), // TODO: C_LI
-        .C_ADDI16SP => @panic("unimplemented instruction execution for C_ADDI16SP"), // TODO: C_ADDI16SP
-        .C_LUI => @panic("unimplemented instruction execution for C_LUI"), // TODO: C_LUI
-        .C_SRLI => @panic("unimplemented instruction execution for C_SRLI"), // TODO: C_SRLI
-        .C_SRAI => @panic("unimplemented instruction execution for C_SRAI"), // TODO: C_SRAI
-        .C_ANDI => @panic("unimplemented instruction execution for C_ANDI"), // TODO: C_ANDI
-        .C_SUB => @panic("unimplemented instruction execution for C_SUB"), // TODO: C_SUB
-        .C_XOR => @panic("unimplemented instruction execution for C_XOR"), // TODO: C_XOR
-        .C_OR => @panic("unimplemented instruction execution for C_OR"), // TODO: C_OR
-        .C_AND => @panic("unimplemented instruction execution for C_AND"), // TODO: C_AND
-        .C_SUBW => @panic("unimplemented instruction execution for C_SUBW"), // TODO: C_SUBW
-        .C_ADDW => @panic("unimplemented instruction execution for C_ADDW"), // TODO: C_ADDW
+        .CSRRS => return instructionExecutionUnimplemented("CSRRS"), // TODO: CSRRS
+        .CSRRC => return instructionExecutionUnimplemented("CSRRC"), // TODO: CSRRC
+        .CSRRWI => return instructionExecutionUnimplemented("CSRRWI"), // TODO: CSRRWI
+        .CSRRSI => return instructionExecutionUnimplemented("CSRRSI"), // TODO: CSRRSI
+        .CSRRCI => return instructionExecutionUnimplemented("CSRRCI"), // TODO: CSRRCI
+        .MUL => return instructionExecutionUnimplemented("MUL"), // TODO: MUL
+        .MULH => return instructionExecutionUnimplemented("MULH"), // TODO: MULH
+        .MULHSU => return instructionExecutionUnimplemented("MULHSU"), // TODO: MULHSU
+        .MULHU => return instructionExecutionUnimplemented("MULHU"), // TODO: MULHU
+        .DIV => return instructionExecutionUnimplemented("DIV"), // TODO: DIV
+        .DIVU => return instructionExecutionUnimplemented("DIVU"), // TODO: DIVU
+        .REM => return instructionExecutionUnimplemented("REM"), // TODO: REM
+        .REMU => return instructionExecutionUnimplemented("REMU"), // TODO: REMU
+        .MULW => return instructionExecutionUnimplemented("MULW"), // TODO: MULW
+        .DIVW => return instructionExecutionUnimplemented("DIVW"), // TODO: DIVW
+        .DIVUW => return instructionExecutionUnimplemented("DIVUW"), // TODO: DIVUW
+        .REMW => return instructionExecutionUnimplemented("REMW"), // TODO: REMW
+        .REMUW => return instructionExecutionUnimplemented("REMUW"), // TODO: REMUW
+        .LR_W => return instructionExecutionUnimplemented("LR_W"), // TODO: LR_W
+        .SC_W => return instructionExecutionUnimplemented("SC_W"), // TODO: SC_W
+        .AMOSWAP_W => return instructionExecutionUnimplemented("AMOSWAP_W"), // TODO: AMOSWAP_W
+        .AMOADD_W => return instructionExecutionUnimplemented("AMOADD_W"), // TODO: AMOADD_W
+        .AMOXOR_W => return instructionExecutionUnimplemented("AMOXOR_W"), // TODO: AMOXOR_W
+        .AMOAND_W => return instructionExecutionUnimplemented("AMOAND_W"), // TODO: AMOAND_W
+        .AMOOR_W => return instructionExecutionUnimplemented("AMOOR_W"), // TODO: AMOOR_W
+        .AMOMIN_W => return instructionExecutionUnimplemented("AMOMIN_W"), // TODO: AMOMIN_W
+        .AMOMAX_W => return instructionExecutionUnimplemented("AMOMAX_W"), // TODO: AMOMAX_W
+        .AMOMINU_W => return instructionExecutionUnimplemented("AMOMINU_W"), // TODO: AMOMINU_W
+        .AMOMAXU_W => return instructionExecutionUnimplemented("AMOMAXU_W"), // TODO: AMOMAXU_W
+        .LR_D => return instructionExecutionUnimplemented("LR_D"), // TODO: LR_D
+        .SC_D => return instructionExecutionUnimplemented("SC_D"), // TODO: SC_D
+        .AMOSWAP_D => return instructionExecutionUnimplemented("AMOSWAP_D"), // TODO: AMOSWAP_D
+        .AMOADD_D => return instructionExecutionUnimplemented("AMOADD_D"), // TODO: AMOADD_D
+        .AMOXOR_D => return instructionExecutionUnimplemented("AMOXOR_D"), // TODO: AMOXOR_D
+        .AMOAND_D => return instructionExecutionUnimplemented("AMOAND_D"), // TODO: AMOAND_D
+        .AMOOR_D => return instructionExecutionUnimplemented("AMOOR_D"), // TODO: AMOOR_D
+        .AMOMIN_D => return instructionExecutionUnimplemented("AMOMIN_D"), // TODO: AMOMIN_D
+        .AMOMAX_D => return instructionExecutionUnimplemented("AMOMAX_D"), // TODO: AMOMAX_D
+        .AMOMINU_D => return instructionExecutionUnimplemented("AMOMINU_D"), // TODO: AMOMINU_D
+        .AMOMAXU_D => return instructionExecutionUnimplemented("AMOMAXU_D"), // TODO: AMOMAXU_D
+        .FLW => return instructionExecutionUnimplemented("FLW"), // TODO: FLW
+        .FSW => return instructionExecutionUnimplemented("FSW"), // TODO: FSW
+        .FMADD_S => return instructionExecutionUnimplemented("FMADD_S"), // TODO: FMADD_S
+        .FMSUB_S => return instructionExecutionUnimplemented("FMSUB_S"), // TODO: FMSUB_S
+        .FNMSUB_S => return instructionExecutionUnimplemented("FNMSUB_S"), // TODO: FNMSUB_S
+        .FNMADD_S => return instructionExecutionUnimplemented("FNMADD_S"), // TODO: FNMADD_S
+        .FADD_S => return instructionExecutionUnimplemented("FADD_S"), // TODO: FADD_S
+        .FSUB_S => return instructionExecutionUnimplemented("FSUB_S"), // TODO: FSUB_S
+        .FMUL_S => return instructionExecutionUnimplemented("FMUL_S"), // TODO: FMUL_S
+        .FDIV_S => return instructionExecutionUnimplemented("FDIV_S"), // TODO: FDIV_S
+        .FSQRT_S => return instructionExecutionUnimplemented("FSQRT_S"), // TODO: FSQRT_S
+        .FSGNJ_S => return instructionExecutionUnimplemented("FSGNJ_S"), // TODO: FSGNJ_S
+        .FSGNJN_S => return instructionExecutionUnimplemented("FSGNJN_S"), // TODO: FSGNJN_S
+        .FSGNJX_S => return instructionExecutionUnimplemented("FSGNJX_S"), // TODO: FSGNJX_S
+        .FMIN_S => return instructionExecutionUnimplemented("FMIN_S"), // TODO: FMIN_S
+        .FMAX_S => return instructionExecutionUnimplemented("FMAX_S"), // TODO: FMAX_S
+        .FCVT_W_S => return instructionExecutionUnimplemented("FCVT_W_S"), // TODO: FCVT_W_S
+        .FCVT_WU_S => return instructionExecutionUnimplemented("FCVT_WU_S"), // TODO: FCVT_WU_S
+        .FMV_X_W => return instructionExecutionUnimplemented("FMV_X_W"), // TODO: FMV_X_W
+        .FEQ_S => return instructionExecutionUnimplemented("FEQ_S"), // TODO: FEQ_S
+        .FLT_S => return instructionExecutionUnimplemented("FLT_S"), // TODO: FLT_S
+        .FLE_S => return instructionExecutionUnimplemented("FLE_S"), // TODO: FLE_S
+        .FCLASS_S => return instructionExecutionUnimplemented("FCLASS_S"), // TODO: FCLASS_S
+        .FCVT_S_W => return instructionExecutionUnimplemented("FCVT_S_W"), // TODO: FCVT_S_W
+        .FCVT_S_WU => return instructionExecutionUnimplemented("FCVT_S_WU"), // TODO: FCVT_S_WU
+        .FMV_W_X => return instructionExecutionUnimplemented("FMV_W_X"), // TODO: FMV_W_X
+        .FCVT_L_S => return instructionExecutionUnimplemented("FCVT_L_S"), // TODO: FCVT_L_S
+        .FCVT_LU_S => return instructionExecutionUnimplemented("FCVT_LU_S"), // TODO: FCVT_LU_S
+        .FCVT_S_L => return instructionExecutionUnimplemented("FCVT_S_L"), // TODO: FCVT_S_L
+        .FCVT_S_LU => return instructionExecutionUnimplemented("FCVT_S_LU"), // TODO: FCVT_S_LU
+        .FLD => return instructionExecutionUnimplemented("FLD"), // TODO: FLD
+        .FSD => return instructionExecutionUnimplemented("FSD"), // TODO: FSD
+        .FMADD_D => return instructionExecutionUnimplemented("FMADD_D"), // TODO: FMADD_D
+        .FMSUB_D => return instructionExecutionUnimplemented("FMSUB_D"), // TODO: FMSUB_D
+        .FNMSUB_D => return instructionExecutionUnimplemented("FNMSUB_D"), // TODO: FNMSUB_D
+        .FNMADD_D => return instructionExecutionUnimplemented("FNMADD_D"), // TODO: FNMADD_D
+        .FADD_D => return instructionExecutionUnimplemented("FADD_D"), // TODO: FADD_D
+        .FSUB_D => return instructionExecutionUnimplemented("FSUB_D"), // TODO: FSUB_D
+        .FMUL_D => return instructionExecutionUnimplemented("FMUL_D"), // TODO: FMUL_D
+        .FDIV_D => return instructionExecutionUnimplemented("FDIV_D"), // TODO: FDIV_D
+        .FSQRT_D => return instructionExecutionUnimplemented("FSQRT_D"), // TODO: FSQRT_D
+        .FSGNJ_D => return instructionExecutionUnimplemented("FSGNJ_D"), // TODO: FSGNJ_D
+        .FSGNJN_D => return instructionExecutionUnimplemented("FSGNJN_D"), // TODO: FSGNJN_D
+        .FSGNJX_D => return instructionExecutionUnimplemented("FSGNJX_D"), // TODO: FSGNJX_D
+        .FMIN_D => return instructionExecutionUnimplemented("FMIN_D"), // TODO: FMIN_D
+        .FMAX_D => return instructionExecutionUnimplemented("FMAX_D"), // TODO: FMAX_D
+        .FCVT_S_D => return instructionExecutionUnimplemented("FCVT_S_D"), // TODO: FCVT_S_D
+        .FCVT_D_S => return instructionExecutionUnimplemented("FCVT_D_S"), // TODO: FCVT_D_S
+        .FEQ_D => return instructionExecutionUnimplemented("FEQ_D"), // TODO: FEQ_D
+        .FLT_D => return instructionExecutionUnimplemented("FLT_D"), // TODO: FLT_D
+        .FLE_D => return instructionExecutionUnimplemented("FLE_D"), // TODO: FLE_D
+        .FCLASS_D => return instructionExecutionUnimplemented("FCLASS_D"), // TODO: FCLASS_D
+        .FCVT_W_D => return instructionExecutionUnimplemented("FCVT_W_D"), // TODO: FCVT_W_D
+        .FCVT_WU_D => return instructionExecutionUnimplemented("FCVT_WU_D"), // TODO: FCVT_WU_D
+        .FCVT_D_W => return instructionExecutionUnimplemented("FCVT_D_W"), // TODO: FCVT_D_W
+        .FCVT_D_WU => return instructionExecutionUnimplemented("FCVT_D_WU"), // TODO: FCVT_D_WU
+        .FCVT_L_D => return instructionExecutionUnimplemented("FCVT_L_D"), // TODO: FCVT_L_D
+        .FCVT_LU_D => return instructionExecutionUnimplemented("FCVT_LU_D"), // TODO: FCVT_LU_D
+        .FMV_X_D => return instructionExecutionUnimplemented("FMV_X_D"), // TODO: FMV_X_D
+        .FCVT_D_L => return instructionExecutionUnimplemented("FCVT_D_L"), // TODO: FCVT_D_L
+        .FCVT_D_LU => return instructionExecutionUnimplemented("FCVT_D_LU"), // TODO: FCVT_D_LU
+        .FMV_D_X => return instructionExecutionUnimplemented("FMV_D_X"), // TODO: FMV_D_X
+        .C_ADDI4SPN => return instructionExecutionUnimplemented("C_ADDI4SPN"), // TODO: C_ADDI4SPN
+        .C_FLD => return instructionExecutionUnimplemented("C_FLD"), // TODO: C_FLD
+        .C_LW => return instructionExecutionUnimplemented("C_LW"), // TODO: C_LW
+        .C_LD => return instructionExecutionUnimplemented("C_LD"), // TODO: C_LD
+        .C_FSD => return instructionExecutionUnimplemented("C_FSD"), // TODO: C_FSD
+        .C_SW => return instructionExecutionUnimplemented("C_SW"), // TODO: C_SW
+        .C_SD => return instructionExecutionUnimplemented("C_SD"), // TODO: C_SD
+        .C_NOP => return instructionExecutionUnimplemented("C_NOP"), // TODO: C_NOP
+        .C_ADDI => return instructionExecutionUnimplemented("C_ADDI"), // TODO: C_ADDI
+        .C_ADDIW => return instructionExecutionUnimplemented("C_ADDIW"), // TODO: C_ADDIW
+        .C_LI => return instructionExecutionUnimplemented("C_LI"), // TODO: C_LI
+        .C_ADDI16SP => return instructionExecutionUnimplemented("C_ADDI16SP"), // TODO: C_ADDI16SP
+        .C_LUI => return instructionExecutionUnimplemented("C_LUI"), // TODO: C_LUI
+        .C_SRLI => return instructionExecutionUnimplemented("C_SRLI"), // TODO: C_SRLI
+        .C_SRAI => return instructionExecutionUnimplemented("C_SRAI"), // TODO: C_SRAI
+        .C_ANDI => return instructionExecutionUnimplemented("C_ANDI"), // TODO: C_ANDI
+        .C_SUB => return instructionExecutionUnimplemented("C_SUB"), // TODO: C_SUB
+        .C_XOR => return instructionExecutionUnimplemented("C_XOR"), // TODO: C_XOR
+        .C_OR => return instructionExecutionUnimplemented("C_OR"), // TODO: C_OR
+        .C_AND => return instructionExecutionUnimplemented("C_AND"), // TODO: C_AND
+        .C_SUBW => return instructionExecutionUnimplemented("C_SUBW"), // TODO: C_SUBW
+        .C_ADDW => return instructionExecutionUnimplemented("C_ADDW"), // TODO: C_ADDW
         .C_J => {
             const z = lib.traceNamed(@src(), "C_J");
             defer z.end();
@@ -1191,23 +1191,31 @@ fn execute(
                 hart.pc = result;
             }
         },
-        .C_BEQZ => @panic("unimplemented instruction execution for C_BEQZ"), // TODO: C_BEQZ
-        .C_BNEZ => @panic("unimplemented instruction execution for C_BNEZ"), // TODO: C_BNEZ
-        .C_SLLI => @panic("unimplemented instruction execution for C_SLLI"), // TODO: C_SLLI
-        .C_FLDSP => @panic("unimplemented instruction execution for C_FLDSP"), // TODO: C_FLDSP
-        .C_LWSP => @panic("unimplemented instruction execution for C_LWSP"), // TODO: C_LWSP
-        .C_LDSP => @panic("unimplemented instruction execution for C_LDSP"), // TODO: C_LDSP
-        .C_JR => @panic("unimplemented instruction execution for C_JR"), // TODO: C_JR
-        .C_MV => @panic("unimplemented instruction execution for C_MV"), // TODO: C_MV
-        .C_EBREAK => @panic("unimplemented instruction execution for C_EBREAK"), // TODO: C_EBREAK
-        .C_JALR => @panic("unimplemented instruction execution for C_JALR"), // TODO: C_JALR
-        .C_ADD => @panic("unimplemented instruction execution for C_ADD"), // TODO: C_ADD
-        .C_FSDSP => @panic("unimplemented instruction execution for C_FSDSP"), // TODO: C_FSDSP
-        .C_SWSP => @panic("unimplemented instruction execution for C_SWSP"), // TODO: C_SWSP
-        .C_SDSP => @panic("unimplemented instruction execution for C_SDSP"), // TODO: C_SDSP
+        .C_BEQZ => return instructionExecutionUnimplemented("C_BEQZ"), // TODO: C_BEQZ
+        .C_BNEZ => return instructionExecutionUnimplemented("C_BNEZ"), // TODO: C_BNEZ
+        .C_SLLI => return instructionExecutionUnimplemented("C_SLLI"), // TODO: C_SLLI
+        .C_FLDSP => return instructionExecutionUnimplemented("C_FLDSP"), // TODO: C_FLDSP
+        .C_LWSP => return instructionExecutionUnimplemented("C_LWSP"), // TODO: C_LWSP
+        .C_LDSP => return instructionExecutionUnimplemented("C_LDSP"), // TODO: C_LDSP
+        .C_JR => return instructionExecutionUnimplemented("C_JR"), // TODO: C_JR
+        .C_MV => return instructionExecutionUnimplemented("C_MV"), // TODO: C_MV
+        .C_EBREAK => return instructionExecutionUnimplemented("C_EBREAK"), // TODO: C_EBREAK
+        .C_JALR => return instructionExecutionUnimplemented("C_JALR"), // TODO: C_JALR
+        .C_ADD => return instructionExecutionUnimplemented("C_ADD"), // TODO: C_ADD
+        .C_FSDSP => return instructionExecutionUnimplemented("C_FSDSP"), // TODO: C_FSDSP
+        .C_SWSP => return instructionExecutionUnimplemented("C_SWSP"), // TODO: C_SWSP
+        .C_SDSP => return instructionExecutionUnimplemented("C_SDSP"), // TODO: C_SDSP
     }
 
     return true;
+}
+
+inline fn instructionExecutionUnimplemented(comptime name: []const u8) bool {
+    if (build_options.dont_panic_on_unimplemented) {
+        std.debug.print("unimplemented instruction execution for " ++ name, .{});
+        return false;
+    }
+    @panic("unimplemented instruction execution for " ++ name);
 }
 
 fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u64 {

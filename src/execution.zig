@@ -483,7 +483,64 @@ fn execute(
             }
         },
         .BLTU => return instructionExecutionUnimplemented("BLTU"), // TODO: BLTU
-        .BGEU => return instructionExecutionUnimplemented("BGEU"), // TODO: BGEU
+        .BGEU => {
+            const z = lib.traceNamed(@src(), "BGEU");
+            defer z.end();
+
+            // B-type
+
+            const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs2 = instruction.rs2();
+            const rs2_value = hart.x[@enumToInt(rs2)];
+
+            if (rs1_value >= rs2_value) {
+                const imm = instruction.b_imm.read();
+                const result = addSignedToUnsignedWrap(hart.pc, imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\BGEU - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
+                        \\  true
+                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        imm,
+                        hart.pc,
+                        imm,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.pc = result;
+                }
+            } else {
+                if (has_writer) {
+                    const imm = instruction.b_imm.read();
+
+                    try writer.print(
+                        \\BGEU - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
+                        \\  false
+                        \\
+                    , .{
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        imm,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.pc += 4;
+                }
+            }
+        },
         .LB => return instructionExecutionUnimplemented("LB"), // TODO: LB
         .LH => return instructionExecutionUnimplemented("LH"), // TODO: LH
         .LW => return instructionExecutionUnimplemented("LW"), // TODO: LW

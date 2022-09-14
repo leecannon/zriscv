@@ -1068,7 +1068,21 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .FENCE => return instructionExecutionUnimplemented("FENCE"), // TODO: FENCE
+        .FENCE => {
+            const z = lib.traceNamed(@src(), "FENCE");
+            defer z.end();
+
+            if (has_writer) {
+                try writer.print("FENCE\n", .{});
+            }
+
+            if (actually_execute) {
+                // TODO: More precise atomic order
+                @fence(.SeqCst);
+
+                hart.pc += 4;
+            }
+        },
         .ECALL => return instructionExecutionUnimplemented("ECALL"), // TODO: ECALL
         .EBREAK => return instructionExecutionUnimplemented("EBREAK"), // TODO: EBREAK
         .LWU => return instructionExecutionUnimplemented("LWU"), // TODO: LWU

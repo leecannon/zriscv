@@ -673,7 +673,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\LB - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 1 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\  load 1 byte into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
                         \\
                     , .{
                         rs1,
@@ -880,7 +880,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\LBU - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 1 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\  load 1 byte into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
                         \\
                     , .{
                         rs1,

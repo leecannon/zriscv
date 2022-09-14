@@ -1000,8 +1000,118 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SB => return instructionExecutionUnimplemented("SB"), // TODO: SB
-        .SH => return instructionExecutionUnimplemented("SH"), // TODO: SH
+        .SB => {
+            const z = lib.traceNamed(@src(), "SB");
+            defer z.end();
+
+            // S-Type
+            const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs2 = instruction.rs2();
+            const rs2_value = hart.x[@enumToInt(rs2)];
+            const imm = instruction.s_imm.read();
+
+            const address = addSignedToUnsignedWrap(rs1_value, imm);
+
+            if (has_writer) {
+                try writer.print(
+                    \\SB - base: {}, src: {}, imm: 0x{x}
+                    \\  store 1 byte from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\
+                , .{
+                    rs1,
+                    rs2,
+                    imm,
+                    rs2,
+                    rs2_value,
+                    rs1,
+                    rs1_value,
+                    imm,
+                    address,
+                });
+            }
+
+            if (actually_execute) {
+                // TODO: Should this be made comptime?
+                if (riscof_mode) {
+                    // Check if the memory being written to is the 'tohost' symbol
+                    if (hart.machine.executable.tohost == address) {
+                        return false;
+                    }
+                }
+
+                if (options.execution_out_of_bounds_is_fatal) {
+                    try hart.storeMemory(8, address, @truncate(u8, rs2_value));
+                } else {
+                    hart.storeMemory(8, address, @truncate(u8, rs2_value)) catch |err| switch (err) {
+                        error.ExecutionOutOfBounds => {
+                            // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
+                            try throw(mode, hart, {}, 0, writer, true);
+                            return true;
+                        },
+                        else => |e| return e,
+                    };
+                }
+
+                hart.pc += 4;
+            }
+        },
+        .SH => {
+            const z = lib.traceNamed(@src(), "SH");
+            defer z.end();
+
+            // S-Type
+            const rs1 = instruction.rs1();
+            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs2 = instruction.rs2();
+            const rs2_value = hart.x[@enumToInt(rs2)];
+            const imm = instruction.s_imm.read();
+
+            const address = addSignedToUnsignedWrap(rs1_value, imm);
+
+            if (has_writer) {
+                try writer.print(
+                    \\SH - base: {}, src: {}, imm: 0x{x}
+                    \\  store 2 bytes from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\
+                , .{
+                    rs1,
+                    rs2,
+                    imm,
+                    rs2,
+                    rs2_value,
+                    rs1,
+                    rs1_value,
+                    imm,
+                    address,
+                });
+            }
+
+            if (actually_execute) {
+                // TODO: Should this be made comptime?
+                if (riscof_mode) {
+                    // Check if the memory being written to is the 'tohost' symbol
+                    if (hart.machine.executable.tohost == address) {
+                        return false;
+                    }
+                }
+
+                if (options.execution_out_of_bounds_is_fatal) {
+                    try hart.storeMemory(16, address, @truncate(u16, rs2_value));
+                } else {
+                    hart.storeMemory(16, address, @truncate(u16, rs2_value)) catch |err| switch (err) {
+                        error.ExecutionOutOfBounds => {
+                            // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
+                            try throw(mode, hart, {}, 0, writer, true);
+                            return true;
+                        },
+                        else => |e| return e,
+                    };
+                }
+
+                hart.pc += 4;
+            }
+        },
         .SW => {
             const z = lib.traceNamed(@src(), "SW");
             defer z.end();

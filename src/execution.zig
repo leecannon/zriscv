@@ -493,7 +493,58 @@ fn execute(
         .SLTIU => @panic("unimplemented instruction execution for SLTIU"), // TODO: SLTIU
         .XORI => @panic("unimplemented instruction execution for XORI"), // TODO: XORI
         .ORI => @panic("unimplemented instruction execution for ORI"), // TODO: ORI
-        .ANDI => @panic("unimplemented instruction execution for ANDI"), // TODO: ANDI
+        .ANDI => {
+            const z = lib.traceNamed(@src(), "ANDI");
+            defer z.end();
+
+            // I-type
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const imm = instruction.i_imm.read();
+                const result = rs1_value & @bitCast(u64, imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\ANDI - src: {}, dest: {}, imm: {}
+                        \\  set {} to ( {}<{}> & u64({}) ) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                        result,
+                    });
+                }
+
+                hart.x[@enumToInt(rd)] = result;
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\ANDI - src: {}, dest: {}, imm: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SLLI => {
             const z = lib.traceNamed(@src(), "SLLI");
             defer z.end();

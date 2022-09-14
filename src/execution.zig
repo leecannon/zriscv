@@ -655,8 +655,144 @@ fn execute(
                 }
             }
         },
-        .LB => return instructionExecutionUnimplemented("LB"), // TODO: LB
-        .LH => return instructionExecutionUnimplemented("LH"), // TODO: LH
+        .LB => {
+            const z = lib.traceNamed(@src(), "LB");
+            defer z.end();
+
+            // I-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const imm = instruction.i_imm.read();
+
+                const address = addSignedToUnsignedWrap(rs1_value, imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\LB - base: {}, dest: {}, imm: 0x{x}
+                        \\  load 2 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                        address,
+                    });
+                }
+
+                if (actually_execute) {
+                    const memory = if (options.execution_out_of_bounds_is_fatal)
+                        try hart.loadMemory(8, address)
+                    else blk: {
+                        break :blk hart.loadMemory(8, address) catch |err| switch (err) {
+                            error.ExecutionOutOfBounds => {
+                                // TODO: Pass `.LoadAccessFault` once `throw` is implemented
+                                try throw(mode, hart, {}, 0, writer, true);
+                                return true;
+                            },
+                            else => |e| return e,
+                        };
+                    };
+
+                    hart.x[@enumToInt(rd)] = signExtend8bit(memory);
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\LB - base: {}, dest: {}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
+        .LH => {
+            const z = lib.traceNamed(@src(), "LH");
+            defer z.end();
+
+            // I-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const imm = instruction.i_imm.read();
+
+                const address = addSignedToUnsignedWrap(rs1_value, imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\LH - base: {}, dest: {}, imm: 0x{x}
+                        \\  load 2 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                        address,
+                    });
+                }
+
+                if (actually_execute) {
+                    const memory = if (options.execution_out_of_bounds_is_fatal)
+                        try hart.loadMemory(16, address)
+                    else blk: {
+                        break :blk hart.loadMemory(16, address) catch |err| switch (err) {
+                            error.ExecutionOutOfBounds => {
+                                // TODO: Pass `.LoadAccessFault` once `throw` is implemented
+                                try throw(mode, hart, {}, 0, writer, true);
+                                return true;
+                            },
+                            else => |e| return e,
+                        };
+                    };
+
+                    hart.x[@enumToInt(rd)] = signExtend16bit(memory);
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\LH - base: {}, dest: {}, imm: 0x{x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .LW => {
             const z = lib.traceNamed(@src(), "LW");
             defer z.end();

@@ -1366,7 +1366,9 @@ fn execute(
                     });
                 }
 
-                hart.x[@enumToInt(rd)] = result;
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
             } else {
                 if (has_writer) {
                     const rs1 = instruction.rs1();
@@ -2050,9 +2052,11 @@ fn execute(
                     return true;
                 }
 
-                const initial_csr = readCsr(mode, hart, csr);
-                try writeCsr(mode, hart, csr, rs1_value);
-                hart.x[@enumToInt(rd)] = initial_csr;
+                if (actually_execute) {
+                    const initial_csr = readCsr(mode, hart, csr);
+                    try writeCsr(mode, hart, csr, rs1_value);
+                    hart.x[@enumToInt(rd)] = initial_csr;
+                }
             } else {
                 if (has_writer) {
                     try writer.print(
@@ -2075,10 +2079,14 @@ fn execute(
                     return true;
                 }
 
-                try writeCsr(mode, hart, csr, rs1_value);
+                if (actually_execute) {
+                    try writeCsr(mode, hart, csr, rs1_value);
+                }
             }
 
-            hart.pc += 4;
+            if (actually_execute) {
+                hart.pc += 4;
+            }
         },
         .CSRRS => return instructionExecutionUnimplemented("CSRRS"), // TODO: CSRRS
         .CSRRC => return instructionExecutionUnimplemented("CSRRC"), // TODO: CSRRC

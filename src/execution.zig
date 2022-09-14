@@ -1037,6 +1037,27 @@ fn execute(
         .FCVT_D_LU => @panic("unimplemented instruction execution for FCVT_D_LU"), // TODO: FCVT_D_LU
         .FMV_D_X => @panic("unimplemented instruction execution for FMV_D_X"), // TODO: FMV_D_X
         .C_ADDI4SPN => @panic("unimplemented instruction execution for C_ADDI4SPN"), // TODO: C_ADDI4SPN
+        .C_FLD => @panic("unimplemented instruction execution for C_FLD"), // TODO: C_FLD
+        .C_LW => @panic("unimplemented instruction execution for C_LW"), // TODO: C_LW
+        .C_LD => @panic("unimplemented instruction execution for C_LD"), // TODO: C_LD
+        .C_FSD => @panic("unimplemented instruction execution for C_FSD"), // TODO: C_FSD
+        .C_SW => @panic("unimplemented instruction execution for C_SW"), // TODO: C_SW
+        .C_SD => @panic("unimplemented instruction execution for C_SD"), // TODO: C_SD
+        .C_NOP => @panic("unimplemented instruction execution for C_NOP"), // TODO: C_NOP
+        .C_ADDI => @panic("unimplemented instruction execution for C_ADDI"), // TODO: C_ADDI
+        .C_ADDIW => @panic("unimplemented instruction execution for C_ADDIW"), // TODO: C_ADDIW
+        .C_LI => @panic("unimplemented instruction execution for C_LI"), // TODO: C_LI
+        .C_ADDI16SP => @panic("unimplemented instruction execution for C_ADDI16SP"), // TODO: C_ADDI16SP
+        .C_LUI => @panic("unimplemented instruction execution for C_LUI"), // TODO: C_LUI
+        .C_SRLI => @panic("unimplemented instruction execution for C_SRLI"), // TODO: C_SRLI
+        .C_SRAI => @panic("unimplemented instruction execution for C_SRAI"), // TODO: C_SRAI
+        .C_ANDI => @panic("unimplemented instruction execution for C_ANDI"), // TODO: C_ANDI
+        .C_SUB => @panic("unimplemented instruction execution for C_SUB"), // TODO: C_SUB
+        .C_XOR => @panic("unimplemented instruction execution for C_XOR"), // TODO: C_XOR
+        .C_OR => @panic("unimplemented instruction execution for C_OR"), // TODO: C_OR
+        .C_AND => @panic("unimplemented instruction execution for C_AND"), // TODO: C_AND
+        .C_SUBW => @panic("unimplemented instruction execution for C_SUBW"), // TODO: C_SUBW
+        .C_ADDW => @panic("unimplemented instruction execution for C_ADDW"), // TODO: C_ADDW
         .C_J => {
             const z = lib.traceNamed(@src(), "C_J");
             defer z.end();
@@ -1063,6 +1084,20 @@ fn execute(
                 hart.pc = result;
             }
         },
+        .C_BEQZ => @panic("unimplemented instruction execution for C_BEQZ"), // TODO: C_BEQZ
+        .C_BNEZ => @panic("unimplemented instruction execution for C_BNEZ"), // TODO: C_BNEZ
+        .C_SLLI => @panic("unimplemented instruction execution for C_SLLI"), // TODO: C_SLLI
+        .C_FLDSP => @panic("unimplemented instruction execution for C_FLDSP"), // TODO: C_FLDSP
+        .C_LWSP => @panic("unimplemented instruction execution for C_LWSP"), // TODO: C_LWSP
+        .C_LDSP => @panic("unimplemented instruction execution for C_LDSP"), // TODO: C_LDSP
+        .C_JR => @panic("unimplemented instruction execution for C_JR"), // TODO: C_JR
+        .C_MV => @panic("unimplemented instruction execution for C_MV"), // TODO: C_MV
+        .C_EBREAK => @panic("unimplemented instruction execution for C_EBREAK"), // TODO: C_EBREAK
+        .C_JALR => @panic("unimplemented instruction execution for C_JALR"), // TODO: C_JALR
+        .C_ADD => @panic("unimplemented instruction execution for C_ADD"), // TODO: C_ADD
+        .C_FSDSP => @panic("unimplemented instruction execution for C_FSDSP"), // TODO: C_FSDSP
+        .C_SWSP => @panic("unimplemented instruction execution for C_SWSP"), // TODO: C_SWSP
+        .C_SDSP => @panic("unimplemented instruction execution for C_SDSP"), // TODO: C_SDSP
     }
 
     return true;

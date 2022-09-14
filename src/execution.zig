@@ -980,7 +980,61 @@ fn execute(
         },
         .SLTI => return instructionExecutionUnimplemented("SLTI"), // TODO: SLTI
         .SLTIU => return instructionExecutionUnimplemented("SLTIU"), // TODO: SLTIU
-        .XORI => return instructionExecutionUnimplemented("XORI"), // TODO: XORI
+        .XORI => {
+            const z = lib.traceNamed(@src(), "ADDI");
+            defer z.end();
+
+            // I-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const imm = @bitCast(u64, instruction.i_imm.read());
+                const result = rs1_value ^ @bitCast(u64, imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\XORI - src: {}, dest: {}, imm: {}
+                        \\  set {} to ( {}<{}> ^ {} ) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\XORI - src: {}, dest: {}, imm: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .ORI => return instructionExecutionUnimplemented("ORI"), // TODO: ORI
         .ANDI => {
             const z = lib.traceNamed(@src(), "ANDI");
@@ -992,13 +1046,13 @@ fn execute(
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
                 const rs1_value = hart.x[@enumToInt(rs1)];
-                const imm = instruction.i_imm.read();
-                const result = rs1_value & @bitCast(u64, imm);
+                const imm = @bitCast(u64, instruction.i_imm.read());
+                const result = rs1_value & imm;
 
                 if (has_writer) {
                     try writer.print(
                         \\ANDI - src: {}, dest: {}, imm: {}
-                        \\  set {} to ( {}<{}> & u64({}) ) = {}
+                        \\  set {} to ( {}<{}> & {} ) = {}
                         \\
                     , .{
                         rs1,

@@ -798,7 +798,7 @@ fn execute(
         .SRLIW => @panic("unimplemented instruction execution for SRLIW"), // TODO: SRLIW
         .SRAIW => @panic("unimplemented instruction execution for SRAIW"), // TODO: SRAIW
         .ADDW => {
-            const z = lib.traceNamed(@src(), "ADDIW");
+            const z = lib.traceNamed(@src(), "ADDW");
             defer z.end();
 
             // R-type

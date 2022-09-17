@@ -71,12 +71,12 @@ fn setupLinksAndPackages(exe: *std.build.LibExeObjStep, options_step: *std.build
     exe.addPackage(bitjuggle_pkg);
     exe.linkLibC();
 
-    exe.addIncludeDir("external/bestline");
+    exe.addIncludePath("external/bestline");
     exe.addCSourceFile("external/bestline/bestline.c", &.{});
 
     if (include_tracy) {
         exe.linkLibCpp();
-        exe.addIncludeDir("external/tracy/public");
+        exe.addIncludePath("external/tracy/public");
 
         const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
             &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }

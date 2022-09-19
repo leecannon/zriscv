@@ -1621,7 +1621,60 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SLT => return instructionExecutionUnimplemented("SLT"), // TODO: SLT
+        .SLT => {
+            const z = lib.traceNamed(@src(), "SLT");
+            defer z.end();
+
+            // I-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+                const imm = instruction.i_imm.read();
+                const result = @boolToInt(rs1_value < imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLTI - src: {}, dest: {}, imm: {x}
+                        \\  set {} to {}<{}> < {x} ? 1 : 0
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\SLTI - src: {}, dest: {}, imm: {x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SLTU => return instructionExecutionUnimplemented("SLTU"), // TODO: SLTU
         .XOR => return instructionExecutionUnimplemented("XOR"), // TODO: XOR
         .SRL => return instructionExecutionUnimplemented("SRL"), // TODO: SRL

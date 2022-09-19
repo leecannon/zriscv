@@ -2405,7 +2405,61 @@ fn execute(
             }
         },
         .SRLIW => return instructionExecutionUnimplemented("SRLIW"), // TODO: SRLIW
-        .SRAIW => return instructionExecutionUnimplemented("SRAIW"), // TODO: SRAIW
+        .SRAIW => {
+            const z = lib.traceNamed(@src(), "SRAIW");
+            defer z.end();
+
+            // I-type specialization
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs1)]));
+                const shmt = instruction.i_specialization.smallShift();
+                const result = signExtend32bit(@bitCast(u32, rs1_value >> shmt));
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SRAI - src: {}, dest: {}, shmt: {}
+                        \\  set {} to {}<{}> >> {} = {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        shmt,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SRAI - src: {}, dest: {}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .ADDW => {
             const z = lib.traceNamed(@src(), "ADDW");
             defer z.end();

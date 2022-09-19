@@ -2577,7 +2577,63 @@ fn execute(
             }
         },
         .SRLW => return instructionExecutionUnimplemented("SRLW"), // TODO: SRLW
-        .SRAW => return instructionExecutionUnimplemented("SRAW"), // TODO: SRAW
+        .SRAW => {
+            const z = lib.traceNamed(@src(), "SRAW");
+            defer z.end();
+
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs1)]));
+                const rs2 = instruction.rs2();
+                const rs2_value = @truncate(u5, hart.x[@enumToInt(rs2)]);
+                const result = signExtend32bit(@bitCast(u32, rs1_value >> rs2_value));
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SRAW - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {}<{}> >> {}<{}> = {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\SRAW - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .FENCE_I => return instructionExecutionUnimplemented("FENCE_I"), // TODO: FENCE_I
         .CSRRW => {
             const z = lib.traceNamed(@src(), "CSRRW");

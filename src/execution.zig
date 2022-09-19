@@ -2114,7 +2114,63 @@ fn execute(
             }
         },
         .SUBW => return instructionExecutionUnimplemented("SUBW"), // TODO: SUBW
-        .SLLW => return instructionExecutionUnimplemented("SLLW"), // TODO: SLLW
+        .SLLW => {
+            const z = lib.traceNamed(@src(), "SLLW");
+            defer z.end();
+
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs2 = instruction.rs2();
+                const rs2_value = @truncate(u5, hart.x[@enumToInt(rs2)]);
+                const result = signExtend32bit(rs1_value << rs2_value);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLLW - src1: {}, src2: {}, dest: {}
+                        \\  set {} to ( u32({}<{}>) << u5({}<{}>) ) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\SLLW - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SRLW => return instructionExecutionUnimplemented("SRLW"), // TODO: SRLW
         .SRAW => return instructionExecutionUnimplemented("SRAW"), // TODO: SRAW
         .FENCE_I => return instructionExecutionUnimplemented("FENCE_I"), // TODO: FENCE_I

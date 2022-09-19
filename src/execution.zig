@@ -1248,7 +1248,60 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SLTI => return instructionExecutionUnimplemented("SLTI"), // TODO: SLTI
+        .SLTI => {
+            const z = lib.traceNamed(@src(), "SLTI");
+            defer z.end();
+
+            // I-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+                const imm = instruction.i_imm.read();
+                const result = @boolToInt(rs1_value < imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLTI - src: {}, dest: {}, imm: {x}
+                        \\  set {} to {}<{}> < {x} ? 1 : 0
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\SLTI - src: {}, dest: {}, imm: {x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SLTIU => return instructionExecutionUnimplemented("SLTIU"), // TODO: SLTIU
         .XORI => {
             const z = lib.traceNamed(@src(), "ADDI");
@@ -1646,32 +1699,31 @@ fn execute(
             }
         },
         .SLT => {
-            const z = lib.traceNamed(@src(), "SLT");
-            defer z.end();
-
-            // I-type
+            // R-type
 
             const rd = instruction.rd();
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
                 const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
-                const imm = instruction.i_imm.read();
-                const result = @boolToInt(rs1_value < imm);
+                const rs2 = instruction.rs2();
+                const rs2_value = @bitCast(i64, hart.x[@enumToInt(rs2)]);
+                const result = @boolToInt(rs1_value < rs2_value);
 
                 if (has_writer) {
                     try writer.print(
-                        \\SLTI - src: {}, dest: {}, imm: {x}
-                        \\  set {} to {}<{}> < {x} ? 1 : 0
+                        \\SLT - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {}<{}> < {}<{}> ? 1 : 0
                         \\
                     , .{
                         rs1,
+                        rs2,
                         rd,
-                        imm,
                         rd,
                         rs1,
                         rs1_value,
-                        imm,
+                        rs2,
+                        rs2_value,
                     });
                 }
 
@@ -1681,16 +1733,16 @@ fn execute(
             } else {
                 if (has_writer) {
                     const rs1 = instruction.rs1();
-                    const imm = instruction.i_imm.read();
+                    const rs2 = instruction.rs2();
 
                     try writer.print(
-                        \\SLTI - src: {}, dest: {}, imm: {x}
+                        \\SLT - src1: {}, src2: {}, dest: {}
                         \\  nop
                         \\
                     , .{
                         rs1,
+                        rs2,
                         rd,
-                        imm,
                     });
                 }
             }

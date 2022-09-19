@@ -1302,7 +1302,60 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SLTIU => return instructionExecutionUnimplemented("SLTIU"), // TODO: SLTIU
+        .SLTIU => {
+            const z = lib.traceNamed(@src(), "SLTIU");
+            defer z.end();
+
+            // I-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const imm = @bitCast(u64, instruction.i_imm.read());
+                const result = @boolToInt(rs1_value < imm);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLTIU - src: {}, dest: {}, imm: {x}
+                        \\  set {} to {}<{}> < {x} ? 1 : 0
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        imm,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const imm = instruction.i_imm.read();
+
+                    try writer.print(
+                        \\SLTIU - src: {}, dest: {}, imm: {x}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        imm,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .XORI => {
             const z = lib.traceNamed(@src(), "ADDI");
             defer z.end();

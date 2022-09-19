@@ -2738,7 +2738,66 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SUBW => return instructionExecutionUnimplemented("SUBW"), // TODO: SUBW
+        .SUBW => {
+            const z = lib.traceNamed(@src(), "SUBW");
+            defer z.end();
+
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs2 = instruction.rs2();
+                const rs2_value = @truncate(u32, hart.x[@enumToInt(rs2)]);
+
+                var result: u32 = undefined;
+                _ = @subWithOverflow(u32, rs1_value, rs2_value, &result);
+                const extended_result = signExtend32bit(result);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SUBW - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {}<{}> - {}<{}> = {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = extended_result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\SUBW - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SLLW => {
             const z = lib.traceNamed(@src(), "SLLW");
             defer z.end();

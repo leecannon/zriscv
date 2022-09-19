@@ -1576,7 +1576,61 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SRLI => return instructionExecutionUnimplemented("SRLI"), // TODO: SRLI
+        .SRLI => {
+            const z = lib.traceNamed(@src(), "SRLI");
+            defer z.end();
+
+            // I-type specialization
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const shmt = instruction.i_specialization.fullShift();
+                const result = rs1_value >> shmt;
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SRLI - src: {}, dest: {}, shmt: {}
+                        \\  set {} to {}<{}> >> {} = {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        shmt,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SRLI - src: {}, dest: {}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SRAI => {
             const z = lib.traceNamed(@src(), "SRAI");
             defer z.end();

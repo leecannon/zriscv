@@ -29,35 +29,16 @@ pub fn step(
 
     const has_writer = comptime isWriter(@TypeOf(writer));
 
-    const instruction: lib.Instruction = blk: {
-        const z = lib.traceNamed(@src(), "instruction read");
-        defer z.end();
+    const instruction = readInstruction(mode, hart) catch |err| {
+        if (options.execution_out_of_bounds_is_fatal) return err;
 
-        break :blk .{
-            // try to load 32-bit instruction
-            .full_backing = hart.loadMemory(32, hart.pc) catch |err| switch (err) {
-                // try to load 16-bit compressed instruction
-                error.ExecutionOutOfBounds => {
-                    break :blk .{
-                        .compressed_backing = .{
-                            .low = hart.loadMemory(16, hart.pc) catch |compressed_err| {
-                                if (options.execution_out_of_bounds_is_fatal) return error.ExecutionOutOfBounds;
-
-                                switch (compressed_err) {
-                                    // TODO: Pass `InstructionAccessFault` once `throw` is implemented
-                                    error.ExecutionOutOfBounds => {
-                                        try throw(mode, hart, {}, 0, writer, actually_execute);
-                                        return true;
-                                    },
-                                    else => |e| return e,
-                                }
-                            },
-                        },
-                    };
-                },
-                else => |e| return e,
+        switch (err) {
+            // TODO: Pass `InstructionAccessFault` once `throw` is implemented
+            error.ExecutionOutOfBounds => {
+                try throw(mode, hart, {}, 0, writer, actually_execute);
+                return true;
             },
-        };
+        }
     };
 
     if (has_writer and options.always_print_pc) {
@@ -65,6 +46,26 @@ pub fn step(
     }
 
     return try execute(mode, hart, instruction, writer, riscof_mode, options, actually_execute);
+}
+
+fn readInstruction(comptime mode: lib.Mode, hart: *lib.Hart(mode)) !lib.Instruction {
+    // try to load 32-bit instruction
+    if (hart.loadMemory(32, hart.pc)) |mem| {
+        return lib.Instruction{ .full_backing = mem };
+    } else |full_err| switch (full_err) {
+        error.ExecutionOutOfBounds => {
+            // try to load 16-bit compressed instruction which happens to be at the very end of readable memory region
+            if (hart.loadMemory(16, hart.pc)) |mem| {
+                const instruction = lib.Instruction{ .compressed_backing = .{ .low = mem } };
+                if (instruction.op.read() == 0b11) {
+                    // This doesn't look like a compressed instruction
+                    return error.ExecutionOutOfBounds;
+                }
+                return instruction;
+            } else |e| return e;
+        },
+        else => |e| return e,
+    }
 }
 
 fn execute(

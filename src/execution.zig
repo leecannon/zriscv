@@ -1752,6 +1752,9 @@ fn execute(
             }
         },
         .SLT => {
+            const z = lib.traceNamed(@src(), "SLT");
+            defer z.end();
+
             // R-type
 
             const rd = instruction.rd();

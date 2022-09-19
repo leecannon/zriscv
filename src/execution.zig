@@ -1577,7 +1577,61 @@ fn execute(
             }
         },
         .SRLI => return instructionExecutionUnimplemented("SRLI"), // TODO: SRLI
-        .SRAI => return instructionExecutionUnimplemented("SRAI"), // TODO: SRAI
+        .SRAI => {
+            const z = lib.traceNamed(@src(), "SRAI");
+            defer z.end();
+
+            // I-type specialization
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+                const shmt = instruction.i_specialization.fullShift();
+                const result = @bitCast(u64, @bitCast(i64, rs1_value >> shmt));
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SRAI - src: {}, dest: {}, shmt: {}
+                        \\  set {} to {}<{}> >> {} = {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        shmt,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SRAI - src: {}, dest: {}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .ADD => {
             const z = lib.traceNamed(@src(), "ADD");
             defer z.end();

@@ -16,7 +16,7 @@ The focus is on correctness not performance, I'm expecting practically every exe
  - provide a linux userspace emulation similar to qemu's
 
 ## Progress
-- [ ] RV64I (64-bit Base Integer)
+- [X] RV64I (64-bit Base Integer)
 - [ ] M (Multiplication and Division)
 - [ ] A (Atomic)
 - [ ] F (Single-Precision Floating-Point)

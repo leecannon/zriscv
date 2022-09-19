@@ -159,8 +159,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\AUIPC - dest: {}, offset: 0x{x}
-                        \\  setting {} to  ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\AUIPC - dest: {}, offset: {x}
+                        \\  setting {} to pc<{x}> + {x} = {x}
                         \\
                     , .{
                         rd,
@@ -180,7 +180,7 @@ fn execute(
                     const imm = instruction.u_imm.read();
 
                     try writer.print(
-                        \\AUIPC - dest: {}, offset: 0x{x}
+                        \\AUIPC - dest: {}, offset: {x}
                         \\  nop
                         \\
                     , .{
@@ -210,9 +210,9 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\JAL - dest: {}, offset: 0x{x}
-                        \\  setting {} to ( pc<0x{x}> + 0x4 ) = 0x{x}
-                        \\  setting pc ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\JAL - dest: {}, offset: {x}
+                        \\  setting {} to pc<{x}> + 4 = {x}
+                        \\  setting pc to pc<{x}> + {x} = {x}
                         \\
                     , .{
                         rd,
@@ -232,8 +232,8 @@ fn execute(
             } else {
                 if (has_writer) {
                     try writer.print(
-                        \\JAL - dest: {}, offset: 0x{x}
-                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\JAL - dest: {}, offset: {x}
+                        \\  setting pc to pc<{x}> + {x} = {x}
                         \\
                     , .{
                         rd,
@@ -266,9 +266,9 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\JALR - dest: {}, base: {}, offset: 0x{x}
-                        \\  setting {} to ( pc<0x{x}> + 0x4 ) = 0x{x}
-                        \\  setting pc to ( {}<0x{x}> + 0x{x} ) & ~1 = 0x{x}
+                        \\JALR - dest: {}, base: {}, offset: {x}
+                        \\  setting {} to pc<{x}> + 4 = {x}
+                        \\  setting pc to ({}<{x}> + {x}) & ~1 = {x}
                         \\
                     , .{
                         rd,
@@ -290,8 +290,8 @@ fn execute(
             } else {
                 if (has_writer) {
                     try writer.print(
-                        \\JALR - dest: {}, base: {}, offset: 0x{x}
-                        \\  setting pc to ( {}<0x{x}> + 0x{x} ) & ~1 = 0x{x}
+                        \\JALR - dest: {}, base: {}, offset: {x}
+                        \\  setting pc to ({}<{x}> + {x}) & ~1 = {x}
                         \\
                     , .{
                         rd,
@@ -326,16 +326,18 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\BEQ - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  true
-                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\BEQ - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> == {}<{}> ) == true
+                        \\  setting pc to pc<{x}> + {x} = {x}
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                         hart.pc,
                         imm,
                         result,
@@ -350,15 +352,17 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BEQ - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  false
+                        \\BEQ - src1: {}, src2: {}, offset: 0x{x}
+                        \\  ( {}<{}> == {}<{}> ) == false
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                     });
                 }
 
@@ -384,16 +388,18 @@ fn execute(
             if (rs1_value != rs2_value) {
                 if (has_writer) {
                     try writer.print(
-                        \\BNE - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  true
-                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\BNE - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> != {}<{}> ) == true
+                        \\  setting pc to pc<{x}> + {x} = {x}
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                         hart.pc,
                         imm,
                         result,
@@ -406,15 +412,17 @@ fn execute(
             } else {
                 if (has_writer) {
                     try writer.print(
-                        \\BNE - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  false
+                        \\BNE - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> != {}<{}> ) == false
                         \\
                     , .{
                         rs1,
+                        rs2,
+                        imm,
+                        rs1,
                         rs1_value,
                         rs2,
-                        rs1_value,
-                        imm,
+                        rs2_value,
                     });
                 }
 
@@ -440,16 +448,18 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\BLT - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  true
-                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\BLT - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> < {}<{}> ) == true
+                        \\  setting pc to pc<{x}> + {x} = {x}
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                         hart.pc,
                         imm,
                         result,
@@ -464,15 +474,17 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BLT - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  false
+                        \\BLT - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> < {}<{}> ) == false
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                     });
                 }
 
@@ -498,16 +510,18 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\BGE - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  true
-                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\BGE - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> >= {}<{}> ) == true
+                        \\  setting pc to pc<{x}> + {x} = {x}
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                         hart.pc,
                         imm,
                         result,
@@ -522,15 +536,17 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BGE - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  false
+                        \\BGE - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> >= {}<{}> ) == false
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                     });
                 }
 
@@ -556,16 +572,18 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\BLTU - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  true
-                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\BLTU - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> < {}<{}> ) == true
+                        \\  setting pc to pc<{x}> + {x} = {x}
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                         hart.pc,
                         imm,
                         result,
@@ -580,15 +598,17 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BLTU - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  false
+                        \\BLTU - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> < {}<{}> ) == false
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                     });
                 }
 
@@ -614,16 +634,18 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\BGEU - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  true
-                        \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                        \\BGEU - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> >= {}<{}> ) == true
+                        \\  setting pc to pc<{x}> + {x} = {x}
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                         hart.pc,
                         imm,
                         result,
@@ -638,15 +660,17 @@ fn execute(
                     const imm = instruction.b_imm.read();
 
                     try writer.print(
-                        \\BGEU - src1: {}<{}>, src2: {}<{}>, offset: 0x{x}
-                        \\  false
+                        \\BGEU - src1: {}, src2: {}, offset: {x}
+                        \\  ( {}<{}> >= {}<{}> ) == false
                         \\
                     , .{
+                        rs1,
+                        rs2,
+                        imm,
                         rs1,
                         rs1_value,
                         rs2,
                         rs2_value,
-                        imm,
                     });
                 }
 
@@ -672,8 +696,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\LB - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 1 byte into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\LB - base: {}, dest: {}, imm: {x}
+                        \\  load 1 byte into {} from memory ( {}<{x}> + {x} ) = {x}
                         \\
                     , .{
                         rs1,
@@ -709,7 +733,7 @@ fn execute(
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LB - base: {}, dest: {}, imm: 0x{x}
+                        \\LB - base: {}, dest: {}, imm: {x}
                         \\  nop
                         \\
                     , .{
@@ -741,8 +765,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\LH - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 2 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\LH - base: {}, dest: {}, imm: {x}
+                        \\  load 2 bytes into {} from memory ( {}<{x}> + {x} ) = {x}
                         \\
                     , .{
                         rs1,
@@ -778,7 +802,7 @@ fn execute(
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LH - base: {}, dest: {}, imm: 0x{x}
+                        \\LH - base: {}, dest: {}, imm: {x}
                         \\  nop
                         \\
                     , .{
@@ -810,8 +834,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\LW - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 4 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\LW - base: {}, dest: {}, imm: {x}
+                        \\  load 4 bytes into {} from memory ( {}<{x}> + {x} ) = {x}
                         \\
                     , .{
                         rs1,
@@ -847,7 +871,7 @@ fn execute(
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LW - base: {}, dest: {}, imm: 0x{x}
+                        \\LW - base: {}, dest: {}, imm: {x}
                         \\  nop
                         \\
                     , .{
@@ -879,8 +903,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\LBU - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 1 byte into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\LBU - base: {}, dest: {}, imm: {x}
+                        \\  load 1 byte into {} from memory ( {}<{x}> + {x} ) = {x}
                         \\
                     , .{
                         rs1,
@@ -916,7 +940,7 @@ fn execute(
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LB - base: {}, dest: {}, imm: 0x{x}
+                        \\LB - base: {}, dest: {}, imm: {x}
                         \\  nop
                         \\
                     , .{
@@ -948,8 +972,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\LHU - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 2 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\LHU - base: {}, dest: {}, imm: {x}
+                        \\  load 2 bytes into {} from memory ( {}<{x}> + {x} ) = {x}
                         \\
                     , .{
                         rs1,
@@ -985,7 +1009,7 @@ fn execute(
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LHU - base: {}, dest: {}, imm: 0x{x}
+                        \\LHU - base: {}, dest: {}, imm: {x}
                         \\  nop
                         \\
                     , .{
@@ -1015,8 +1039,8 @@ fn execute(
 
             if (has_writer) {
                 try writer.print(
-                    \\SB - base: {}, src: {}, imm: 0x{x}
-                    \\  store 1 byte from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\SB - base: {}, src: {}, imm: {x}
+                    \\  store 1 byte from {}<{}> into memory ( {}<{x}> + {x} ) = {x}
                     \\
                 , .{
                     rs1,
@@ -1071,8 +1095,8 @@ fn execute(
 
             if (has_writer) {
                 try writer.print(
-                    \\SH - base: {}, src: {}, imm: 0x{x}
-                    \\  store 2 bytes from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\SH - base: {}, src: {}, imm: {x}
+                    \\  store 2 bytes from {}<{}> into memory ( {}<{x}> + {x} ) = {x}
                     \\
                 , .{
                     rs1,
@@ -1127,8 +1151,8 @@ fn execute(
 
             if (has_writer) {
                 try writer.print(
-                    \\SW - base: {}, src: {}, imm: 0x{x}
-                    \\  store 4 bytes from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\SW - base: {}, src: {}, imm: {x}
+                    \\  store 4 bytes from {}<{}> into memory ( {}<{x}> + {x} ) = {x}
                     \\
                 , .{
                     rs1,
@@ -1186,7 +1210,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\ADDI - src: {}, dest: {}, imm: {}
-                        \\  set {} to ( {}<{}> + {} ) = {}
+                        \\  set {} to {}<{}> + {} = {}
                         \\
                     , .{
                         rs1,
@@ -1243,7 +1267,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\XORI - src: {}, dest: {}, imm: {}
-                        \\  set {} to ( {}<{}> ^ {} ) = {}
+                        \\  set {} to {}<{}> ^ {} = {}
                         \\
                     , .{
                         rs1,
@@ -1298,7 +1322,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\ORI - src: {}, dest: {}, imm: {}
-                        \\  set {} to ( {}<{}> & {} ) = {}
+                        \\  set {} to {}<{}> & {} = {}
                         \\
                     , .{
                         rs1,
@@ -1352,7 +1376,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\ANDI - src: {}, dest: {}, imm: {}
-                        \\  set {} to ( {}<{}> & {} ) = {}
+                        \\  set {} to {}<{}> & {} = {}
                         \\
                     , .{
                         rs1,
@@ -1407,7 +1431,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\SLLI - src: {}, dest: {}, shmt: {}
-                        \\  set {} to ( {}<{}> << {} ) = {}
+                        \\  set {} to {}<{}> << {} = {}
                         \\
                     , .{
                         rs1,
@@ -1467,7 +1491,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\ADD - src1: {}, src2: {}, dest: {}
-                        \\  set {} to ( {}<{}> + {}<{}> ) = {}
+                        \\  set {} to {}<{}> + {}<{}> = {}
                         \\
                     , .{
                         rs1,
@@ -1525,7 +1549,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\ADD - src1: {}, src2: {}, dest: {}
-                        \\  set {} to ( {}<{}> + {}<{}> ) = {}
+                        \\  set {} to {}<{}> + {}<{}> = {}
                         \\
                     , .{
                         rs1,
@@ -1582,7 +1606,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\SLL - src1: {}, src2: {}, dest: {}
-                        \\  set {} to ( {}<{}> << {}<u6({})> ) = {}
+                        \\  set {} to {}<{}> << u6({}<{}>) = {}
                         \\
                     , .{
                         rs1,
@@ -1697,7 +1721,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\OR - src1: {}, src2: {}, dest: {}
-                        \\  set {} to ( {}<{}> & {}<{}> ) = {}
+                        \\  set {} to {}<{}> & {}<{}> = {}
                         \\
                     , .{
                         rs1,
@@ -1754,7 +1778,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\AND - src1: {}, src2: {}, dest: {}
-                        \\  set {} to ( {}<{}> & {}<{}> ) = {}
+                        \\  set {} to {}<{}> & {}<{}> = {}
                         \\
                     , .{
                         rs1,
@@ -1827,8 +1851,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\LWU - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 4 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\LWU - base: {}, dest: {}, imm: {x}
+                        \\  load 4 bytes into {} from memory {}<{x}> + {x} = {x}
                         \\
                     , .{
                         rs1,
@@ -1864,7 +1888,7 @@ fn execute(
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LWU - base: {}, dest: {}, imm: 0x{x}
+                        \\LWU - base: {}, dest: {}, imm: {x}
                         \\  nop
                         \\
                     , .{
@@ -1896,8 +1920,8 @@ fn execute(
 
                 if (has_writer) {
                     try writer.print(
-                        \\LD - base: {}, dest: {}, imm: 0x{x}
-                        \\  load 8 bytes into {} from memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                        \\LD - base: {}, dest: {}, imm: {x}
+                        \\  load 8 bytes into {} from memory {}<{x}> + {x} = {x}
                         \\
                     , .{
                         rs1,
@@ -1933,7 +1957,7 @@ fn execute(
                     const imm = instruction.i_imm.read();
 
                     try writer.print(
-                        \\LD - base: {}, dest: {}, imm: 0x{x}
+                        \\LD - base: {}, dest: {}, imm: {x}
                         \\  nop
                         \\
                     , .{
@@ -1963,8 +1987,8 @@ fn execute(
 
             if (has_writer) {
                 try writer.print(
-                    \\SD - base: {}, src: {}, imm: 0x{x}
-                    \\  store 8 bytes from {}<{}> into memory ( {}<0x{x}> + 0x{x} ) = 0x{x}
+                    \\SD - base: {}, src: {}, imm: {x}
+                    \\  store 8 bytes from {}<{}> into memory {}<{x}> + {x} = {x}
                     \\
                 , .{
                     rs1,
@@ -2068,7 +2092,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\SLLIW - src: {}, dest: {}, shmt: {}
-                        \\  set {} to ( {}<{}> << {} ) = {}
+                        \\  set {} to u32({}<{}>) << {} = {}
                         \\
                     , .{
                         rs1,
@@ -2185,7 +2209,7 @@ fn execute(
                 if (has_writer) {
                     try writer.print(
                         \\SLLW - src1: {}, src2: {}, dest: {}
-                        \\  set {} to ( u32({}<{}>) << u5({}<{}>) ) = {}
+                        \\  set {} to u32( {}<{}> ) << u5( {}<{}> ) = {}
                         \\
                     , .{
                         rs1,
@@ -2442,8 +2466,8 @@ fn execute(
 
             if (has_writer) {
                 try writer.print(
-                    \\C.J - offset: 0x{x}
-                    \\  setting pc to ( pc<0x{x}> + 0x{x} ) = 0x{x}
+                    \\C.J - offset: {x}
+                    \\  setting pc to pc<{x}> + {x} = {x}
                     \\
                 , .{
                     imm,

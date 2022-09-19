@@ -1808,7 +1808,62 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SLTU => return instructionExecutionUnimplemented("SLTU"), // TODO: SLTU
+        .SLTU => {
+            const z = lib.traceNamed(@src(), "SLTU");
+            defer z.end();
+
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs2 = instruction.rs2();
+                const rs2_value = hart.x[@enumToInt(rs2)];
+                const result = @boolToInt(rs1_value < rs2_value);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLTU - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {}<{}> < {}<{}> ? 1 : 0
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\SLTU - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .XOR => return instructionExecutionUnimplemented("XOR"), // TODO: XOR
         .SRL => return instructionExecutionUnimplemented("SRL"), // TODO: SRL
         .SRA => return instructionExecutionUnimplemented("SRA"), // TODO: SRA

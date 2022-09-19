@@ -1998,7 +1998,61 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .SLLIW => return instructionExecutionUnimplemented("SLLIW"), // TODO: SLLIW
+        .SLLIW => {
+            const z = lib.traceNamed(@src(), "SLLIW");
+            defer z.end();
+
+            // I-type specialization
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const shmt = instruction.i_specialization.smallShift();
+                const result = signExtend32bit(rs1_value << shmt);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\SLLIW - src: {}, dest: {}, shmt: {}
+                        \\  set {} to ( {}<{}> << {} ) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        shmt,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const shmt = instruction.i_specialization.fullShift();
+
+                    try writer.print(
+                        \\SLLIW - src: {}, dest: {}, shmt: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rd,
+                        shmt,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SRLIW => return instructionExecutionUnimplemented("SRLIW"), // TODO: SRLIW
         .SRAIW => return instructionExecutionUnimplemented("SRAIW"), // TODO: SRAIW
         .ADDW => {

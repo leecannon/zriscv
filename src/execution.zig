@@ -1972,7 +1972,63 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .XOR => return instructionExecutionUnimplemented("XOR"), // TODO: XOR
+        .XOR => {
+            const z = lib.traceNamed(@src(), "XOR");
+            defer z.end();
+
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs2 = instruction.rs2();
+                const rs2_value = hart.x[@enumToInt(rs2)];
+                const result = rs1_value ^ rs2_value;
+
+                if (has_writer) {
+                    try writer.print(
+                        \\XOR - src1: {}, src2: {}, dest: {}
+                        \\  set {} to {}>{}> ^ {}<{}> = {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\XOR - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .SRL => {
             const z = lib.traceNamed(@src(), "SRL");
             defer z.end();

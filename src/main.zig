@@ -331,7 +331,7 @@ fn writeOutSignature(signature_file: []const u8, memory: lib.SystemMemory, execu
     var buffered_writer = std.io.bufferedWriter(file.writer());
     const writer = buffered_writer.writer();
 
-    const ptr = @ptrCast([*]const u32, &memory.memory[executable.begin_signature]);
+    const ptr = @ptrCast([*]const u32, @alignCast(4, &memory.memory[executable.begin_signature]));
     const len = (executable.end_signature - executable.begin_signature) / @sizeOf(u32);
     const slice = ptr[0..len];
 

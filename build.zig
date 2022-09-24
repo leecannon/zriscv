@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const zriscv_version = std.builtin.Version{ .major = 0, .minor = 0, .patch = 2 };
+const zriscv_version = std.builtin.Version{ .major = 0, .minor = 1, .patch = 0 };
 
 pub fn build(b: *std.build.Builder) !void {
     b.prominent_compile_errors = true;

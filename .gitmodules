@@ -1,15 +1,15 @@
-[submodule "external/zig-bitjuggle"]
+[submodule "libraries/zig-bitjuggle"]
 	path = libraries/zig-bitjuggle
 	url = https://github.com/leecannon/zig-bitjuggle.git
-[submodule "external/zig-args"]
+[submodule "libraries/zig-args"]
 	path = libraries/zig-args
 	url = https://github.com/MasterQ32/zig-args.git
-[submodule "external/tracy"]
+[submodule "libraries/tracy"]
 	path = libraries/tracy/tracy
 	url = https://github.com/wolfpld/tracy.git
-[submodule "external/bestline"]
+[submodule "libraries/bestline"]
 	path = libraries/bestline/bestline
 	url = https://github.com/jart/bestline.git
-[submodule "external/known-folders"]
+[submodule "libraries/known-folders"]
 	path = libraries/known-folders
 	url = https://github.com/ziglibs/known-folders.git

@@ -1,8 +1,8 @@
 const std = @import("std");
-const lib = @import("lib.zig");
+const zriscv = @import("zriscv");
 const tracy = @import("tracy");
 
-pub inline fn Hart(comptime mode: lib.Mode) type {
+pub inline fn Hart(comptime mode: zriscv.Mode) type {
     return switch (mode) {
         .system => SystemHart,
         .user => UserHart,
@@ -21,14 +21,14 @@ const StoreError = error{
 
 pub const SystemHart = struct {
     hart_id: u64,
-    machine: *lib.SystemMachine,
+    machine: *zriscv.SystemMachine,
 
     pc: usize = 0,
     x: [32]u64 = [_]u64{0} ** 32,
     cycle: u64 = 0,
 
-    address_translation_mode: lib.AddressTranslationMode = .Bare,
-    privilege_level: lib.PrivilegeLevel = .Machine,
+    address_translation_mode: zriscv.AddressTranslationMode = .Bare,
+    privilege_level: zriscv.PrivilegeLevel = .Machine,
 
     pub fn loadMemory(
         self: *SystemHart,
@@ -91,7 +91,7 @@ pub const SystemHart = struct {
 
 pub const UserHart = struct {
     hart_id: usize,
-    machine: *lib.UserMachine,
+    machine: *zriscv.UserMachine,
 
     pc: usize = 0,
     x: [32]u64 = [_]u64{0} ** 32,

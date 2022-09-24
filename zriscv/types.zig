@@ -1,5 +1,5 @@
 const std = @import("std");
-const lib = @import("lib.zig");
+const zriscv = @import("zriscv");
 
 pub const PrivilegeLevel = enum(u2) {
     User = 0,

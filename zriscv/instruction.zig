@@ -1,7 +1,7 @@
 const std = @import("std");
 const bitjuggle = @import("bitjuggle");
 const tracy = @import("tracy");
-const lib = @import("lib.zig");
+const zriscv = @import("zriscv");
 
 pub const InstructionType = enum {
     Illegal,
@@ -802,16 +802,16 @@ pub const Instruction = extern union {
         }
     };
 
-    pub inline fn rd(self: Instruction) lib.IntegerRegister {
-        return lib.IntegerRegister.getIntegerRegister(self._rd.read());
+    pub inline fn rd(self: Instruction) zriscv.IntegerRegister {
+        return zriscv.IntegerRegister.getIntegerRegister(self._rd.read());
     }
 
-    pub inline fn rs1(self: Instruction) lib.IntegerRegister {
-        return lib.IntegerRegister.getIntegerRegister(self._rs1.read());
+    pub inline fn rs1(self: Instruction) zriscv.IntegerRegister {
+        return zriscv.IntegerRegister.getIntegerRegister(self._rs1.read());
     }
 
-    pub inline fn rs2(self: Instruction) lib.IntegerRegister {
-        return lib.IntegerRegister.getIntegerRegister(self._rs2.read());
+    pub inline fn rs2(self: Instruction) zriscv.IntegerRegister {
+        return zriscv.IntegerRegister.getIntegerRegister(self._rs2.read());
     }
 
     comptime {

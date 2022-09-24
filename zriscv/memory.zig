@@ -1,7 +1,7 @@
 const std = @import("std");
-const lib = @import("lib.zig");
+const zriscv = @import("zriscv");
 
-pub inline fn Memory(comptime mode: lib.Mode) type {
+pub inline fn Memory(comptime mode: zriscv.Mode) type {
     return switch (mode) {
         .system => SystemMemory,
         .user => UserMemory,
@@ -30,7 +30,7 @@ pub const SystemMemory = struct {
         self.memory = try allocateMemory(memory_size);
     }
 
-    pub fn loadExecutable(self: *SystemMemory, executable: lib.Executable) !void {
+    pub fn loadExecutable(self: *SystemMemory, executable: zriscv.Executable) !void {
         for (executable.region_description) |descriptor| {
             if (descriptor.load_address + descriptor.length > self.memory.len) return error.OutOfBoundsWrite;
             std.mem.copy(u8, self.memory[descriptor.load_address..], descriptor.memory);
@@ -68,7 +68,7 @@ pub const UserMemory = struct {
         @panic("UNIMPLEMENTED: user memory deinit"); // TODO: user memory deinit
     }
 
-    pub fn loadExecutable(self: *UserMemory, executable: lib.Executable) !void {
+    pub fn loadExecutable(self: *UserMemory, executable: zriscv.Executable) !void {
         _ = self;
         _ = executable;
         @panic("UNIMPLEMENTED: user memory load executable"); // TODO: user memory load executable

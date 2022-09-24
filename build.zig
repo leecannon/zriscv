@@ -60,7 +60,7 @@ pub fn build(b: *std.build.Builder) !void {
 
     // Tests
     {
-        const zriscv_test = b.addTest("zriscv/lib.zig");
+        const zriscv_test = b.addTest("zriscv/zriscv.zig");
         zriscv_test.setTarget(target);
         zriscv_test.setBuildMode(mode);
         setupZriscvForTests(zriscv_test, options_package, trace);
@@ -118,6 +118,7 @@ fn setupZriscvForTests(exe: *std.build.LibExeObjStep, options_package: std.build
     exe.addPackage(options_package);
     exe.addPackage(bitjuggle_pkg);
     exe.addPackage(tracy_pkg);
+    exe.addPackage(getZriscvPkg(options_package));
     link(exe, .{ .include_tracy = trace });
 }
 
@@ -225,24 +226,32 @@ fn getOptionsPkg(b: *std.build.Builder, trace: bool, trace_callstack: bool, outp
 }
 
 fn getZriscvPkg(options_package: std.build.Pkg) std.build.Pkg {
-    if (!zriscv_pkg_deps_init) {
-        zriscv_pkg_deps[0] = options_package;
-        zriscv_pkg_deps_init = true;
+    const static = struct {
+        var zriscv_pkg_deps_init: bool = false;
+        var zriscv_pkg_deps = [_]std.build.Pkg{
+            undefined, // options
+            mostly_empty_zriscv_pkg,
+            bitjuggle_pkg,
+            tracy_pkg,
+        };
+
+        const mostly_empty_zriscv_pkg: std.build.Pkg = .{
+            .name = "zriscv",
+            .source = .{ .path = "zriscv/zriscv.zig" },
+        };
+    };
+
+    if (!static.zriscv_pkg_deps_init) {
+        static.zriscv_pkg_deps[0] = options_package;
+        static.zriscv_pkg_deps_init = true;
     }
 
     return .{
         .name = "zriscv",
-        .source = .{ .path = "zriscv/lib.zig" },
-        .dependencies = &zriscv_pkg_deps,
+        .source = .{ .path = "zriscv/zriscv.zig" },
+        .dependencies = &static.zriscv_pkg_deps,
     };
 }
-
-var zriscv_pkg_deps_init: bool = false;
-var zriscv_pkg_deps = [_]std.build.Pkg{
-    undefined, // options,
-    bitjuggle_pkg,
-    tracy_pkg,
-};
 
 const args_pkg: std.build.Pkg = .{
     .name = "args",

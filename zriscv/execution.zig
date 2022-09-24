@@ -1,5 +1,5 @@
 const std = @import("std");
-const lib = @import("lib.zig");
+const zriscv = @import("zriscv");
 const tracy = @import("tracy");
 const build_options = @import("build_options");
 
@@ -18,8 +18,8 @@ pub const ExecutionOptions = struct {
 ///
 /// Note: `writer` may be void (`{}`) in order to suppress output
 pub fn step(
-    comptime mode: lib.Mode,
-    hart: *lib.Hart(mode),
+    comptime mode: zriscv.Mode,
+    hart: *zriscv.Hart(mode),
     writer: anytype,
     riscof_mode: bool,
     comptime options: ExecutionOptions,
@@ -49,15 +49,15 @@ pub fn step(
     return try execute(mode, hart, instruction, writer, riscof_mode, options, actually_execute);
 }
 
-fn readInstruction(comptime mode: lib.Mode, hart: *lib.Hart(mode)) !lib.Instruction {
+fn readInstruction(comptime mode: zriscv.Mode, hart: *zriscv.Hart(mode)) !zriscv.Instruction {
     // try to load 32-bit instruction
     if (hart.loadMemory(32, hart.pc)) |mem| {
-        return lib.Instruction{ .full_backing = mem };
+        return zriscv.Instruction{ .full_backing = mem };
     } else |full_err| switch (full_err) {
         error.ExecutionOutOfBounds => {
             // try to load 16-bit compressed instruction which happens to be at the very end of readable memory region
             if (hart.loadMemory(16, hart.pc)) |mem| {
-                const instruction = lib.Instruction{ .compressed_backing = .{ .low = mem } };
+                const instruction = zriscv.Instruction{ .compressed_backing = .{ .low = mem } };
                 if (instruction.op.read() == 0b11) {
                     // This doesn't look like a compressed instruction
                     return error.ExecutionOutOfBounds;
@@ -70,9 +70,9 @@ fn readInstruction(comptime mode: lib.Mode, hart: *lib.Hart(mode)) !lib.Instruct
 }
 
 fn execute(
-    comptime mode: lib.Mode,
-    hart: *lib.Hart(mode),
-    instruction: lib.Instruction,
+    comptime mode: zriscv.Mode,
+    hart: *zriscv.Hart(mode),
+    instruction: zriscv.Instruction,
     writer: anytype,
     riscof_mode: bool,
     comptime options: ExecutionOptions,
@@ -2977,10 +2977,10 @@ fn execute(
 
             // I-type
 
-            const csr: lib.Csr = if (options.unrecognised_csr_is_fatal)
-                try lib.Csr.getCsr(instruction.csr.read())
+            const csr: zriscv.Csr = if (options.unrecognised_csr_is_fatal)
+                try zriscv.Csr.getCsr(instruction.csr.read())
             else
-                lib.Csr.getCsr(instruction.csr.read()) catch {
+                zriscv.Csr.getCsr(instruction.csr.read()) catch {
                     // TODO: Pass `IllegalInstruction` once `throw` is implemented
                     try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
                     return true;
@@ -3228,7 +3228,7 @@ inline fn instructionExecutionUnimplemented(comptime name: []const u8) bool {
     @panic("unimplemented instruction execution for " ++ name);
 }
 
-fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u64 {
+fn readCsr(comptime mode: zriscv.Mode, hart: *const zriscv.Hart(mode), csr: zriscv.Csr) u64 {
     const read_csr_z = tracy.traceNamed(@src(), "read csr");
     defer read_csr_z.end();
 
@@ -3238,7 +3238,7 @@ fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u
     };
 }
 
-fn writeCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr, value: u64) !void {
+fn writeCsr(comptime mode: zriscv.Mode, hart: *const zriscv.Hart(mode), csr: zriscv.Csr, value: u64) !void {
     const write_csr_z = tracy.traceNamed(@src(), "write csr");
     defer write_csr_z.end();
 
@@ -3252,8 +3252,8 @@ fn writeCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr, 
 }
 
 fn throw(
-    comptime mode: lib.Mode,
-    hart: *lib.Hart(mode),
+    comptime mode: zriscv.Mode,
+    hart: *zriscv.Hart(mode),
     exception: void,
     value: u64,
     writer: anytype,

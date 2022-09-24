@@ -1,6 +1,6 @@
 const std = @import("std");
 const bitjuggle = @import("bitjuggle");
-const lib = @import("lib.zig");
+const zriscv = @import("zriscv");
 
 pub const Csr = enum(u12) {
     // Cycle counter for RDCYCLE instruction
@@ -16,7 +16,7 @@ pub const Csr = enum(u12) {
         };
     }
 
-    pub fn canRead(self: Csr, privilege_level: lib.PrivilegeLevel) bool {
+    pub fn canRead(self: Csr, privilege_level: zriscv.PrivilegeLevel) bool {
         const csr_value = @enumToInt(self);
 
         // TODO: Calculate this at comptime
@@ -26,7 +26,7 @@ pub const Csr = enum(u12) {
         return true;
     }
 
-    pub fn canWrite(self: Csr, privilege_level: lib.PrivilegeLevel) bool {
+    pub fn canWrite(self: Csr, privilege_level: zriscv.PrivilegeLevel) bool {
         const csr_value = @enumToInt(self);
 
         // TODO: Calculate this at comptime

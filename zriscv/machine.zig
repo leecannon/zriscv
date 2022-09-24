@@ -1,8 +1,8 @@
 const std = @import("std");
-const lib = @import("lib.zig");
+const zriscv = @import("zriscv");
 const tracy = @import("tracy");
 
-pub inline fn Machine(comptime mode: lib.Mode) type {
+pub inline fn Machine(comptime mode: zriscv.Mode) type {
     return switch (mode) {
         .system => SystemMachine,
         .user => UserMachine,
@@ -11,14 +11,14 @@ pub inline fn Machine(comptime mode: lib.Mode) type {
 
 pub const SystemMachine = struct {
     allocator: std.mem.Allocator,
-    executable: lib.Executable,
-    memory: lib.SystemMemory,
-    harts: []lib.SystemHart,
+    executable: zriscv.Executable,
+    memory: zriscv.SystemMemory,
+    harts: []zriscv.SystemHart,
 
     pub fn create(
         allocator: std.mem.Allocator,
         memory_size: usize,
-        executable: lib.Executable,
+        executable: zriscv.Executable,
         number_of_harts: usize,
     ) !*SystemMachine {
         const z = tracy.traceNamed(@src(), "system machine create");
@@ -29,10 +29,10 @@ pub const SystemMachine = struct {
         const self = try allocator.create(SystemMachine);
         errdefer allocator.destroy(self);
 
-        var memory = try lib.SystemMemory.init(memory_size);
+        var memory = try zriscv.SystemMemory.init(memory_size);
         errdefer memory.deinit();
 
-        const harts = try allocator.alloc(lib.SystemHart, number_of_harts);
+        const harts = try allocator.alloc(zriscv.SystemHart, number_of_harts);
         errdefer allocator.free(harts);
 
         self.* = .{

@@ -1,5 +1,5 @@
 const std = @import("std");
-const lib = @import("lib.zig");
+const zriscv = @import("zriscv");
 const tracy = @import("tracy");
 
 const Executable = @This();

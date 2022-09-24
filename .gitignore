@@ -1,6 +1,5 @@
 zig-cache/
 zig-out/
-scratch/
 __pycache__/
 riscof/riscof_work/
 riscof/riscv-arch-test/

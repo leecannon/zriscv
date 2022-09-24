@@ -1,5 +1,6 @@
 const std = @import("std");
 const lib = @import("lib.zig");
+const tracy = @import("tracy");
 const build_options = @import("build_options");
 
 pub const ExecutionOptions = struct {
@@ -24,7 +25,7 @@ pub fn step(
     comptime options: ExecutionOptions,
     comptime actually_execute: bool,
 ) !bool {
-    const execute_z = lib.traceNamed(@src(), "execute step");
+    const execute_z = tracy.traceNamed(@src(), "execute step");
     defer execute_z.end();
 
     const has_writer = comptime isWriter(@TypeOf(writer));
@@ -77,7 +78,7 @@ fn execute(
     comptime options: ExecutionOptions,
     comptime actually_execute: bool,
 ) !bool {
-    const execute_z = lib.traceNamed(@src(), "execute");
+    const execute_z = tracy.traceNamed(@src(), "execute");
     defer execute_z.end();
 
     defer if (actually_execute) {
@@ -103,7 +104,7 @@ fn execute(
             try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
         },
         .LUI => {
-            const z = lib.traceNamed(@src(), "LUI");
+            const z = tracy.traceNamed(@src(), "LUI");
             defer z.end();
 
             // U-type
@@ -148,7 +149,7 @@ fn execute(
             }
         },
         .AUIPC => {
-            const z = lib.traceNamed(@src(), "AUIPC");
+            const z = tracy.traceNamed(@src(), "AUIPC");
             defer z.end();
 
             // U-type
@@ -196,7 +197,7 @@ fn execute(
             }
         },
         .JAL => {
-            const z = lib.traceNamed(@src(), "JAL");
+            const z = tracy.traceNamed(@src(), "JAL");
             defer z.end();
 
             // J-type
@@ -251,7 +252,7 @@ fn execute(
             }
         },
         .JALR => {
-            const z = lib.traceNamed(@src(), "JALR");
+            const z = tracy.traceNamed(@src(), "JALR");
             defer z.end();
 
             // I-type
@@ -311,7 +312,7 @@ fn execute(
             }
         },
         .BEQ => {
-            const z = lib.traceNamed(@src(), "BEQ");
+            const z = tracy.traceNamed(@src(), "BEQ");
             defer z.end();
 
             // B-type
@@ -373,7 +374,7 @@ fn execute(
             }
         },
         .BNE => {
-            const z = lib.traceNamed(@src(), "BNE");
+            const z = tracy.traceNamed(@src(), "BNE");
             defer z.end();
 
             // B-type
@@ -433,7 +434,7 @@ fn execute(
             }
         },
         .BLT => {
-            const z = lib.traceNamed(@src(), "BLT");
+            const z = tracy.traceNamed(@src(), "BLT");
             defer z.end();
 
             // B-type
@@ -495,7 +496,7 @@ fn execute(
             }
         },
         .BGE => {
-            const z = lib.traceNamed(@src(), "BGE");
+            const z = tracy.traceNamed(@src(), "BGE");
             defer z.end();
 
             // B-type
@@ -557,7 +558,7 @@ fn execute(
             }
         },
         .BLTU => {
-            const z = lib.traceNamed(@src(), "BLTU");
+            const z = tracy.traceNamed(@src(), "BLTU");
             defer z.end();
 
             // B-type
@@ -619,7 +620,7 @@ fn execute(
             }
         },
         .BGEU => {
-            const z = lib.traceNamed(@src(), "BGEU");
+            const z = tracy.traceNamed(@src(), "BGEU");
             defer z.end();
 
             // B-type
@@ -681,7 +682,7 @@ fn execute(
             }
         },
         .LB => {
-            const z = lib.traceNamed(@src(), "LB");
+            const z = tracy.traceNamed(@src(), "LB");
             defer z.end();
 
             // I-type
@@ -750,7 +751,7 @@ fn execute(
             }
         },
         .LH => {
-            const z = lib.traceNamed(@src(), "LH");
+            const z = tracy.traceNamed(@src(), "LH");
             defer z.end();
 
             // I-type
@@ -819,7 +820,7 @@ fn execute(
             }
         },
         .LW => {
-            const z = lib.traceNamed(@src(), "LW");
+            const z = tracy.traceNamed(@src(), "LW");
             defer z.end();
 
             // I-type
@@ -888,7 +889,7 @@ fn execute(
             }
         },
         .LBU => {
-            const z = lib.traceNamed(@src(), "LBU");
+            const z = tracy.traceNamed(@src(), "LBU");
             defer z.end();
 
             // I-type
@@ -957,7 +958,7 @@ fn execute(
             }
         },
         .LHU => {
-            const z = lib.traceNamed(@src(), "LHU");
+            const z = tracy.traceNamed(@src(), "LHU");
             defer z.end();
 
             // I-type
@@ -1026,7 +1027,7 @@ fn execute(
             }
         },
         .SB => {
-            const z = lib.traceNamed(@src(), "SB");
+            const z = tracy.traceNamed(@src(), "SB");
             defer z.end();
 
             // S-Type
@@ -1082,7 +1083,7 @@ fn execute(
             }
         },
         .SH => {
-            const z = lib.traceNamed(@src(), "SH");
+            const z = tracy.traceNamed(@src(), "SH");
             defer z.end();
 
             // S-Type
@@ -1138,7 +1139,7 @@ fn execute(
             }
         },
         .SW => {
-            const z = lib.traceNamed(@src(), "SW");
+            const z = tracy.traceNamed(@src(), "SW");
             defer z.end();
 
             // S-Type
@@ -1194,7 +1195,7 @@ fn execute(
             }
         },
         .ADDI => {
-            const z = lib.traceNamed(@src(), "ADDI");
+            const z = tracy.traceNamed(@src(), "ADDI");
             defer z.end();
 
             // I-Type
@@ -1250,7 +1251,7 @@ fn execute(
             }
         },
         .SLTI => {
-            const z = lib.traceNamed(@src(), "SLTI");
+            const z = tracy.traceNamed(@src(), "SLTI");
             defer z.end();
 
             // I-type
@@ -1304,7 +1305,7 @@ fn execute(
             }
         },
         .SLTIU => {
-            const z = lib.traceNamed(@src(), "SLTIU");
+            const z = tracy.traceNamed(@src(), "SLTIU");
             defer z.end();
 
             // I-type
@@ -1358,7 +1359,7 @@ fn execute(
             }
         },
         .XORI => {
-            const z = lib.traceNamed(@src(), "ADDI");
+            const z = tracy.traceNamed(@src(), "ADDI");
             defer z.end();
 
             // I-type
@@ -1413,7 +1414,7 @@ fn execute(
             }
         },
         .ORI => {
-            const z = lib.traceNamed(@src(), "ORI");
+            const z = tracy.traceNamed(@src(), "ORI");
             defer z.end();
 
             // I-type
@@ -1468,7 +1469,7 @@ fn execute(
             }
         },
         .ANDI => {
-            const z = lib.traceNamed(@src(), "ANDI");
+            const z = tracy.traceNamed(@src(), "ANDI");
             defer z.end();
 
             // I-type
@@ -1522,7 +1523,7 @@ fn execute(
             }
         },
         .SLLI => {
-            const z = lib.traceNamed(@src(), "SLLI");
+            const z = tracy.traceNamed(@src(), "SLLI");
             defer z.end();
 
             // I-type specialization
@@ -1577,7 +1578,7 @@ fn execute(
             }
         },
         .SRLI => {
-            const z = lib.traceNamed(@src(), "SRLI");
+            const z = tracy.traceNamed(@src(), "SRLI");
             defer z.end();
 
             // I-type specialization
@@ -1632,7 +1633,7 @@ fn execute(
             }
         },
         .SRAI => {
-            const z = lib.traceNamed(@src(), "SRAI");
+            const z = tracy.traceNamed(@src(), "SRAI");
             defer z.end();
 
             // I-type specialization
@@ -1687,7 +1688,7 @@ fn execute(
             }
         },
         .ADD => {
-            const z = lib.traceNamed(@src(), "ADD");
+            const z = tracy.traceNamed(@src(), "ADD");
             defer z.end();
 
             // R-Type
@@ -1745,7 +1746,7 @@ fn execute(
             }
         },
         .SUB => {
-            const z = lib.traceNamed(@src(), "SUB");
+            const z = tracy.traceNamed(@src(), "SUB");
             defer z.end();
 
             // R-type
@@ -1804,7 +1805,7 @@ fn execute(
             }
         },
         .SLL => {
-            const z = lib.traceNamed(@src(), "SUB");
+            const z = tracy.traceNamed(@src(), "SUB");
             defer z.end();
 
             // R-type
@@ -1861,7 +1862,7 @@ fn execute(
             }
         },
         .SLT => {
-            const z = lib.traceNamed(@src(), "SLT");
+            const z = tracy.traceNamed(@src(), "SLT");
             defer z.end();
 
             // R-type
@@ -1917,7 +1918,7 @@ fn execute(
             }
         },
         .SLTU => {
-            const z = lib.traceNamed(@src(), "SLTU");
+            const z = tracy.traceNamed(@src(), "SLTU");
             defer z.end();
 
             // R-type
@@ -1973,7 +1974,7 @@ fn execute(
             }
         },
         .XOR => {
-            const z = lib.traceNamed(@src(), "XOR");
+            const z = tracy.traceNamed(@src(), "XOR");
             defer z.end();
 
             // R-type
@@ -2030,7 +2031,7 @@ fn execute(
             }
         },
         .SRL => {
-            const z = lib.traceNamed(@src(), "SRL");
+            const z = tracy.traceNamed(@src(), "SRL");
             defer z.end();
 
             // R-type
@@ -2087,7 +2088,7 @@ fn execute(
             }
         },
         .SRA => {
-            const z = lib.traceNamed(@src(), "SRA");
+            const z = tracy.traceNamed(@src(), "SRA");
             defer z.end();
 
             // R-type
@@ -2144,7 +2145,7 @@ fn execute(
             }
         },
         .OR => {
-            const z = lib.traceNamed(@src(), "OR");
+            const z = tracy.traceNamed(@src(), "OR");
             defer z.end();
 
             // R-type
@@ -2201,7 +2202,7 @@ fn execute(
             }
         },
         .AND => {
-            const z = lib.traceNamed(@src(), "AND");
+            const z = tracy.traceNamed(@src(), "AND");
             defer z.end();
 
             // R-type
@@ -2258,7 +2259,7 @@ fn execute(
             }
         },
         .FENCE => {
-            const z = lib.traceNamed(@src(), "FENCE");
+            const z = tracy.traceNamed(@src(), "FENCE");
             defer z.end();
 
             if (has_writer) {
@@ -2275,7 +2276,7 @@ fn execute(
         .ECALL => return instructionExecutionUnimplemented("ECALL"), // TODO: ECALL
         .EBREAK => return instructionExecutionUnimplemented("EBREAK"), // TODO: EBREAK
         .LWU => {
-            const z = lib.traceNamed(@src(), "LWU");
+            const z = tracy.traceNamed(@src(), "LWU");
             defer z.end();
 
             // I-type
@@ -2344,7 +2345,7 @@ fn execute(
             }
         },
         .LD => {
-            const z = lib.traceNamed(@src(), "LD");
+            const z = tracy.traceNamed(@src(), "LD");
             defer z.end();
 
             // I-type
@@ -2413,7 +2414,7 @@ fn execute(
             }
         },
         .SD => {
-            const z = lib.traceNamed(@src(), "SD");
+            const z = tracy.traceNamed(@src(), "SD");
             defer z.end();
 
             // S-Type
@@ -2461,7 +2462,7 @@ fn execute(
             }
         },
         .ADDIW => {
-            const z = lib.traceNamed(@src(), "ADDIW");
+            const z = tracy.traceNamed(@src(), "ADDIW");
             defer z.end();
 
             // I-type
@@ -2516,7 +2517,7 @@ fn execute(
             }
         },
         .SLLIW => {
-            const z = lib.traceNamed(@src(), "SLLIW");
+            const z = tracy.traceNamed(@src(), "SLLIW");
             defer z.end();
 
             // I-type specialization
@@ -2571,7 +2572,7 @@ fn execute(
             }
         },
         .SRLIW => {
-            const z = lib.traceNamed(@src(), "SRLIW");
+            const z = tracy.traceNamed(@src(), "SRLIW");
             defer z.end();
 
             // I-type specialization
@@ -2626,7 +2627,7 @@ fn execute(
             }
         },
         .SRAIW => {
-            const z = lib.traceNamed(@src(), "SRAIW");
+            const z = tracy.traceNamed(@src(), "SRAIW");
             defer z.end();
 
             // I-type specialization
@@ -2681,7 +2682,7 @@ fn execute(
             }
         },
         .ADDW => {
-            const z = lib.traceNamed(@src(), "ADDW");
+            const z = tracy.traceNamed(@src(), "ADDW");
             defer z.end();
 
             // R-type
@@ -2739,7 +2740,7 @@ fn execute(
             }
         },
         .SUBW => {
-            const z = lib.traceNamed(@src(), "SUBW");
+            const z = tracy.traceNamed(@src(), "SUBW");
             defer z.end();
 
             // R-type
@@ -2799,7 +2800,7 @@ fn execute(
             }
         },
         .SLLW => {
-            const z = lib.traceNamed(@src(), "SLLW");
+            const z = tracy.traceNamed(@src(), "SLLW");
             defer z.end();
 
             // R-type
@@ -2856,7 +2857,7 @@ fn execute(
             }
         },
         .SRLW => {
-            const z = lib.traceNamed(@src(), "SRLW");
+            const z = tracy.traceNamed(@src(), "SRLW");
             defer z.end();
 
             // R-type
@@ -2913,7 +2914,7 @@ fn execute(
             }
         },
         .SRAW => {
-            const z = lib.traceNamed(@src(), "SRAW");
+            const z = tracy.traceNamed(@src(), "SRAW");
             defer z.end();
 
             // R-type
@@ -2971,7 +2972,7 @@ fn execute(
         },
         .FENCE_I => return instructionExecutionUnimplemented("FENCE_I"), // TODO: FENCE_I
         .CSRRW => {
-            const z = lib.traceNamed(@src(), "CSRRW");
+            const z = tracy.traceNamed(@src(), "CSRRW");
             defer z.end();
 
             // I-type
@@ -3175,7 +3176,7 @@ fn execute(
         .C_SUBW => return instructionExecutionUnimplemented("C_SUBW"), // TODO: C_SUBW
         .C_ADDW => return instructionExecutionUnimplemented("C_ADDW"), // TODO: C_ADDW
         .C_J => {
-            const z = lib.traceNamed(@src(), "C_J");
+            const z = tracy.traceNamed(@src(), "C_J");
             defer z.end();
 
             // CJ Type
@@ -3228,7 +3229,7 @@ inline fn instructionExecutionUnimplemented(comptime name: []const u8) bool {
 }
 
 fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u64 {
-    const read_csr_z = lib.traceNamed(@src(), "read csr");
+    const read_csr_z = tracy.traceNamed(@src(), "read csr");
     defer read_csr_z.end();
 
     return switch (csr) {
@@ -3238,7 +3239,7 @@ fn readCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr) u
 }
 
 fn writeCsr(comptime mode: lib.Mode, hart: *const lib.Hart(mode), csr: lib.Csr, value: u64) !void {
-    const write_csr_z = lib.traceNamed(@src(), "write csr");
+    const write_csr_z = tracy.traceNamed(@src(), "write csr");
     defer write_csr_z.end();
 
     _ = hart;
@@ -3258,7 +3259,7 @@ fn throw(
     writer: anytype,
     comptime actually_execute: bool,
 ) !void {
-    const z = lib.traceNamed(@src(), "throw");
+    const z = tracy.traceNamed(@src(), "throw");
     defer z.end();
 
     const has_writer = comptime isWriter(@TypeOf(writer));

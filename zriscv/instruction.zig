@@ -1,5 +1,6 @@
 const std = @import("std");
 const bitjuggle = @import("bitjuggle");
+const tracy = @import("tracy");
 const lib = @import("lib.zig");
 
 pub const InstructionType = enum {
@@ -234,7 +235,7 @@ pub const Instruction = extern union {
     full_backing: u32,
 
     pub fn decode(instruction: Instruction) InstructionType {
-        const z = lib.traceNamed(@src(), "instruction decode");
+        const z = tracy.traceNamed(@src(), "instruction decode");
         defer z.end();
 
         const compressed_funct3 = instruction.compressed_funct3.read();

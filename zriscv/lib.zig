@@ -1,7 +1,5 @@
 const std = @import("std");
 
-pub usingnamespace @import("tracy.zig");
-
 pub usingnamespace @import("types.zig");
 
 const csr = @import("csr.zig");
@@ -38,6 +36,7 @@ pub const Mode = enum {
 };
 
 comptime {
+    _ = @import("tests.zig");
     refAllDeclsRecursive(@This());
 }
 

@@ -1,5 +1,6 @@
 const std = @import("std");
 const lib = @import("lib.zig");
+const tracy = @import("tracy");
 
 pub inline fn Hart(comptime mode: lib.Mode) type {
     return switch (mode) {
@@ -34,7 +35,7 @@ pub const SystemHart = struct {
         comptime number_of_bits: comptime_int,
         virtual_address: u64,
     ) LoadError!std.meta.Int(.unsigned, number_of_bits) {
-        const z = lib.traceNamed(@src(), "system load memory");
+        const z = tracy.traceNamed(@src(), "system load memory");
         defer z.end();
 
         const MemoryType = std.meta.Int(.unsigned, number_of_bits);
@@ -56,7 +57,7 @@ pub const SystemHart = struct {
         virtual_address: u64,
         value: std.meta.Int(.unsigned, number_of_bits),
     ) StoreError!void {
-        const z = lib.traceNamed(@src(), "system store memory");
+        const z = tracy.traceNamed(@src(), "system store memory");
         defer z.end();
 
         const MemoryType = std.meta.Int(.unsigned, number_of_bits);
@@ -74,7 +75,7 @@ pub const SystemHart = struct {
     }
 
     fn translateAddress(self: *SystemHart, virtual_address: u64) !u64 {
-        const z = lib.traceNamed(@src(), "system translate address");
+        const z = tracy.traceNamed(@src(), "system translate address");
         defer z.end();
 
         // TODO: Is this correct with multiple harts, atomic read?
@@ -101,7 +102,7 @@ pub const UserHart = struct {
         comptime number_of_bits: comptime_int,
         virtual_address: u64,
     ) LoadError!std.meta.Int(.unsigned, number_of_bits) {
-        const z = lib.traceNamed(@src(), "user load memory");
+        const z = tracy.traceNamed(@src(), "user load memory");
         defer z.end();
 
         const MemoryType = std.meta.Int(.unsigned, number_of_bits);
@@ -118,7 +119,7 @@ pub const UserHart = struct {
         virtual_address: u64,
         value: std.meta.Int(.unsigned, number_of_bits),
     ) StoreError!void {
-        const z = lib.traceNamed(@src(), "user store memory");
+        const z = tracy.traceNamed(@src(), "user store memory");
         defer z.end();
 
         const MemoryType = std.meta.Int(.unsigned, number_of_bits);

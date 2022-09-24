@@ -1,5 +1,6 @@
 const std = @import("std");
 const lib = @import("lib.zig");
+const tracy = @import("tracy");
 
 pub inline fn Machine(comptime mode: lib.Mode) type {
     return switch (mode) {
@@ -20,7 +21,7 @@ pub const SystemMachine = struct {
         executable: lib.Executable,
         number_of_harts: usize,
     ) !*SystemMachine {
-        const z = lib.traceNamed(@src(), "system machine create");
+        const z = tracy.traceNamed(@src(), "system machine create");
         defer z.end();
 
         std.debug.assert(number_of_harts != 0); // non-zero number of harts required
@@ -47,7 +48,7 @@ pub const SystemMachine = struct {
     }
 
     pub fn reset(self: *SystemMachine, clear_memory: bool) !void {
-        const z = lib.traceNamed(@src(), "system machine reset");
+        const z = tracy.traceNamed(@src(), "system machine reset");
         defer z.end();
 
         for (self.harts) |*hart, i| {
@@ -77,7 +78,7 @@ pub const UserMachine = struct {
     pub fn create(
         allocator: std.mem.Allocator,
     ) !*UserMachine {
-        const z = lib.traceNamed(@src(), "user machine create");
+        const z = tracy.traceNamed(@src(), "user machine create");
         defer z.end();
 
         const self = try allocator.create(UserMachine);
@@ -89,7 +90,7 @@ pub const UserMachine = struct {
     }
 
     pub fn reset(self: *UserMachine, clear_memory: bool) !void {
-        const z = lib.traceNamed(@src(), "user machine reset");
+        const z = tracy.traceNamed(@src(), "user machine reset");
         defer z.end();
 
         _ = self;

@@ -1,6 +1,6 @@
 const std = @import("std");
 const known_folders = @import("known_folders");
-const c_bestline = @cImport(@cInclude("bestline.h"));
+const bestline = @import("bestline");
 
 const Self = @This();
 
@@ -10,9 +10,9 @@ history_path: [:0]const u8,
 pub fn init(allocator: std.mem.Allocator, file_path: []const u8) !Self {
     const history_path = try getHistoryPathAndEnsureExists(allocator, file_path);
 
-    bestlineSetCompletionCallback(completionCallback);
-    bestlineSetHintsCallback(hintsCallback);
-    _ = c_bestline.bestlineHistoryLoad(history_path.ptr);
+    bestline.bestlineSetCompletionCallback(completionCallback);
+    bestline.bestlineSetHintsCallback(hintsCallback);
+    _ = bestline.c.bestlineHistoryLoad(history_path.ptr);
 
     return Self{
         .allocator = allocator,
@@ -47,7 +47,7 @@ pub fn deinit(self: Self) void {
 
 pub fn getInput(self: Self, stdout: anytype, stderr: anytype) ?Input {
     while (true) {
-        const c_line = c_bestline.bestline("> ") orelse return null;
+        const c_line = bestline.c.bestline("> ") orelse return null;
         defer std.c.free(c_line);
 
         const line = std.mem.sliceTo(c_line, 0);
@@ -145,8 +145,8 @@ pub fn getInput(self: Self, stdout: anytype, stderr: anytype) ?Input {
 
 fn history(self: Self, c_line: [*c]u8) void {
     // FIXME: Is it a good idea to save the history after *every* keypress?
-    if (c_bestline.bestlineHistoryAdd(c_line) == 1) {
-        _ = c_bestline.bestlineHistorySave(self.history_path.ptr);
+    if (bestline.c.bestlineHistoryAdd(c_line) == 1) {
+        _ = bestline.c.bestlineHistorySave(self.history_path.ptr);
     }
 }
 
@@ -161,7 +161,7 @@ pub const Input = union(enum) {
     breakpoint: u64,
 };
 
-fn completionCallback(c_buf: [*:0]const u8, completion: *Completions) callconv(.C) void {
+fn completionCallback(c_buf: [*:0]const u8, completion: *bestline.Completions) callconv(.C) void {
     const buf = std.mem.sliceTo(c_buf, 0);
 
     switch (buf.len) {
@@ -281,23 +281,6 @@ pub const help_menu =
     \\              q|quit - quit
     \\
 ;
-
-const Completions = extern struct {
-    len: c_ulong,
-    cvec: [*c][*c]u8,
-
-    pub inline fn addCompletion(self: *Completions, str: [:0]const u8) void {
-        c_bestline.bestlineAddCompletion(@ptrCast([*c]c_bestline.bestlineCompletions, self), str.ptr);
-    }
-};
-
-const CompletionCallback = fn (buf: [*:0]const u8, completions: *Completions) callconv(.C) void;
-
-extern fn bestlineSetCompletionCallback(callback: std.meta.FnPtr(CompletionCallback)) void;
-
-const HintsCallback = fn (buf: [*:0]const u8, ansi1: *[*:0]const u8, ansi2: *[*:0]const u8) callconv(.C) ?[*:0]const u8;
-
-extern fn bestlineSetHintsCallback(callback: std.meta.FnPtr(HintsCallback)) void;
 
 comptime {
     refAllDeclsRecursive(@This());

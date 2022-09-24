@@ -1,8 +1,9 @@
 const std = @import("std");
-const build_options = @import("build_options");
+const root = @import("root");
+const builtin = @import("builtin");
 
-const enable: bool = build_options.trace;
-const enable_callstack: bool = build_options.trace_callstack;
+const enable: bool = if (builtin.is_test and !@hasDecl(root, "trace")) false else root.trace;
+const enable_callstack: bool = if (builtin.is_test and !@hasDecl(root, "trace_callstack")) false else root.trace_callstack;
 const callstack_depth = 20;
 
 const ___tracy_c_zone_context = extern struct {
@@ -81,92 +82,6 @@ pub inline fn traceNamed(comptime src: std.builtin.SourceLocation, comptime name
             .color = 0,
         }, 1) };
     }
-}
-
-pub fn tracyAllocator(allocator: std.mem.Allocator) TracyAllocator(null) {
-    return TracyAllocator(null).init(allocator);
-}
-
-fn TracyAllocator(comptime name: ?[:0]const u8) type {
-    return struct {
-        parent_allocator: std.mem.Allocator,
-
-        first_allocation: bool = true,
-
-        const Self = @This();
-
-        pub fn init(parent_allocator: std.mem.Allocator) Self {
-            return .{ .parent_allocator = parent_allocator };
-        }
-
-        pub fn allocator(self: *Self) std.mem.Allocator {
-            return std.mem.Allocator.init(self, allocFn, resizeFn, freeFn);
-        }
-
-        fn allocFn(self: *Self, len: usize, ptr_align: u29, len_align: u29, ret_addr: usize) std.mem.Allocator.Error![]u8 {
-            if (self.first_allocation) {
-                const val: u1 = 0;
-                // this is to prevent a visual glitch with tracys graph when the application makes very few allocations
-                if (name) |n| {
-                    ___tracy_emit_memory_alloc_named(&val, 0, 0, n.ptr);
-                    ___tracy_emit_memory_free_named(&val, 0, n.ptr);
-                } else {
-                    ___tracy_emit_memory_alloc(&val, 0, 0);
-                    ___tracy_emit_memory_free(&val, 0);
-                }
-                self.first_allocation = false;
-            }
-
-            const result = self.parent_allocator.rawAlloc(len, ptr_align, len_align, ret_addr);
-            if (result) |data| {
-                if (data.len != 0) {
-                    if (name) |n| {
-                        allocNamed(data.ptr, data.len, n);
-                    } else {
-                        alloc(data.ptr, data.len);
-                    }
-                }
-            } else |_| {
-                traceMessageColor("allocation failed", 0xFF0000);
-            }
-            return result;
-        }
-
-        fn resizeFn(self: *Self, buf: []u8, buf_align: u29, new_len: usize, len_align: u29, ret_addr: usize) ?usize {
-            if (self.parent_allocator.rawResize(buf, buf_align, new_len, len_align, ret_addr)) |resized_len| {
-                if (name) |n| {
-                    freeNamed(buf.ptr, n);
-                } else {
-                    free(buf.ptr);
-                }
-
-                if (name) |n| {
-                    allocNamed(buf.ptr, resized_len, n);
-                } else {
-                    alloc(buf.ptr, resized_len);
-                }
-
-                return resized_len;
-            }
-
-            // during normal operation the compiler hits this case thousands of times due to this
-            // emitting messages for it is both slow and causes clutter
-            return null;
-        }
-
-        fn freeFn(self: *Self, buf: []u8, buf_align: u29, ret_addr: usize) void {
-            self.parent_allocator.rawFree(buf, buf_align, ret_addr);
-            // this condition is to handle free being called on an empty slice that was never even allocated
-            // example case: `std.process.getSelfExeSharedLibPaths` can return `&[_][:0]u8{}`
-            if (buf.len != 0) {
-                if (name) |n| {
-                    freeNamed(buf.ptr, n);
-                } else {
-                    free(buf.ptr);
-                }
-            }
-        }
-    };
 }
 
 // This function only accepts comptime known strings, see `messageCopy` for runtime strings

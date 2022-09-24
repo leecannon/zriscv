@@ -1,5 +1,6 @@
 const std = @import("std");
 const lib = @import("lib.zig");
+const tracy = @import("tracy");
 
 const Executable = @This();
 
@@ -32,7 +33,7 @@ end_signature: u64 = undefined,
 tohost: u64 = undefined,
 
 pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8, riscof_mode: bool) !Executable {
-    const z = lib.traceNamed(@src(), "executable loading");
+    const z = tracy.traceNamed(@src(), "executable loading");
     defer z.end();
 
     const contents = try mapFile(file_path, stderr);

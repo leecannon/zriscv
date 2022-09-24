@@ -2,17 +2,22 @@ const std = @import("std");
 const builtin = @import("builtin");
 const build_options = @import("build_options");
 const args = @import("args");
-const lib = @import("lib.zig");
+const tracy = @import("tracy");
+const zriscv = @import("zriscv");
 const Interactive = @import("Interactive.zig");
+
+// Configure tracy
+pub const trace = build_options.trace;
+pub const trace_callstack = build_options.trace_callstack;
 
 pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
-const execution_options: lib.ExecutionOptions = .{};
+const execution_options: zriscv.ExecutionOptions = .{};
 
 pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
-    const main_z = lib.traceNamed(@src(), "main");
+    const main_z = tracy.traceNamed(@src(), "main");
     // this causes the frame to start with our main instead of `std.start`
-    lib.traceFrameMark();
+    tracy.traceFrameMark();
 
     var gpa = if (is_debug_or_test) std.heap.GeneralPurposeAllocator(.{}){} else {};
 
@@ -21,9 +26,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
         main_z.end();
     }
 
-    const gpa_allocator = if (is_debug_or_test) gpa.allocator() else std.heap.c_allocator;
-    var tracy_allocator = if (build_options.trace) lib.tracyAllocator(gpa_allocator) else {};
-    const allocator: std.mem.Allocator = if (build_options.trace) tracy_allocator.allocator() else gpa_allocator;
+    const allocator = if (is_debug_or_test) gpa.allocator() else std.heap.c_allocator;
 
     const stderr = std.io.getStdErr().writer();
 
@@ -32,7 +35,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
 
     const riscof_mode = if (options.verb.? == .system) options.verb.?.system.riscof != null else false;
 
-    const executable = lib.Executable.load(
+    const executable = zriscv.Executable.load(
         allocator,
         stderr,
         options.positionals[0], // `parseArguments` ensures a single positional is given
@@ -67,11 +70,11 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
 
 fn systemMode(
     allocator: std.mem.Allocator,
-    executable: lib.Executable,
+    executable: zriscv.Executable,
     system_mode_options: SystemModeOptions,
     stderr: anytype,
 ) !void {
-    const z = lib.traceNamed(@src(), "system mode");
+    const z = tracy.traceNamed(@src(), "system mode");
     defer z.end();
 
     const riscof_mode = system_mode_options.riscof != null;
@@ -96,7 +99,7 @@ fn systemMode(
         @panic("UNIMPLEMENTED: multiple harts"); // TODO: multiple harts
     }
 
-    const machine = lib.SystemMachine.create(
+    const machine = zriscv.SystemMachine.create(
         allocator,
         system_mode_options.memory * 1024 * 1024, // convert from MiB to bytes
         executable,
@@ -120,7 +123,7 @@ fn systemMode(
     if (riscof_mode) {
         // TODO: Support multiple harts
         loop: while (true) {
-            const cont = lib.step(.system, &machine.harts[0], if (build_options.output) stderr else {}, riscof_mode, execution_options, true) catch |err| {
+            const cont = zriscv.step(.system, &machine.harts[0], if (build_options.output) stderr else {}, riscof_mode, execution_options, true) catch |err| {
                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                 break :loop;
             };
@@ -144,7 +147,7 @@ fn systemMode(
 
     // TODO: Support multiple harts
     while (true) {
-        const cont = lib.step(.system, &machine.harts[0], if (build_options.output) stderr else {}, riscof_mode, execution_options, true) catch |err| {
+        const cont = zriscv.step(.system, &machine.harts[0], if (build_options.output) stderr else {}, riscof_mode, execution_options, true) catch |err| {
             stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
             return err;
         };
@@ -158,13 +161,13 @@ fn systemMode(
     }
 }
 
-fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachine, stderr: anytype) !void {
-    const z = lib.traceNamed(@src(), "interactive system mode");
+fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *zriscv.SystemMachine, stderr: anytype) !void {
+    const z = tracy.traceNamed(@src(), "interactive system mode");
     defer z.end();
 
     std.debug.assert(machine.harts.len == 1);
 
-    const hart: *lib.SystemHart = &machine.harts[0];
+    const hart: *zriscv.SystemHart = &machine.harts[0];
 
     const stdout = std.io.getStdOut().writer();
 
@@ -179,7 +182,7 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
     var opt_break_point: ?u64 = null;
 
     while (interactive.getInput(stdout, stderr)) |input| {
-        const user_input_z = lib.traceNamed(@src(), "action user input");
+        const user_input_z = tracy.traceNamed(@src(), "action user input");
         defer user_input_z.end();
 
         switch (input) {
@@ -193,7 +196,7 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
                 if (opt_break_point) |break_point| {
                     run_loop: while (hart.pc != break_point) {
                         if (output) {
-                            const cont = lib.step(.system, hart, stdout, false, execution_options, true) catch |err| {
+                            const cont = zriscv.step(.system, hart, stdout, false, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break :run_loop;
                             };
@@ -202,7 +205,7 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
                                 break :run_loop;
                             }
                         } else {
-                            const cont = lib.step(.system, hart, {}, false, execution_options, true) catch |err| {
+                            const cont = zriscv.step(.system, hart, {}, false, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break :run_loop;
                             };
@@ -217,7 +220,7 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
                 } else {
                     if (output) {
                         run_loop: while (true) {
-                            const cont = lib.step(.system, hart, stdout, false, execution_options, true) catch |err| {
+                            const cont = zriscv.step(.system, hart, stdout, false, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break :run_loop;
                             };
@@ -228,7 +231,7 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
                         }
                     } else {
                         run_loop: while (true) {
-                            const cont = lib.step(.system, hart, {}, false, execution_options, true) catch |err| {
+                            const cont = zriscv.step(.system, hart, {}, false, execution_options, true) catch |err| {
                                 stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                                 break :run_loop;
                             };
@@ -251,13 +254,13 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
                 timer.reset();
 
                 if (output) {
-                    const cont = lib.step(.system, hart, stdout, false, execution_options, true) catch |err| blk: {
+                    const cont = zriscv.step(.system, hart, stdout, false, execution_options, true) catch |err| blk: {
                         stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                         break :blk true;
                     };
                     if (!cont) stdout.writeAll("execution requested stop\n") catch unreachable;
                 } else {
-                    const cont = lib.step(.system, hart, {}, false, execution_options, true) catch |err| blk: {
+                    const cont = zriscv.step(.system, hart, {}, false, execution_options, true) catch |err| blk: {
                         stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                         break :blk true;
                     };
@@ -270,7 +273,7 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
             .whatif => {
                 user_input_z.addText("whatif");
 
-                const cont = lib.step(.system, hart, stdout, false, execution_options, false) catch |err| {
+                const cont = zriscv.step(.system, hart, stdout, false, execution_options, false) catch |err| {
                     stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
                     continue;
                 };
@@ -310,11 +313,11 @@ fn interactiveSystemMode(allocator: std.mem.Allocator, machine: *lib.SystemMachi
 
 fn userMode(
     allocator: std.mem.Allocator,
-    executable: lib.Executable,
+    executable: zriscv.Executable,
     user_mode_options: UserModeOptions,
     stderr: anytype,
 ) !void {
-    const z = lib.traceNamed(@src(), "user mode");
+    const z = tracy.traceNamed(@src(), "user mode");
     defer z.end();
 
     _ = allocator;
@@ -324,7 +327,7 @@ fn userMode(
     @panic("UNIMPLEMENTED: user mode"); // TODO: user mode
 }
 
-fn writeOutSignature(signature_file: []const u8, memory: lib.SystemMemory, executable: lib.Executable) !void {
+fn writeOutSignature(signature_file: []const u8, memory: zriscv.SystemMemory, executable: zriscv.Executable) !void {
     const file = try std.fs.cwd().createFile(signature_file, .{});
     defer file.close();
 
@@ -359,7 +362,7 @@ fn parseArguments(
     allocator: std.mem.Allocator,
     stderr: anytype,
 ) args.ParseArgsResult(SharedArguments, ModeOptions) {
-    const z = lib.traceNamed(@src(), "parse arguments");
+    const z = tracy.traceNamed(@src(), "parse arguments");
     defer z.end();
 
     const options = args.parseWithVerbForCurrentProcess(
@@ -424,7 +427,7 @@ const usage =
     \\
 ;
 
-const ModeOptions = union(lib.Mode) {
+const ModeOptions = union(zriscv.Mode) {
     user: UserModeOptions,
     system: SystemModeOptions,
 };

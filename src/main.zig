@@ -331,9 +331,14 @@ fn writeOutSignature(signature_file: []const u8, memory: lib.SystemMemory, execu
     var buffered_writer = std.io.bufferedWriter(file.writer());
     const writer = buffered_writer.writer();
 
-    const ptr = @ptrCast([*]const u32, @alignCast(4, &memory.memory[executable.begin_signature]));
+    const signature_ptr = blk: {
+        const signature_ptr = &memory.memory[executable.begin_signature];
+        if (!std.mem.isAligned(@ptrToInt(signature_ptr), 4)) @panic("riscof signature start is not 4-byte aligned");
+        break :blk @ptrCast([*]const u32, @alignCast(4, signature_ptr));
+    };
+
     const len = (executable.end_signature - executable.begin_signature) / @sizeOf(u32);
-    const slice = ptr[0..len];
+    const slice = signature_ptr[0..len];
 
     for (slice) |value| {
         try std.fmt.formatInt(value, 16, .lower, .{ .fill = '0', .width = 8 }, writer);

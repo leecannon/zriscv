@@ -158,7 +158,7 @@ class zriscv(pluginTemplate):
 	  # echo statement.
           if self.target_run:
             # set up the simulation command. Template is for spike. Please change.
-            simcmd = self.dut_exe + ' system --signature={0} {1}'.format(sig_file, elf)
+            simcmd = self.dut_exe + ' system --riscof={0} {1}'.format(sig_file, elf)
             #simcmd = self.dut_exe + ' --isa={0} +signature={1} +signature-granularity=4 {2}'.format(self.isa, sig_file, elf)
           else:
             simcmd = 'echo "NO RUN"'

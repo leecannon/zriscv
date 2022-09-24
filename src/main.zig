@@ -30,7 +30,7 @@ pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
     const options = parseArguments(allocator, stderr);
     defer if (is_debug_or_test) options.deinit();
 
-    const riscof_mode = if (options.verb.? == .system) options.verb.?.system.signature != null else false;
+    const riscof_mode = if (options.verb.? == .system) options.verb.?.system.riscof != null else false;
 
     const executable = lib.Executable.load(
         allocator,
@@ -74,7 +74,7 @@ fn systemMode(
     const z = lib.traceNamed(@src(), "system mode");
     defer z.end();
 
-    const riscof_mode = system_mode_options.signature != null;
+    const riscof_mode = system_mode_options.riscof != null;
 
     if (riscof_mode and system_mode_options.interactive) {
         stderr.writeAll("ERROR: interactive mode is not supported with riscof mode\n") catch unreachable;
@@ -133,7 +133,7 @@ fn systemMode(
         }
 
         // if all has gone well then the signature section of memory has been filled in
-        writeOutSignature(system_mode_options.signature.?, machine.memory, executable) catch |err| {
+        writeOutSignature(system_mode_options.riscof.?, machine.memory, executable) catch |err| {
             stderr.print("failed to output signature file: {s}\n", .{@errorName(err)}) catch unreachable;
         };
 
@@ -419,7 +419,8 @@ const usage =
     \\
     \\    --harts=[HARTS]            the number of harts the system has, defaults to 1, must be greater than zero
     \\
-    \\    --signature=[PATH]         runs the emulator in riscof test mode and writes out the signature to [PATH]
+    \\    --riscof=[SIGNATURE_PATH]  runs the emulator in riscof test mode and writes out the signature to [SIGNATURE_PATH]
+    \\                               REQUIRES system mode
     \\
 ;
 
@@ -445,7 +446,7 @@ const SystemModeOptions = struct {
     memory: usize = 4096,
     harts: usize = 1,
     interactive: bool = false,
-    signature: ?[]const u8 = null,
+    riscof: ?[]const u8 = null,
 
     pub const shorthands = .{
         .m = "memory",

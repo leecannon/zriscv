@@ -102,7 +102,30 @@ fn setupZriscvCli(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg,
     exe.addPackage(bestline_pkg);
     exe.addPackage(tracy_pkg);
     exe.addPackage(getZriscvPkg(options_package));
-    link(exe, .{ .include_tracy = trace, .include_bestline = true });
+
+    exe.linkLibC();
+
+    exe.addIncludePath("libraries/bestline/bestline");
+    exe.addCSourceFile("libraries/bestline/bestline/bestline.c", &.{});
+
+    if (trace) {
+        exe.linkLibCpp();
+        exe.addIncludePath("libraries/tracy/tracy/public");
+
+        const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
+            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
+        else
+            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
+
+        exe.addCSourceFile("libraries/tracy/tracy/public/TracyClient.cpp", tracy_c_flags);
+
+        if (exe.target.isWindows()) {
+            exe.linkSystemLibrary("Advapi32");
+            exe.linkSystemLibrary("User32");
+            exe.linkSystemLibrary("Ws2_32");
+            exe.linkSystemLibrary("DbgHelp");
+        }
+    }
 }
 
 fn setupZriscvGui(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg, trace: bool) void {
@@ -111,7 +134,27 @@ fn setupZriscvGui(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg,
     exe.addPackage(known_folders_pkg);
     exe.addPackage(tracy_pkg);
     exe.addPackage(getZriscvPkg(options_package));
-    link(exe, .{ .include_tracy = trace });
+
+    exe.linkLibC();
+
+    if (trace) {
+        exe.linkLibCpp();
+        exe.addIncludePath("libraries/tracy/tracy/public");
+
+        const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
+            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
+        else
+            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
+
+        exe.addCSourceFile("libraries/tracy/tracy/public/TracyClient.cpp", tracy_c_flags);
+
+        if (exe.target.isWindows()) {
+            exe.linkSystemLibrary("Advapi32");
+            exe.linkSystemLibrary("User32");
+            exe.linkSystemLibrary("Ws2_32");
+            exe.linkSystemLibrary("DbgHelp");
+        }
+    }
 }
 
 fn setupZriscvForTests(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg, trace: bool) void {
@@ -119,23 +162,10 @@ fn setupZriscvForTests(exe: *std.build.LibExeObjStep, options_package: std.build
     exe.addPackage(bitjuggle_pkg);
     exe.addPackage(tracy_pkg);
     exe.addPackage(getZriscvPkg(options_package));
-    link(exe, .{ .include_tracy = trace });
-}
 
-const LinkOptions = struct {
-    include_tracy: bool,
-    include_bestline: bool = false,
-};
-
-fn link(exe: *std.build.LibExeObjStep, options: LinkOptions) void {
     exe.linkLibC();
 
-    if (options.include_bestline) {
-        exe.addIncludePath("libraries/bestline/bestline");
-        exe.addCSourceFile("libraries/bestline/bestline/bestline.c", &.{});
-    }
-
-    if (options.include_tracy) {
+    if (trace) {
         exe.linkLibCpp();
         exe.addIncludePath("libraries/tracy/tracy/public");
 

@@ -137,6 +137,19 @@ fn setupZriscvGui(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg,
 
     exe.linkLibC();
 
+    const zgui = @import("libraries/zig-gamedev/libs/zgui/build.zig");
+    const zglfw = @import("libraries/zig-gamedev/libs/zglfw/build.zig");
+    const zgpu = @import("libraries/zig-gamedev/libs/zgpu/build.zig");
+    const zpool = @import("libraries/zig-gamedev/libs/zpool/build.zig");
+
+    exe.addPackage(zgui.pkg);
+    zgui.link(exe);
+    const zgpu_pkg = zgpu.getPkg(&.{ zpool.pkg, zglfw.pkg });
+    exe.addPackage(zglfw.pkg);
+    exe.addPackage(zgpu_pkg);
+    zglfw.link(exe);
+    zgpu.link(exe);
+
     if (trace) {
         exe.linkLibCpp();
         exe.addIncludePath("libraries/tracy/tracy/public");

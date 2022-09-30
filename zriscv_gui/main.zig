@@ -5,12 +5,29 @@ const args = @import("args");
 const tracy = @import("tracy");
 const zriscv = @import("zriscv");
 
+const zglfw = @import("zglfw");
+const zgpu = @import("zgpu");
+const wgpu = zgpu.wgpu;
+const zgui = @import("zgui");
+
 // Configure tracy
 pub const trace = build_options.trace;
 pub const trace_callstack = build_options.trace_callstack;
 
-pub fn main() void {
-    std.debug.print("Hello from gzriscv!\n", .{});
+pub fn main() !void {
+    try zglfw.init();
+    defer zglfw.terminate();
+
+    zglfw.defaultWindowHints();
+    zglfw.windowHint(.cocoa_retina_framebuffer, 1);
+    zglfw.windowHint(.client_api, 0);
+    const window = try zglfw.createWindow(1600, 1000, "Hello World", null, null);
+    defer window.destroy();
+    window.setSizeLimits(400, 400, -1, -1);
+
+    while (!window.shouldClose()) {
+        zglfw.pollEvents();
+    }
 }
 
 comptime {

@@ -13,3 +13,6 @@
 [submodule "libraries/known-folders"]
 	path = libraries/known-folders
 	url = https://github.com/ziglibs/known-folders.git
+[submodule "libraries/zig-gamedev"]
+	path = libraries/zig-gamedev
+	url = https://github.com/michal-z/zig-gamedev.git

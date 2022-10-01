@@ -5,29 +5,42 @@ const args = @import("args");
 const tracy = @import("tracy");
 const zriscv = @import("zriscv");
 
-const zglfw = @import("zglfw");
-const zgpu = @import("zgpu");
-const wgpu = zgpu.wgpu;
-const zgui = @import("zgui");
+const State = @import("State.zig");
 
 // Configure tracy
 pub const trace = build_options.trace;
 pub const trace_callstack = build_options.trace_callstack;
 
-pub fn main() !void {
-    try zglfw.init();
-    defer zglfw.terminate();
+pub const is_debug_or_test = builtin.is_test or builtin.mode == .Debug;
 
-    zglfw.defaultWindowHints();
-    zglfw.windowHint(.cocoa_retina_framebuffer, 1);
-    zglfw.windowHint(.client_api, 0);
-    const window = try zglfw.createWindow(1600, 1000, "Hello World", null, null);
-    defer window.destroy();
-    window.setSizeLimits(400, 400, -1, -1);
+pub fn main() if (is_debug_or_test) anyerror!u8 else u8 {
+    const main_z = tracy.traceNamed(@src(), "main");
+    // this causes the frame to start with our main instead of `std.start`
+    tracy.traceFrameMark();
 
-    while (!window.shouldClose()) {
-        zglfw.pollEvents();
+    var gpa = if (is_debug_or_test) std.heap.GeneralPurposeAllocator(.{}){} else {};
+
+    defer {
+        if (is_debug_or_test) _ = gpa.deinit();
+        main_z.end();
     }
+
+    const allocator = if (is_debug_or_test) gpa.allocator() else std.heap.c_allocator;
+
+    const stderr = std.io.getStdErr().writer();
+
+    var state = State.init(allocator, stderr) catch |err| {
+        if (is_debug_or_test) return err;
+        return 1;
+    };
+    defer if (is_debug_or_test) state.deinit();
+
+    state.run() catch |err| {
+        if (is_debug_or_test) return err;
+        return 1;
+    };
+
+    return 0;
 }
 
 comptime {

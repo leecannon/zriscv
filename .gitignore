@@ -3,3 +3,4 @@ zig-out/
 __pycache__/
 riscof/riscof_work/
 riscof/riscv-arch-test/
+imgui.ini

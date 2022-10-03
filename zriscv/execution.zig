@@ -3056,7 +3056,65 @@ fn execute(
         .CSRRWI => return instructionExecutionUnimplemented("CSRRWI"), // TODO: CSRRWI
         .CSRRSI => return instructionExecutionUnimplemented("CSRRSI"), // TODO: CSRRSI
         .CSRRCI => return instructionExecutionUnimplemented("CSRRCI"), // TODO: CSRRCI
-        .MUL => return instructionExecutionUnimplemented("MUL"), // TODO: MUL
+        .MUL => {
+            const z = tracy.traceNamed(@src(), "MUL");
+            defer z.end();
+
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs2 = instruction.rs2();
+                const rs2_value = hart.x[@enumToInt(rs2)];
+
+                var result: u64 = undefined;
+                _ = @mulWithOverflow(u64, rs1_value, rs2_value, &result);
+
+                if (has_writer) {
+                    try writer.print(
+                        \\MUL - src1: {}, src2: {}, dest: {}
+                        \\  set {} to ( {}<{}> * {}<{}> ) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        result,
+                    });
+                }
+
+                if (actually_execute) {
+                    hart.x[@enumToInt(rd)] = result;
+                }
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\MUL - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .MULH => return instructionExecutionUnimplemented("MULH"), // TODO: MULH
         .MULHSU => return instructionExecutionUnimplemented("MULHSU"), // TODO: MULHSU
         .MULHU => return instructionExecutionUnimplemented("MULHU"), // TODO: MULHU

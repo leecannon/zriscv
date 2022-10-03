@@ -3196,7 +3196,70 @@ fn execute(
         .REMU => return instructionExecutionUnimplemented("REMU"), // TODO: REMU
         .MULW => return instructionExecutionUnimplemented("MULW"), // TODO: MULW
         .DIVW => return instructionExecutionUnimplemented("DIVW"), // TODO: DIVW
-        .DIVUW => return instructionExecutionUnimplemented("DIVUW"), // TODO: DIVUW
+        .DIVUW => {
+            const z = tracy.traceNamed(@src(), "DIVUW");
+            defer z.end();
+
+            // R-type
+
+            const rd = instruction.rd();
+
+            if (rd != .zero) {
+                const rs1 = instruction.rs1();
+                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs2 = instruction.rs2();
+                const rs2_value = @truncate(u32, hart.x[@enumToInt(rs2)]);
+
+                const result = signExtend32bit(
+                    std.math.divTrunc(
+                        u32,
+                        rs1_value,
+                        rs2_value,
+                    ) catch |err| switch (err) {
+                        error.DivisionByZero => @bitCast(u32, @as(i32, -1)),
+                    },
+                );
+
+                if (has_writer) {
+                    try writer.print(
+                        \\DIVUW - src1: {}, src2: {}, dest: {}
+                        \\  32 bit set {} to ( {}<{}> / {}<{}>) = {}
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                        rd,
+                        rs1,
+                        rs1_value,
+                        rs2,
+                        rs2_value,
+                        result,
+                    });
+                }
+
+                hart.x[@enumToInt(rd)] = result;
+            } else {
+                if (has_writer) {
+                    const rs1 = instruction.rs1();
+                    const rs2 = instruction.rs2();
+
+                    try writer.print(
+                        \\DIVUW - src1: {}, src2: {}, dest: {}
+                        \\  nop
+                        \\
+                    , .{
+                        rs1,
+                        rs2,
+                        rd,
+                    });
+                }
+            }
+
+            if (actually_execute) {
+                hart.pc += 4;
+            }
+        },
         .REMW => return instructionExecutionUnimplemented("REMW"), // TODO: REMW
         .REMUW => return instructionExecutionUnimplemented("REMUW"), // TODO: REMUW
         .LR_W => return instructionExecutionUnimplemented("LR_W"), // TODO: LR_W

@@ -58,7 +58,7 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
         return error.ElfNotLittleEndian;
     }
 
-    if (elf_header.@"type" != .EXEC) {
+    if (elf_header.type != .EXEC) {
         stderr.writeAll("ERROR: ELF file is not an executable\n") catch unreachable;
         return error.ElfNotAnExecutable;
     }
@@ -186,7 +186,7 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
     defer symbols.deinit();
 
     var regions: std.ArrayListUnmanaged(RegionDescriptor) = .{};
-    errdefer regions.deinit(allocator);
+    defer regions.deinit(allocator);
 
     for (program_headers) |program_header| {
         switch (program_header.p_type) {
@@ -256,7 +256,7 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
 
     var executable = Executable{
         .contents = contents,
-        .region_description = regions.toOwnedSlice(allocator),
+        .region_description = try regions.toOwnedSlice(allocator),
         .start_address = elf_header.entry,
         .file_path = file_path,
     };
@@ -290,7 +290,7 @@ const native_endian = @import("builtin").target.cpu.arch.endian();
 // Copied from `std.elf.Header` but includes the Elf type
 const ElfHeader = struct {
     endian: std.builtin.Endian,
-    @"type": std.elf.ET,
+    type: std.elf.ET,
     machine: std.elf.EM,
     is_64: bool,
     entry: u64,
@@ -343,7 +343,7 @@ const ElfHeader = struct {
             .endian = endian,
             .machine = machine,
             .is_64 = is_64,
-            .@"type" = @"type",
+            .type = @"type",
             .entry = std.elf.int(is_64, need_bswap, hdr32.e_entry, hdr64.e_entry),
             .phoff = std.elf.int(is_64, need_bswap, hdr32.e_phoff, hdr64.e_phoff),
             .shoff = std.elf.int(is_64, need_bswap, hdr32.e_shoff, hdr64.e_shoff),

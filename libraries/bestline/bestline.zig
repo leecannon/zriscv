@@ -10,10 +10,10 @@ pub const Completions = extern struct {
     }
 };
 
-pub const CompletionCallback = fn (buf: [*:0]const u8, completions: *Completions) callconv(.C) void;
+pub const CompletionCallback = *const fn (buf: [*:0]const u8, completions: *Completions) callconv(.C) void;
 
-pub extern fn bestlineSetCompletionCallback(callback: std.meta.FnPtr(CompletionCallback)) void;
+pub extern fn bestlineSetCompletionCallback(callback: CompletionCallback) void;
 
-pub const HintsCallback = fn (buf: [*:0]const u8, ansi1: *[*:0]const u8, ansi2: *[*:0]const u8) callconv(.C) ?[*:0]const u8;
+pub const HintsCallback = *const fn (buf: [*:0]const u8, ansi1: *[*:0]const u8, ansi2: *[*:0]const u8) callconv(.C) ?[*:0]const u8;
 
-pub extern fn bestlineSetHintsCallback(callback: std.meta.FnPtr(HintsCallback)) void;
+pub extern fn bestlineSetHintsCallback(callback: HintsCallback) void;

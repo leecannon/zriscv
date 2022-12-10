@@ -14,11 +14,6 @@ pub fn build(b: *std.build.Builder) !void {
     const trace = b.option(bool, "trace", "enable tracy tracing") orelse false;
     const trace_callstack = b.option(bool, "trace-callstack", "enable tracy callstack (does nothing without trace option)") orelse false;
 
-    if (trace) {
-        // TODO: For some reason self-hosted and tracy don't get along
-        b.use_stage1 = true;
-    }
-
     const options_package = try getOptionsPkg(b, trace, trace_callstack, output, dont_panic_on_unimplemented);
 
     // zriscv_cli

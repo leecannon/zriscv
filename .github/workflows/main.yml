@@ -25,6 +25,9 @@ jobs:
 
       - name: Build
         run: zig build install
+        
+      - name: Build with Tracy
+        run: zig build install -Dtrace
 
       - name: Test
         run: zig build test

@@ -21,7 +21,7 @@ trap cleanup EXIT
 
 if [ ! -d $TEST_DIR ]; then
     echo "cloning riscv-arch-test"
-    git clone --depth=1 --single-branch https://github.com/leecannon/riscv-arch-test.git $TEST_DIR &>/dev/null || die "couldn't clone riscv-arch-test"
+    git clone --depth=1 --single-branch https://github.com/riscv-non-isa/riscv-arch-test.git $TEST_DIR &>/dev/null || die "couldn't clone riscv-arch-test"
 else
     echo "updating riscv-arch-test"
     git -C $TEST_DIR pull &>/dev/null || die "couldn't update riscv-arch-test"

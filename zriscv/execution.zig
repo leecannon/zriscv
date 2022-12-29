@@ -1701,8 +1701,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const rs2_value = hart.x[@enumToInt(rs2)];
 
-                var result: u64 = undefined;
-                _ = @addWithOverflow(u64, rs1_value, rs2_value, &result);
+                const result = @addWithOverflow(rs1_value, rs2_value)[0];
 
                 if (has_writer) {
                     try writer.print(
@@ -1759,8 +1758,7 @@ fn execute(
                 const rs2 = instruction.rs2();
                 const rs2_value = hart.x[@enumToInt(rs2)];
 
-                var result: u64 = undefined;
-                _ = @subWithOverflow(u64, rs1_value, rs2_value, &result);
+                const result = @subWithOverflow(rs1_value, rs2_value)[0];
 
                 if (has_writer) {
                     try writer.print(
@@ -2694,8 +2692,7 @@ fn execute(
                 const rs2 = instruction.rs2();
                 const rs2_value_truncated = @truncate(u32, hart.x[@enumToInt(rs2)]);
 
-                var result: u32 = undefined;
-                _ = @addWithOverflow(u32, rs1_value_truncated, rs2_value_truncated, &result);
+                const result = @addWithOverflow(rs1_value_truncated, rs2_value_truncated)[0];
 
                 if (has_writer) {
                     try writer.print(
@@ -2753,8 +2750,7 @@ fn execute(
                 const rs2 = instruction.rs2();
                 const rs2_value = @truncate(u32, hart.x[@enumToInt(rs2)]);
 
-                var result: u32 = undefined;
-                _ = @subWithOverflow(u32, rs1_value, rs2_value, &result);
+                const result = @subWithOverflow(rs1_value, rs2_value)[0];
                 const extended_result = signExtend32bit(result);
 
                 if (has_writer) {
@@ -3070,8 +3066,7 @@ fn execute(
                 const rs2 = instruction.rs2();
                 const rs2_value = hart.x[@enumToInt(rs2)];
 
-                var result: u64 = undefined;
-                _ = @mulWithOverflow(u64, rs1_value, rs2_value, &result);
+                const result = @mulWithOverflow(rs1_value, rs2_value)[0];
 
                 if (has_writer) {
                     try writer.print(
@@ -3612,13 +3607,10 @@ test "addSignedToUnsignedWrap" {
 
 fn addSignedToUnsignedIgnoreOverflow(unsigned: u64, signed: i64) u64 {
     @setRuntimeSafety(false);
-    var result: u64 = undefined;
-    if (signed < 0) {
-        _ = @subWithOverflow(u64, unsigned, @bitCast(u64, -signed), &result);
-    } else {
-        _ = @addWithOverflow(u64, unsigned, @bitCast(u64, signed), &result);
-    }
-    return result;
+    return if (signed < 0)
+        @subWithOverflow(unsigned, @bitCast(u64, -signed))[0]
+    else
+        @addWithOverflow(unsigned, @bitCast(u64, signed))[0];
 }
 
 test "addSignedToUnsignedIgnoreOverflow" {

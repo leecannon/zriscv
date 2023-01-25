@@ -1,6 +1,7 @@
 const std = @import("std");
 const zriscv = @import("zriscv");
 const tracy = @import("tracy");
+const helpers = @import("helpers.zig");
 const build_options = @import("build_options");
 
 pub const ExecutionOptions = struct {
@@ -25,10 +26,12 @@ pub fn step(
     comptime options: ExecutionOptions,
     comptime actually_execute: bool,
 ) !bool {
+    if (mode == .user and actually_execute == false) @compileError("user mode does not support not actually executing");
+
     const execute_z = tracy.traceNamed(@src(), "execute step");
     defer execute_z.end();
 
-    const has_writer = comptime isWriter(@TypeOf(writer));
+    const has_writer = comptime helpers.isWriter(@TypeOf(writer));
 
     const instruction = readInstruction(mode, hart) catch |err| {
         if (options.execution_out_of_bounds_is_fatal) return err;
@@ -85,7 +88,7 @@ fn execute(
         hart.cycle += 1;
     };
 
-    const has_writer = comptime isWriter(@TypeOf(writer));
+    const has_writer = comptime helpers.isWriter(@TypeOf(writer));
 
     switch (instruction.decode()) {
         .Unimplemented => {
@@ -157,7 +160,7 @@ fn execute(
 
             if (rd != .zero) {
                 const imm = instruction.u_imm.read();
-                const result = addSignedToUnsignedWrap(hart.pc, imm);
+                const result = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -205,7 +208,7 @@ fn execute(
             const rd = instruction.rd();
             const imm = instruction.j_imm.read();
 
-            const target_address = addSignedToUnsignedWrap(hart.pc, imm);
+            const target_address = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
             if (rd != .zero) {
                 const return_address = hart.pc + 4;
@@ -261,7 +264,7 @@ fn execute(
             const rs1_value = hart.x[@enumToInt(rs1)];
             const rd = instruction.rd();
 
-            const target_address = addSignedToUnsignedWrap(rs1_value, imm) & ~@as(u64, 1);
+            const target_address = helpers.addSignedToUnsignedWrap(rs1_value, imm) & ~@as(u64, 1);
 
             if (rd != .zero) {
                 const return_address = hart.pc + 4;
@@ -324,7 +327,7 @@ fn execute(
 
             if (rs1_value == rs2_value) {
                 const imm = instruction.b_imm.read();
-                const result = addSignedToUnsignedWrap(hart.pc, imm);
+                const result = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -385,7 +388,7 @@ fn execute(
             const rs2_value = hart.x[@enumToInt(rs2)];
 
             const imm = instruction.b_imm.read();
-            const result = addSignedToUnsignedWrap(hart.pc, imm);
+            const result = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
             if (rs1_value != rs2_value) {
                 if (has_writer) {
@@ -446,7 +449,7 @@ fn execute(
 
             if (rs1_value < rs2_value) {
                 const imm = instruction.b_imm.read();
-                const result = addSignedToUnsignedWrap(hart.pc, imm);
+                const result = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -508,7 +511,7 @@ fn execute(
 
             if (rs1_value >= rs2_value) {
                 const imm = instruction.b_imm.read();
-                const result = addSignedToUnsignedWrap(hart.pc, imm);
+                const result = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -570,7 +573,7 @@ fn execute(
 
             if (rs1_value < rs2_value) {
                 const imm = instruction.b_imm.read();
-                const result = addSignedToUnsignedWrap(hart.pc, imm);
+                const result = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -632,7 +635,7 @@ fn execute(
 
             if (rs1_value >= rs2_value) {
                 const imm = instruction.b_imm.read();
-                const result = addSignedToUnsignedWrap(hart.pc, imm);
+                const result = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -694,7 +697,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const address = addSignedToUnsignedWrap(rs1_value, imm);
+                const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -727,7 +730,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = signExtend8bit(memory);
+                    hart.x[@enumToInt(rd)] = helpers.signExtend8bit(memory);
                 }
             } else {
                 if (has_writer) {
@@ -763,7 +766,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const address = addSignedToUnsignedWrap(rs1_value, imm);
+                const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -796,7 +799,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = signExtend16bit(memory);
+                    hart.x[@enumToInt(rd)] = helpers.signExtend16bit(memory);
                 }
             } else {
                 if (has_writer) {
@@ -832,7 +835,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const address = addSignedToUnsignedWrap(rs1_value, imm);
+                const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -865,7 +868,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = signExtend32bit(memory);
+                    hart.x[@enumToInt(rd)] = helpers.signExtend32bit(memory);
                 }
             } else {
                 if (has_writer) {
@@ -901,7 +904,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const address = addSignedToUnsignedWrap(rs1_value, imm);
+                const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -970,7 +973,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const address = addSignedToUnsignedWrap(rs1_value, imm);
+                const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -1037,7 +1040,7 @@ fn execute(
             const rs2_value = hart.x[@enumToInt(rs2)];
             const imm = instruction.s_imm.read();
 
-            const address = addSignedToUnsignedWrap(rs1_value, imm);
+            const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
             if (has_writer) {
                 try writer.print(
@@ -1093,7 +1096,7 @@ fn execute(
             const rs2_value = hart.x[@enumToInt(rs2)];
             const imm = instruction.s_imm.read();
 
-            const address = addSignedToUnsignedWrap(rs1_value, imm);
+            const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
             if (has_writer) {
                 try writer.print(
@@ -1149,7 +1152,7 @@ fn execute(
             const rs2_value = hart.x[@enumToInt(rs2)];
             const imm = instruction.s_imm.read();
 
-            const address = addSignedToUnsignedWrap(rs1_value, imm);
+            const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
             if (has_writer) {
                 try writer.print(
@@ -1207,7 +1210,7 @@ fn execute(
 
                 const rs1_value = hart.x[@enumToInt(rs1)];
 
-                const result = addSignedToUnsignedIgnoreOverflow(rs1_value, imm);
+                const result = helpers.addSignedToUnsignedIgnoreOverflow(rs1_value, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -2271,7 +2274,25 @@ fn execute(
                 hart.pc += 4;
             }
         },
-        .ECALL => return instructionExecutionUnimplemented("ECALL"), // TODO: ECALL
+        .ECALL => {
+            if (mode == .user) {
+                if (has_writer) {
+                    try writer.print("ECALL - syscall mapping\n", .{});
+                }
+                const ret = hart.handleSyscall(writer, options);
+                hart.pc += 4;
+                return ret;
+            }
+
+            const z = tracy.traceNamed(@src(), "ECALL");
+            defer z.end();
+
+            if (has_writer) {
+                try writer.print("ECALL\n", .{});
+            }
+
+            return instructionExecutionUnimplemented("ECALL"); // TODO: ECALL
+        },
         .EBREAK => return instructionExecutionUnimplemented("EBREAK"), // TODO: EBREAK
         .LWU => {
             const z = tracy.traceNamed(@src(), "LWU");
@@ -2286,7 +2307,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const address = addSignedToUnsignedWrap(rs1_value, imm);
+                const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -2355,7 +2376,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const address = addSignedToUnsignedWrap(rs1_value, imm);
+                const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -2422,7 +2443,7 @@ fn execute(
             const rs2_value = hart.x[@enumToInt(rs2)];
             const imm = instruction.s_imm.read();
 
-            const address = addSignedToUnsignedWrap(rs1_value, imm);
+            const address = helpers.addSignedToUnsignedWrap(rs1_value, imm);
 
             if (has_writer) {
                 try writer.print(
@@ -2471,7 +2492,7 @@ fn execute(
                 const rs1_value = hart.x[@enumToInt(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const result = signExtend32bit(addSignedToUnsignedIgnoreOverflow(rs1_value, imm) & 0xFFFFFFFF);
+                const result = helpers.signExtend32bit(helpers.addSignedToUnsignedIgnoreOverflow(rs1_value, imm) & 0xFFFFFFFF);
 
                 if (has_writer) {
                     try writer.print(
@@ -2526,7 +2547,7 @@ fn execute(
                 const rs1 = instruction.rs1();
                 const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
                 const shmt = instruction.i_specialization.smallShift();
-                const result = signExtend32bit(rs1_value << shmt);
+                const result = helpers.signExtend32bit(rs1_value << shmt);
 
                 if (has_writer) {
                     try writer.print(
@@ -2581,7 +2602,7 @@ fn execute(
                 const rs1 = instruction.rs1();
                 const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
                 const shmt = instruction.i_specialization.smallShift();
-                const result = signExtend32bit(rs1_value >> shmt);
+                const result = helpers.signExtend32bit(rs1_value >> shmt);
 
                 if (has_writer) {
                     try writer.print(
@@ -2636,7 +2657,7 @@ fn execute(
                 const rs1 = instruction.rs1();
                 const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs1)]));
                 const shmt = instruction.i_specialization.smallShift();
-                const result = signExtend32bit(@bitCast(u32, rs1_value >> shmt));
+                const result = helpers.signExtend32bit(@bitCast(u32, rs1_value >> shmt));
 
                 if (has_writer) {
                     try writer.print(
@@ -2713,7 +2734,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = signExtend32bit(result);
+                    hart.x[@enumToInt(rd)] = helpers.signExtend32bit(result);
                 }
             } else {
                 if (has_writer) {
@@ -2751,7 +2772,7 @@ fn execute(
                 const rs2_value = @truncate(u32, hart.x[@enumToInt(rs2)]);
 
                 const result = @subWithOverflow(rs1_value, rs2_value)[0];
-                const extended_result = signExtend32bit(result);
+                const extended_result = helpers.signExtend32bit(result);
 
                 if (has_writer) {
                     try writer.print(
@@ -2808,7 +2829,7 @@ fn execute(
                 const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
                 const rs2 = instruction.rs2();
                 const rs2_value = @truncate(u5, hart.x[@enumToInt(rs2)]);
-                const result = signExtend32bit(rs1_value << rs2_value);
+                const result = helpers.signExtend32bit(rs1_value << rs2_value);
 
                 if (has_writer) {
                     try writer.print(
@@ -2865,7 +2886,7 @@ fn execute(
                 const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
                 const rs2 = instruction.rs2();
                 const rs2_value = @truncate(u5, hart.x[@enumToInt(rs2)]);
-                const result = signExtend32bit(rs1_value >> rs2_value);
+                const result = helpers.signExtend32bit(rs1_value >> rs2_value);
 
                 if (has_writer) {
                     try writer.print(
@@ -2922,7 +2943,7 @@ fn execute(
                 const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs1)]));
                 const rs2 = instruction.rs2();
                 const rs2_value = @truncate(u5, hart.x[@enumToInt(rs2)]);
-                const result = signExtend32bit(@bitCast(u32, rs1_value >> rs2_value));
+                const result = helpers.signExtend32bit(@bitCast(u32, rs1_value >> rs2_value));
 
                 if (has_writer) {
                     try writer.print(
@@ -2986,6 +3007,11 @@ fn execute(
             const rs1 = instruction.rs1();
             const rs1_value = hart.x[@enumToInt(rs1)];
 
+            const privilege_level: zriscv.PrivilegeLevel = if (mode == .user)
+                .User
+            else
+                hart.privilege_level;
+
             if (rd != .zero) {
                 if (has_writer) {
                     try writer.print(
@@ -3005,7 +3031,7 @@ fn execute(
                     });
                 }
 
-                if (!csr.canWrite(hart.privilege_level)) {
+                if (!csr.canWrite(privilege_level)) {
                     // TODO: Pass `IllegalInstruction` once `throw` is implemented
                     try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
                     return true;
@@ -3032,7 +3058,7 @@ fn execute(
                     });
                 }
 
-                if (!csr.canWrite(hart.privilege_level)) {
+                if (!csr.canWrite(privilege_level)) {
                     // TODO: Pass `IllegalInstruction` once `throw` is implemented
                     try throw(mode, hart, {}, instruction.full_backing, writer, actually_execute);
                     return true;
@@ -3262,7 +3288,7 @@ fn execute(
                 const rs2 = instruction.rs2();
                 const rs2_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs2)]));
 
-                const result = signExtend32bit(
+                const result = helpers.signExtend32bit(
                     @bitCast(
                         u32,
                         std.math.divTrunc(
@@ -3332,7 +3358,7 @@ fn execute(
                 const rs2 = instruction.rs2();
                 const rs2_value = @truncate(u32, hart.x[@enumToInt(rs2)]);
 
-                const result = signExtend32bit(
+                const result = helpers.signExtend32bit(
                     std.math.divTrunc(
                         u32,
                         rs1_value,
@@ -3497,7 +3523,7 @@ fn execute(
             // CJ Type
 
             const imm = instruction.compressed_jump_target.read();
-            const result = addSignedToUnsignedWrap(hart.pc, imm);
+            const result = helpers.addSignedToUnsignedWrap(hart.pc, imm);
 
             if (has_writer) {
                 try writer.print(
@@ -3549,7 +3575,7 @@ fn readCsr(comptime mode: zriscv.Mode, hart: *const zriscv.Hart(mode), csr: zris
 
     return switch (csr) {
         .cycle => hart.cycle,
-        .mhartid => hart.hart_id,
+        .mhartid => if (mode == .system) hart.hart_id else unreachable, // unreachable in user mode
     };
 }
 
@@ -3577,71 +3603,13 @@ fn throw(
     const z = tracy.traceNamed(@src(), "throw");
     defer z.end();
 
-    const has_writer = comptime isWriter(@TypeOf(writer));
+    const has_writer = comptime helpers.isWriter(@TypeOf(writer));
     _ = has_writer;
     _ = hart;
     _ = exception;
     _ = value;
     _ = actually_execute;
     @panic("UNIMPLEMENTED: throw"); // TODO: Exceptions
-}
-
-fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {
-    @setRuntimeSafety(false);
-    return if (signed < 0)
-        unsigned -% @bitCast(u64, -signed)
-    else
-        unsigned +% @bitCast(u64, signed);
-}
-
-test "addSignedToUnsignedWrap" {
-    try std.testing.expectEqual(
-        @as(u64, 0),
-        addSignedToUnsignedWrap(@as(u64, std.math.maxInt(u64)), 1),
-    );
-    try std.testing.expectEqual(
-        @as(u64, std.math.maxInt(u64)),
-        addSignedToUnsignedWrap(0, -1),
-    );
-}
-
-fn addSignedToUnsignedIgnoreOverflow(unsigned: u64, signed: i64) u64 {
-    @setRuntimeSafety(false);
-    return if (signed < 0)
-        @subWithOverflow(unsigned, @bitCast(u64, -signed))[0]
-    else
-        @addWithOverflow(unsigned, @bitCast(u64, signed))[0];
-}
-
-test "addSignedToUnsignedIgnoreOverflow" {
-    try std.testing.expectEqual(
-        @as(u64, 42),
-        addSignedToUnsignedIgnoreOverflow(@as(u64, std.math.maxInt(u64)), 43),
-    );
-    try std.testing.expectEqual(
-        @as(u64, std.math.maxInt(u64)),
-        addSignedToUnsignedIgnoreOverflow(5, -6),
-    );
-}
-
-inline fn signExtend64bit(value: u64) i128 {
-    return @bitCast(i128, @as(u128, value) << 64) >> 64;
-}
-
-inline fn signExtend32bit(value: u64) u64 {
-    return @bitCast(u64, @bitCast(i64, value << 32) >> 32);
-}
-
-inline fn signExtend16bit(value: u64) u64 {
-    return @bitCast(u64, @bitCast(i64, value << 48) >> 48);
-}
-
-inline fn signExtend8bit(value: u64) u64 {
-    return @bitCast(u64, @bitCast(i64, value << 56) >> 56);
-}
-
-inline fn isWriter(comptime T: type) bool {
-    return comptime std.meta.trait.hasFn("print")(T);
 }
 
 comptime {

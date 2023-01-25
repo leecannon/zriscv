@@ -9,20 +9,42 @@ const execution = @import("execution.zig");
 pub const ExecutionOptions = execution.ExecutionOptions;
 pub const step = execution.step;
 
-const machine = @import("machine.zig");
-pub const Machine = machine.Machine;
-pub const SystemMachine = machine.SystemMachine;
-pub const UserMachine = machine.UserMachine;
+pub inline fn Machine(comptime mode: Mode) type {
+    return switch (mode) {
+        .system => SystemMachine,
+        .user => UserMachine,
+    };
+}
+pub const SystemMachine = @import("machine/SystemMachine.zig");
+pub const UserMachine = @import("machine/UserMachine.zig");
 
-const hart = @import("hart.zig");
-pub const Hart = hart.Hart;
-pub const SystemHart = hart.SystemHart;
-pub const UserHart = hart.UserHart;
+pub const LoadError = error{
+    ExecutionOutOfBounds,
+    Unimplemented,
+};
 
-const memory = @import("memory.zig");
-pub const Memory = memory.Memory;
-pub const SystemMemory = memory.SystemMemory;
-pub const UserMemory = memory.UserMemory;
+pub const StoreError = error{
+    ExecutionOutOfBounds,
+    Unimplemented,
+};
+
+pub inline fn Hart(comptime mode: Mode) type {
+    return switch (mode) {
+        .system => SystemHart,
+        .user => UserHart,
+    };
+}
+pub const SystemHart = @import("hart/SystemHart.zig");
+pub const UserHart = @import("hart/UserHart.zig");
+
+pub inline fn Memory(comptime mode: Mode) type {
+    return switch (mode) {
+        .system => SystemMemory,
+        .user => UserMemory,
+    };
+}
+pub const SystemMemory = @import("memory/SystemMemory.zig");
+pub const UserMemory = @import("memory/UserMemory.zig");
 
 const instruction = @import("instruction.zig");
 pub const Instruction = instruction.Instruction;
@@ -36,6 +58,7 @@ pub const Mode = enum {
 };
 
 comptime {
+    _ = @import("helpers.zig");
     _ = @import("tests.zig");
     refAllDeclsRecursive(@This());
 }

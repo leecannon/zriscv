@@ -320,11 +320,42 @@ fn userMode(
     const z = tracy.traceNamed(@src(), "user mode");
     defer z.end();
 
-    _ = allocator;
-    _ = executable;
-    _ = user_mode_options;
-    _ = stderr;
-    @panic("UNIMPLEMENTED: user mode"); // TODO: user mode
+    if (user_mode_options.stack_size == 0) {
+        stderr.writeAll("ERROR: non-zero stack size required\n") catch unreachable;
+        return error.ZeroStackSizeRequested;
+    }
+
+    if (!std.mem.isAligned(user_mode_options.stack_size, std.mem.page_size)) {
+        stderr.writeAll("ERROR: stack size is not page aligned\n") catch unreachable;
+        return error.StackSizeMisaligned;
+    }
+
+    const machine = zriscv.UserMachine.create(
+        allocator,
+        executable,
+        user_mode_options.stack_size,
+    ) catch |err| switch (err) {
+        else => |e| {
+            stderr.print("ERROR: failed to create machine: {s}\n", .{@errorName(err)}) catch unreachable;
+            return e;
+        },
+    };
+    defer if (is_debug_or_test) machine.destroy();
+
+    // TODO: Support multiple harts
+    while (true) {
+        const cont = zriscv.step(.user, zriscv.UserHart.current_hart, if (build_options.output) stderr else {}, false, execution_options, true) catch |err| {
+            stderr.print("execution error: {s}\n", .{@errorName(err)}) catch unreachable;
+            return err;
+        };
+
+        if (!cont) {
+            if (build_options.output) {
+                stderr.writeAll("execution requested stop\n") catch unreachable;
+            }
+            break;
+        }
+    }
 }
 
 fn writeOutSignature(signature_file: []const u8, memory: zriscv.SystemMemory, executable: zriscv.Executable) !void {
@@ -408,8 +439,8 @@ const usage =
     \\Load FILE and execute is as a riscv program in either system or user mode.
     \\
     \\Modes:
-    \\    user   - will run the executable as a userspace program, translating syscalls to and from the host
     \\    system - will run the executable as a system/kernel program
+    \\    user   - will run the executable as a userspace program, translating syscalls to and from the host
     \\
     \\Standard options:
     \\    -h, --help                 display this help and exit
@@ -424,6 +455,8 @@ const usage =
     \\
     \\    --riscof=[SIGNATURE_PATH]  runs the emulator in riscof test mode and writes out the signature to [SIGNATURE_PATH]
     \\                               REQUIRES system mode
+    \\User mode options:
+    \\    -s, --stack_size=[SIZE]    the stack size (KiB), defaults to 16KiB
     \\
 ;
 
@@ -442,7 +475,10 @@ const SharedArguments = struct {
     };
 };
 
-const UserModeOptions = struct {};
+const UserModeOptions = struct {
+    /// stack size in KiB, must be non-zero and page size aligned, defaults to 16KiB
+    stack_size: usize = 16384,
+};
 
 const SystemModeOptions = struct {
     /// memory size in MiB, defaults to 4096MiB

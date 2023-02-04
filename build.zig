@@ -2,11 +2,11 @@ const std = @import("std");
 
 const zriscv_version = std.builtin.Version{ .major = 0, .minor = 1, .patch = 1 };
 
-pub fn build(b: *std.build.Builder) !void {
+pub fn build(b: *std.Build) !void {
     b.prominent_compile_errors = true;
 
     const target = b.standardTargetOptions(.{});
-    const mode = b.standardReleaseOptions();
+    const optimize = b.standardOptimizeOption(.{});
 
     const output = b.option(bool, "output", "output when run in non-interactive system mode") orelse false;
     const dont_panic_on_unimplemented = b.option(bool, "unimp", "*don't* panic on unimplemented instruction execution") orelse false;
@@ -18,9 +18,12 @@ pub fn build(b: *std.build.Builder) !void {
 
     // zriscv_cli
     {
-        const zriscv_cli = b.addExecutable("zriscv", "zriscv_cli/main.zig");
-        zriscv_cli.setTarget(target);
-        zriscv_cli.setBuildMode(mode);
+        const zriscv_cli = b.addExecutable(.{
+            .name = "zriscv",
+            .root_source_file = .{ .path = "zriscv_cli/main.zig" },
+            .target = target,
+            .optimize = optimize,
+        });
 
         setupZriscvCli(zriscv_cli, options_package, trace);
         zriscv_cli.install();
@@ -37,9 +40,12 @@ pub fn build(b: *std.build.Builder) !void {
 
     // zriscv_gui
     {
-        const zriscv_gui = b.addExecutable("gzriscv", "zriscv_gui/main.zig");
-        zriscv_gui.setTarget(target);
-        zriscv_gui.setBuildMode(mode);
+        const zriscv_gui = b.addExecutable(.{
+            .name = "gzriscv",
+            .root_source_file = .{ .path = "zriscv_gui/main.zig" },
+            .target = target,
+            .optimize = optimize,
+        });
         zriscv_gui.install();
         setupZriscvGui(zriscv_gui, options_package, trace);
 
@@ -55,19 +61,25 @@ pub fn build(b: *std.build.Builder) !void {
 
     // Tests
     {
-        const zriscv_test = b.addTest("zriscv/zriscv.zig");
-        zriscv_test.setTarget(target);
-        zriscv_test.setBuildMode(mode);
+        const zriscv_test = b.addTest(.{
+            .root_source_file = .{ .path = "zriscv/zriscv.zig" },
+            .target = target,
+            .optimize = optimize,
+        });
         setupZriscvForTests(zriscv_test, options_package, trace);
 
-        const zriscv_cli_test = b.addTest("zriscv_cli/main.zig");
-        zriscv_cli_test.setTarget(target);
-        zriscv_cli_test.setBuildMode(mode);
+        const zriscv_cli_test = b.addTest(.{
+            .root_source_file = .{ .path = "zriscv_cli/main.zig" },
+            .target = target,
+            .optimize = optimize,
+        });
         setupZriscvCli(zriscv_cli_test, options_package, trace);
 
-        const zriscv_gui_test = b.addTest("zriscv_gui/main.zig");
-        zriscv_gui_test.setTarget(target);
-        zriscv_gui_test.setBuildMode(mode);
+        const zriscv_gui_test = b.addTest(.{
+            .root_source_file = .{ .path = "zriscv_gui/main.zig" },
+            .target = target,
+            .optimize = optimize,
+        });
         setupZriscvGui(zriscv_gui_test, options_package, trace);
 
         const test_step = b.step("test", "Run the tests");
@@ -90,7 +102,7 @@ pub fn build(b: *std.build.Builder) !void {
     }
 }
 
-fn setupZriscvCli(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg, trace: bool) void {
+fn setupZriscvCli(exe: *std.Build.CompileStep, options_package: std.Build.Pkg, trace: bool) void {
     exe.addPackage(options_package);
     exe.addPackage(args_pkg);
     exe.addPackage(known_folders_pkg);
@@ -123,7 +135,7 @@ fn setupZriscvCli(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg,
     }
 }
 
-fn setupZriscvGui(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg, trace: bool) void {
+fn setupZriscvGui(exe: *std.Build.CompileStep, options_package: std.Build.Pkg, trace: bool) void {
     exe.addPackage(options_package);
     exe.addPackage(args_pkg);
     exe.addPackage(known_folders_pkg);
@@ -152,7 +164,7 @@ fn setupZriscvGui(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg,
     }
 }
 
-fn setupZriscvForTests(exe: *std.build.LibExeObjStep, options_package: std.build.Pkg, trace: bool) void {
+fn setupZriscvForTests(exe: *std.Build.LibExeObjStep, options_package: std.Build.Pkg, trace: bool) void {
     exe.addPackage(options_package);
     exe.addPackage(bitjuggle_pkg);
     exe.addPackage(tracy_pkg);
@@ -180,7 +192,7 @@ fn setupZriscvForTests(exe: *std.build.LibExeObjStep, options_package: std.build
     }
 }
 
-fn getOptionsPkg(b: *std.build.Builder, trace: bool, trace_callstack: bool, output: bool, dont_panic_on_unimplemented: bool) !std.build.Pkg {
+fn getOptionsPkg(b: *std.Build, trace: bool, trace_callstack: bool, output: bool, dont_panic_on_unimplemented: bool) !std.Build.Pkg {
     const options = b.addOptions();
 
     options.addOption(bool, "dont_panic_on_unimplemented", dont_panic_on_unimplemented);
@@ -250,17 +262,17 @@ fn getOptionsPkg(b: *std.build.Builder, trace: bool, trace_callstack: bool, outp
     return options.getPackage("build_options");
 }
 
-fn getZriscvPkg(options_package: std.build.Pkg) std.build.Pkg {
+fn getZriscvPkg(options_package: std.Build.Pkg) std.Build.Pkg {
     const static = struct {
         var zriscv_pkg_deps_init: bool = false;
-        var zriscv_pkg_deps = [_]std.build.Pkg{
+        var zriscv_pkg_deps = [_]std.Build.Pkg{
             undefined, // options
             mostly_empty_zriscv_pkg,
             bitjuggle_pkg,
             tracy_pkg,
         };
 
-        const mostly_empty_zriscv_pkg: std.build.Pkg = .{
+        const mostly_empty_zriscv_pkg: std.Build.Pkg = .{
             .name = "zriscv",
             .source = .{ .path = "zriscv/zriscv.zig" },
         };
@@ -278,27 +290,27 @@ fn getZriscvPkg(options_package: std.build.Pkg) std.build.Pkg {
     };
 }
 
-const args_pkg: std.build.Pkg = .{
+const args_pkg: std.Build.Pkg = .{
     .name = "args",
     .source = .{ .path = "libraries/zig-args/args.zig" },
 };
 
-const bestline_pkg: std.build.Pkg = .{
+const bestline_pkg: std.Build.Pkg = .{
     .name = "bestline",
     .source = .{ .path = "libraries/bestline/bestline.zig" },
 };
 
-const bitjuggle_pkg: std.build.Pkg = .{
+const bitjuggle_pkg: std.Build.Pkg = .{
     .name = "bitjuggle",
     .source = .{ .path = "libraries/zig-bitjuggle/bitjuggle.zig" },
 };
 
-const known_folders_pkg: std.build.Pkg = .{
+const known_folders_pkg: std.Build.Pkg = .{
     .name = "known_folders",
     .source = .{ .path = "libraries/known-folders/known-folders.zig" },
 };
 
-const tracy_pkg: std.build.Pkg = .{
+const tracy_pkg: std.Build.Pkg = .{
     .name = "tracy",
     .source = .{ .path = "libraries/tracy/tracy.zig" },
 };

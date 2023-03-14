@@ -51,7 +51,7 @@ pub const SystemMachine = struct {
         const z = tracy.traceNamed(@src(), "system machine reset");
         defer z.end();
 
-        for (self.harts) |*hart, i| {
+        for (self.harts, 0..) |*hart, i| {
             hart.* = .{
                 .hart_id = i,
                 .machine = self,

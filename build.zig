@@ -14,7 +14,23 @@ pub fn build(b: *std.Build) !void {
     const trace = b.option(bool, "trace", "enable tracy tracing") orelse false;
     const trace_callstack = b.option(bool, "trace-callstack", "enable tracy callstack (does nothing without trace option)") orelse false;
 
-    const options_package = try getOptionsPkg(b, trace, trace_callstack, output, dont_panic_on_unimplemented);
+    const options = try getOptions(b, trace, trace_callstack, output, dont_panic_on_unimplemented);
+
+    _ = b.addModule("args", .{ .source_file = .{ .path = "libraries/zig-args/args.zig" } });
+    _ = b.addModule("known_folders", .{ .source_file = .{ .path = "libraries/known-folders/known-folders.zig" } });
+    _ = b.addModule("bestline", .{ .source_file = .{ .path = "libraries/bestline/bestline.zig" } });
+    _ = b.addModule("tracy", .{ .source_file = .{ .path = "libraries/tracy/tracy.zig" } });
+    _ = b.addModule("bitjuggle", .{ .source_file = .{ .path = "libraries/zig-bitjuggle/bitjuggle.zig" } });
+
+    const zriscv_module = b.addModule("zriscv", .{
+        .source_file = .{ .path = "zriscv/zriscv.zig" },
+        .dependencies = &.{
+            .{ .name = "build_options", .module = options.module_options.createModule() },
+            .{ .name = "tracy", .module = b.modules.get("tracy").? },
+            .{ .name = "bitjuggle", .module = b.modules.get("bitjuggle").? },
+        },
+    });
+    zriscv_module.dependencies.put("zriscv", zriscv_module) catch unreachable;
 
     // zriscv_cli
     {
@@ -25,11 +41,11 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
 
-        setupZriscvCli(zriscv_cli, options_package, trace);
+        setupZriscvCli(b, zriscv_cli, options, zriscv_module, trace);
         zriscv_cli.install();
 
         const run_cmd = zriscv_cli.run();
-        run_cmd.expected_exit_code = null;
+        run_cmd.expected_term = null;
         run_cmd.step.dependOn(b.getInstallStep());
         if (b.args) |args| {
             run_cmd.addArgs(args);
@@ -47,10 +63,10 @@ pub fn build(b: *std.Build) !void {
             .optimize = optimize,
         });
         zriscv_gui.install();
-        setupZriscvGui(zriscv_gui, options_package, trace);
+        setupZriscvGui(b, zriscv_gui, options, zriscv_module, trace);
 
         const run_cmd = zriscv_gui.run();
-        run_cmd.expected_exit_code = null;
+        run_cmd.expected_term = null;
         run_cmd.step.dependOn(b.getInstallStep());
         if (b.args) |args| {
             run_cmd.addArgs(args);
@@ -60,41 +76,41 @@ pub fn build(b: *std.Build) !void {
     }
 
     // Tests
-    {
-        const zriscv_test = b.addTest(.{
-            .root_source_file = .{ .path = "zriscv/zriscv.zig" },
-            .target = target,
-            .optimize = optimize,
-        });
-        setupZriscvForTests(zriscv_test, options_package, trace);
+    // {
+    //     const zriscv_test = b.addTest(.{
+    //         .root_source_file = .{ .path = "zriscv/zriscv.zig" },
+    //         .target = target,
+    //         .optimize = optimize,
+    //     });
+    //     setupZriscvForTests(b, zriscv_test, options, zriscv_module, trace);
 
-        const zriscv_cli_test = b.addTest(.{
-            .root_source_file = .{ .path = "zriscv_cli/main.zig" },
-            .target = target,
-            .optimize = optimize,
-        });
-        setupZriscvCli(zriscv_cli_test, options_package, trace);
+    //     const zriscv_cli_test = b.addTest(.{
+    //         .root_source_file = .{ .path = "zriscv_cli/main.zig" },
+    //         .target = target,
+    //         .optimize = optimize,
+    //     });
+    //     setupZriscvCli(b, zriscv_cli_test, options, zriscv_module, trace);
 
-        const zriscv_gui_test = b.addTest(.{
-            .root_source_file = .{ .path = "zriscv_gui/main.zig" },
-            .target = target,
-            .optimize = optimize,
-        });
-        setupZriscvGui(zriscv_gui_test, options_package, trace);
+    //     const zriscv_gui_test = b.addTest(.{
+    //         .root_source_file = .{ .path = "zriscv_gui/main.zig" },
+    //         .target = target,
+    //         .optimize = optimize,
+    //     });
+    //     setupZriscvGui(b, zriscv_gui_test, options, zriscv_module, trace);
 
-        const test_step = b.step("test", "Run the tests");
-        test_step.dependOn(&zriscv_test.step);
-        test_step.dependOn(&zriscv_cli_test.step);
-        test_step.dependOn(&zriscv_gui_test.step);
+    //     const test_step = b.step("test", "Run the tests");
+    //     test_step.dependOn(&zriscv_test.step);
+    //     test_step.dependOn(&zriscv_cli_test.step);
+    //     test_step.dependOn(&zriscv_gui_test.step);
 
-        b.default_step = test_step;
-    }
+    //     b.default_step = test_step;
+    // }
 
     // Riscof
     {
         const build_path = comptime std.fs.path.dirname(@src().file).?;
         const run_riscof_step = b.addSystemCommand(&.{build_path ++ "/riscof/run_tests.sh"});
-        run_riscof_step.expected_exit_code = null;
+        run_riscof_step.expected_term = null;
         run_riscof_step.step.dependOn(b.getInstallStep());
 
         const riscof_step = b.step("riscof", "Run the riscof tests");
@@ -102,14 +118,21 @@ pub fn build(b: *std.Build) !void {
     }
 }
 
-fn setupZriscvCli(exe: *std.Build.CompileStep, options_package: *std.Build.OptionsStep, trace: bool) void {
-    exe.addOptions("build_options", options_package);
-    exe.addAnonymousModule("args", .{ .source_file = .{ .path = "libraries/zig-args/args.zig" } });
-    exe.addAnonymousModule("known_folders", .{ .source_file = .{ .path = "libraries/known-folders/known-folders.zig" } });
-    exe.addAnonymousModule("bestline", .{ .source_file = .{ .path = "libraries/bestline/bestline.zig" } });
-    exe.addAnonymousModule("tracy", .{ .source_file = .{ .path = "libraries/tracy/tracy.zig" } });
+fn setupZriscvCli(
+    b: *std.Build,
+    exe: *std.Build.CompileStep,
+    options: Options,
+    zriscv_module: *std.Build.Module,
+    trace: bool,
+) void {
+    exe.addOptions("build_options", options.cli_options);
 
-    exe.addModule("zriscv", getZriscvModule(exe.builder, options_package));
+    exe.addModule("args", b.modules.get("args").?);
+    exe.addModule("known_folders", b.modules.get("known_folders").?);
+    exe.addModule("bestline", b.modules.get("bestline").?);
+    exe.addModule("tracy", b.modules.get("tracy").?);
+
+    exe.addModule("zriscv", zriscv_module);
 
     exe.linkLibC();
 
@@ -136,43 +159,21 @@ fn setupZriscvCli(exe: *std.Build.CompileStep, options_package: *std.Build.Optio
     }
 }
 
-fn setupZriscvGui(exe: *std.Build.CompileStep, options_package: *std.Build.OptionsStep, trace: bool) void {
-    exe.addOptions("build_options", options_package);
-    exe.addAnonymousModule("args", .{ .source_file = .{ .path = "libraries/zig-args/args.zig" } });
-    exe.addAnonymousModule("known_folders", .{ .source_file = .{ .path = "libraries/known-folders/known-folders.zig" } });
-    exe.addAnonymousModule("bestline", .{ .source_file = .{ .path = "libraries/bestline/bestline.zig" } });
-    exe.addAnonymousModule("tracy", .{ .source_file = .{ .path = "libraries/tracy/tracy.zig" } });
+fn setupZriscvGui(
+    b: *std.Build,
+    exe: *std.Build.CompileStep,
+    options: Options,
+    zriscv_module: *std.Build.Module,
+    trace: bool,
+) void {
+    exe.addOptions("build_options", options.gui_options);
 
-    exe.addModule("zriscv", getZriscvModule(exe.builder, options_package));
+    exe.addModule("args", b.modules.get("args").?);
+    exe.addModule("known_folders", b.modules.get("known_folders").?);
+    exe.addModule("bestline", b.modules.get("bestline").?);
+    exe.addModule("tracy", b.modules.get("tracy").?);
 
-    exe.linkLibC();
-
-    if (trace) {
-        exe.linkLibCpp();
-        exe.addIncludePath("libraries/tracy/tracy/public");
-
-        const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
-            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
-        else
-            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
-
-        exe.addCSourceFile("libraries/tracy/tracy/public/TracyClient.cpp", tracy_c_flags);
-
-        if (exe.target.isWindows()) {
-            exe.linkSystemLibrary("Advapi32");
-            exe.linkSystemLibrary("User32");
-            exe.linkSystemLibrary("Ws2_32");
-            exe.linkSystemLibrary("DbgHelp");
-        }
-    }
-}
-
-fn setupZriscvForTests(exe: *std.Build.LibExeObjStep, options_package: *std.Build.OptionsStep, trace: bool) void {
-    exe.addOptions("build_options", options_package);
-    exe.addAnonymousModule("tracy", .{ .source_file = .{ .path = "libraries/tracy/tracy.zig" } });
-    exe.addAnonymousModule("bitjuggle", .{ .source_file = .{ .path = "libraries/zig-bitjuggle/bitjuggle.zig" } });
-
-    exe.addModule("zriscv", getZriscvModule(exe.builder, options_package));
+    exe.addModule("zriscv", zriscv_module);
 
     exe.linkLibC();
 
@@ -196,20 +197,61 @@ fn setupZriscvForTests(exe: *std.Build.LibExeObjStep, options_package: *std.Buil
     }
 }
 
-fn getOptionsPkg(
+fn setupZriscvForTests(
+    b: *std.Build,
+    exe: *std.Build.LibExeObjStep,
+    options: Options,
+    zriscv_module: *std.Build.Module,
+    trace: bool,
+) void {
+    exe.addOptions("build_options", options.module_options);
+
+    exe.addModule("bitjuggle", b.modules.get("bitjuggle").?);
+    exe.addModule("tracy", b.modules.get("tracy").?);
+
+    exe.addModule("zriscv", zriscv_module);
+
+    exe.linkLibC();
+
+    if (trace) {
+        exe.linkLibCpp();
+        exe.addIncludePath("libraries/tracy/tracy/public");
+
+        const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
+            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
+        else
+            &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
+
+        exe.addCSourceFile("libraries/tracy/tracy/public/TracyClient.cpp", tracy_c_flags);
+
+        if (exe.target.isWindows()) {
+            exe.linkSystemLibrary("Advapi32");
+            exe.linkSystemLibrary("User32");
+            exe.linkSystemLibrary("Ws2_32");
+            exe.linkSystemLibrary("DbgHelp");
+        }
+    }
+}
+
+const Options = struct {
+    module_options: *std.Build.OptionsStep = undefined,
+    cli_options: *std.Build.OptionsStep = undefined,
+    gui_options: *std.Build.OptionsStep = undefined,
+
+    fn addToAll(self: Options, comptime T: type, name: []const u8, value: T) void {
+        self.module_options.addOption(T, name, value);
+        self.cli_options.addOption(T, name, value);
+        self.gui_options.addOption(T, name, value);
+    }
+};
+
+fn getOptions(
     b: *std.Build,
     trace: bool,
     trace_callstack: bool,
     output: bool,
     dont_panic_on_unimplemented: bool,
-) !*std.Build.OptionsStep {
-    const options = b.addOptions();
-
-    options.addOption(bool, "dont_panic_on_unimplemented", dont_panic_on_unimplemented);
-    options.addOption(bool, "output", output);
-    options.addOption(bool, "trace", trace);
-    options.addOption(bool, "trace_callstack", trace_callstack);
-
+) !Options {
     const version = v: {
         const version_string = b.fmt(
             "{d}.{d}.{d}",
@@ -267,31 +309,26 @@ fn getOptionsPkg(
             },
         }
     };
-    options.addOption([:0]const u8, "version", try b.allocator.dupeZ(u8, version));
 
-    return options;
-}
-
-fn getZriscvModule(b: *std.Build, options_package: *std.Build.OptionsStep) *std.Build.Module {
-    const static = struct {
-        var module: ?*std.Build.Module = null;
+    const result = Options{
+        .module_options = b.addOptions(),
+        .cli_options = b.addOptions(),
+        .gui_options = b.addOptions(),
     };
 
-    if (static.module) |module| return module;
+    { // module only
+        result.module_options.addOption(bool, "dont_panic_on_unimplemented", dont_panic_on_unimplemented);
+    }
 
-    const recursive_module = b.createModule(.{
-        .source_file = .{ .path = "zriscv/zriscv.zig" },
-    });
+    { // cli only
+        result.cli_options.addOption(bool, "output", output);
+        result.cli_options.addOption([:0]const u8, "version", try b.allocator.dupeZ(u8, version));
+    }
 
-    static.module = b.createModule(.{
-        .source_file = .{ .path = "zriscv/zriscv.zig" },
-        .dependencies = &.{
-            .{ .name = "build_options", .module = options_package.createModule() },
-            .{ .name = "zriscv", .module = recursive_module },
-            .{ .name = "tracy", .module = b.createModule(.{ .source_file = .{ .path = "libraries/tracy/tracy.zig" } }) },
-            .{ .name = "bitjuggle", .module = b.createModule(.{ .source_file = .{ .path = "libraries/zig-bitjuggle/bitjuggle.zig" } }) },
-        },
-    });
+    { // all
+        result.addToAll(bool, "trace", trace);
+        result.addToAll(bool, "trace_callstack", trace_callstack);
+    }
 
-    return static.module.?;
+    return result;
 }

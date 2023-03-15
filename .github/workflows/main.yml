@@ -4,9 +4,11 @@ on:
   push:
     paths:
       - '**.zig'
+      - '.github/workflows/main.yml'
   pull_request:
      paths:
       - '**.zig'
+      - '.github/workflows/main.yml'
   schedule:
     - cron: '0 0 * * *'
   workflow_dispatch:
@@ -31,5 +33,6 @@ jobs:
       - name: Build with Tracy
         run: zig build install -Dtrace
 
-      - name: Test
-        run: zig build test
+      # TODO: https://github.com/ziglang/zig/issues/14708
+      # - name: Test
+      #   run: zig build test

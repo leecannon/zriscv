@@ -3,8 +3,6 @@ const std = @import("std");
 const zriscv_version = std.builtin.Version{ .major = 0, .minor = 1, .patch = 1 };
 
 pub fn build(b: *std.Build) !void {
-    b.prominent_compile_errors = true;
-
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
@@ -45,7 +43,8 @@ pub fn build(b: *std.Build) !void {
         zriscv_cli.install();
 
         const run_cmd = zriscv_cli.run();
-        run_cmd.expected_term = null;
+        run_cmd.has_side_effects = true;
+        run_cmd.stdio = .inherit;
         run_cmd.step.dependOn(b.getInstallStep());
         if (b.args) |args| {
             run_cmd.addArgs(args);
@@ -66,7 +65,8 @@ pub fn build(b: *std.Build) !void {
         setupZriscvGui(b, zriscv_gui, options, zriscv_module, trace);
 
         const run_cmd = zriscv_gui.run();
-        run_cmd.expected_term = null;
+        run_cmd.has_side_effects = true;
+        run_cmd.stdio = .inherit;
         run_cmd.step.dependOn(b.getInstallStep());
         if (b.args) |args| {
             run_cmd.addArgs(args);
@@ -110,7 +110,8 @@ pub fn build(b: *std.Build) !void {
     {
         const build_path = comptime std.fs.path.dirname(@src().file).?;
         const run_riscof_step = b.addSystemCommand(&.{build_path ++ "/riscof/run_tests.sh"});
-        run_riscof_step.expected_term = null;
+        run_riscof_step.has_side_effects = true;
+        run_riscof_step.stdio = .inherit;
         run_riscof_step.step.dependOn(b.getInstallStep());
 
         const riscof_step = b.step("riscof", "Run the riscof tests");

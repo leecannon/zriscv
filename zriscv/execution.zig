@@ -78,6 +78,8 @@ fn execute(
     comptime options: ExecutionOptions,
     comptime actually_execute: bool,
 ) !bool {
+    @setEvalBranchQuota(1_000_000);
+
     const execute_z = tracy.traceNamed(@src(), "execute");
     defer execute_z.end();
 

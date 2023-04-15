@@ -1,5 +1,7 @@
 const std = @import("std");
 
+// TODO: Re-write this file
+
 const zriscv_version = std.builtin.Version{ .major = 0, .minor = 1, .patch = 1 };
 
 pub fn build(b: *std.Build) !void {
@@ -40,9 +42,9 @@ pub fn build(b: *std.Build) !void {
         });
 
         setupZriscvCli(b, zriscv_cli, options, zriscv_module, trace);
-        zriscv_cli.install();
+        b.installArtifact(zriscv_cli);
 
-        const run_cmd = zriscv_cli.run();
+        const run_cmd = b.addRunArtifact(zriscv_cli);
         run_cmd.has_side_effects = true;
         run_cmd.stdio = .inherit;
         run_cmd.step.dependOn(b.getInstallStep());
@@ -61,10 +63,10 @@ pub fn build(b: *std.Build) !void {
             .target = target,
             .optimize = optimize,
         });
-        zriscv_gui.install();
+        b.installArtifact(zriscv_gui);
         setupZriscvGui(b, zriscv_gui, options, zriscv_module, trace);
 
-        const run_cmd = zriscv_gui.run();
+        const run_cmd = b.addRunArtifact(zriscv_gui);
         run_cmd.has_side_effects = true;
         run_cmd.stdio = .inherit;
         run_cmd.step.dependOn(b.getInstallStep());

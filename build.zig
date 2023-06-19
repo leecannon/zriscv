@@ -2,7 +2,7 @@ const std = @import("std");
 
 // TODO: Re-write this file
 
-const zriscv_version = std.builtin.Version{ .major = 0, .minor = 1, .patch = 1 };
+const zriscv_version = std.SemanticVersion{ .major = 0, .minor = 1, .patch = 1 };
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -288,7 +288,7 @@ fn getOptions(
                 const commit_height = it.next() orelse unreachable;
                 const commit_id = it.next() orelse unreachable;
 
-                const ancestor_ver = try std.builtin.Version.parse(tagged_ancestor);
+                const ancestor_ver = try std.SemanticVersion.parse(tagged_ancestor);
                 if (zriscv_version.order(ancestor_ver) != .gt) {
                     std.debug.print(
                         "zriscv version '{}' must be greater than tagged ancestor '{}'\n",

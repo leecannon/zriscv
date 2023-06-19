@@ -15,7 +15,7 @@ pub const SystemMemory = struct {
     pub fn init(minimum_memory_size: usize) !SystemMemory {
         return SystemMemory{
             .memory = try allocateMemory(
-                std.mem.alignForward(minimum_memory_size, std.mem.page_size),
+                std.mem.alignForward(usize, minimum_memory_size, std.mem.page_size),
             ),
         };
     }

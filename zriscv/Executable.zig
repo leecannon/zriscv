@@ -330,13 +330,13 @@ const ElfHeader = struct {
         };
 
         const machine = if (need_bswap) blk: {
-            const value = @enumToInt(hdr32.e_machine);
-            break :blk @intToEnum(std.elf.EM, @byteSwap(value));
+            const value = @intFromEnum(hdr32.e_machine);
+            break :blk @enumFromInt(std.elf.EM, @byteSwap(value));
         } else hdr32.e_machine;
 
         const @"type" = if (need_bswap) blk: {
-            const value = @enumToInt(hdr32.e_type);
-            break :blk @intToEnum(std.elf.ET, @byteSwap(value));
+            const value = @intFromEnum(hdr32.e_type);
+            break :blk @enumFromInt(std.elf.ET, @byteSwap(value));
         } else hdr32.e_type;
 
         return ElfHeader{

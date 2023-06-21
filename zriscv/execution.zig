@@ -129,7 +129,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = @bitCast(u64, imm);
+                    hart.x[@intFromEnum(rd)] = @bitCast(u64, imm);
                 }
             } else {
                 if (has_writer) {
@@ -177,7 +177,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -231,7 +231,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = return_address;
+                    hart.x[@intFromEnum(rd)] = return_address;
                 }
             } else {
                 if (has_writer) {
@@ -260,7 +260,7 @@ fn execute(
             // I-type
             const imm = instruction.i_imm.read();
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
             const rd = instruction.rd();
 
             const target_address = addSignedToUnsignedWrap(rs1_value, imm) & ~@as(u64, 1);
@@ -289,7 +289,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = return_address;
+                    hart.x[@intFromEnum(rd)] = return_address;
                 }
             } else {
                 if (has_writer) {
@@ -320,9 +320,9 @@ fn execute(
             // B-type
 
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
             const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
+            const rs2_value = hart.x[@intFromEnum(rs2)];
 
             if (rs1_value == rs2_value) {
                 const imm = instruction.b_imm.read();
@@ -381,10 +381,10 @@ fn execute(
 
             // B-type
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
 
             const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
+            const rs2_value = hart.x[@intFromEnum(rs2)];
 
             const imm = instruction.b_imm.read();
             const result = addSignedToUnsignedWrap(hart.pc, imm);
@@ -442,9 +442,9 @@ fn execute(
             // B-type
 
             const rs1 = instruction.rs1();
-            const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+            const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
             const rs2 = instruction.rs2();
-            const rs2_value = @bitCast(i64, hart.x[@enumToInt(rs2)]);
+            const rs2_value = @bitCast(i64, hart.x[@intFromEnum(rs2)]);
 
             if (rs1_value < rs2_value) {
                 const imm = instruction.b_imm.read();
@@ -504,9 +504,9 @@ fn execute(
             // B-type
 
             const rs1 = instruction.rs1();
-            const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+            const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
             const rs2 = instruction.rs2();
-            const rs2_value = @bitCast(i64, hart.x[@enumToInt(rs2)]);
+            const rs2_value = @bitCast(i64, hart.x[@intFromEnum(rs2)]);
 
             if (rs1_value >= rs2_value) {
                 const imm = instruction.b_imm.read();
@@ -566,9 +566,9 @@ fn execute(
             // B-type
 
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
             const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
+            const rs2_value = hart.x[@intFromEnum(rs2)];
 
             if (rs1_value < rs2_value) {
                 const imm = instruction.b_imm.read();
@@ -628,9 +628,9 @@ fn execute(
             // B-type
 
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
             const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
+            const rs2_value = hart.x[@intFromEnum(rs2)];
 
             if (rs1_value >= rs2_value) {
                 const imm = instruction.b_imm.read();
@@ -693,7 +693,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
                 const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -729,7 +729,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = signExtend8bit(memory);
+                    hart.x[@intFromEnum(rd)] = signExtend8bit(memory);
                 }
             } else {
                 if (has_writer) {
@@ -762,7 +762,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
                 const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -798,7 +798,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = signExtend16bit(memory);
+                    hart.x[@intFromEnum(rd)] = signExtend16bit(memory);
                 }
             } else {
                 if (has_writer) {
@@ -831,7 +831,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
                 const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -867,7 +867,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = signExtend32bit(memory);
+                    hart.x[@intFromEnum(rd)] = signExtend32bit(memory);
                 }
             } else {
                 if (has_writer) {
@@ -900,7 +900,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
                 const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -936,7 +936,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = memory;
+                    hart.x[@intFromEnum(rd)] = memory;
                 }
             } else {
                 if (has_writer) {
@@ -969,7 +969,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
                 const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -1005,7 +1005,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = memory;
+                    hart.x[@intFromEnum(rd)] = memory;
                 }
             } else {
                 if (has_writer) {
@@ -1034,9 +1034,9 @@ fn execute(
 
             // S-Type
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
             const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
+            const rs2_value = hart.x[@intFromEnum(rs2)];
             const imm = instruction.s_imm.read();
 
             const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -1090,9 +1090,9 @@ fn execute(
 
             // S-Type
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
             const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
+            const rs2_value = hart.x[@intFromEnum(rs2)];
             const imm = instruction.s_imm.read();
 
             const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -1146,9 +1146,9 @@ fn execute(
 
             // S-Type
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
             const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
+            const rs2_value = hart.x[@intFromEnum(rs2)];
             const imm = instruction.s_imm.read();
 
             const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -1207,7 +1207,7 @@ fn execute(
                 const rs1 = instruction.rs1();
                 const imm = instruction.i_imm.read();
 
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
 
                 const result = addSignedToUnsignedIgnoreOverflow(rs1_value, imm);
 
@@ -1229,7 +1229,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1262,9 +1262,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
                 const imm = instruction.i_imm.read();
-                const result = @boolToInt(rs1_value < imm);
+                const result = @intFromBool(rs1_value < imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -1283,7 +1283,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1316,9 +1316,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = @bitCast(u64, instruction.i_imm.read());
-                const result = @boolToInt(rs1_value < imm);
+                const result = @intFromBool(rs1_value < imm);
 
                 if (has_writer) {
                     try writer.print(
@@ -1337,7 +1337,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1370,7 +1370,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = @bitCast(u64, instruction.i_imm.read());
                 const result = rs1_value ^ @bitCast(u64, imm);
 
@@ -1392,7 +1392,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1425,7 +1425,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = @bitCast(u64, instruction.i_imm.read());
                 const result = rs1_value | @bitCast(u64, imm);
 
@@ -1447,7 +1447,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1479,7 +1479,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = @bitCast(u64, instruction.i_imm.read());
                 const result = rs1_value & imm;
 
@@ -1501,7 +1501,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1533,7 +1533,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const shmt = instruction.i_specialization.fullShift();
 
                 const result = rs1_value << shmt;
@@ -1556,7 +1556,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1589,7 +1589,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const shmt = instruction.i_specialization.fullShift();
                 const result = rs1_value >> shmt;
 
@@ -1611,7 +1611,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1644,7 +1644,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
                 const shmt = instruction.i_specialization.fullShift();
                 const result = @bitCast(u64, @bitCast(i64, rs1_value >> shmt));
 
@@ -1666,7 +1666,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1700,8 +1700,8 @@ fn execute(
                 const rs1 = instruction.rs1();
                 const rs2 = instruction.rs2();
 
-                const rs1_value = hart.x[@enumToInt(rs1)];
-                const rs2_value = hart.x[@enumToInt(rs2)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
+                const rs2_value = hart.x[@intFromEnum(rs2)];
 
                 const result = @addWithOverflow(rs1_value, rs2_value)[0];
 
@@ -1724,7 +1724,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1756,9 +1756,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = hart.x[@enumToInt(rs2)];
+                const rs2_value = hart.x[@intFromEnum(rs2)];
 
                 const result = @subWithOverflow(rs1_value, rs2_value)[0];
 
@@ -1781,7 +1781,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1814,9 +1814,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u6, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @truncate(u6, hart.x[@intFromEnum(rs2)]);
                 const result = rs1_value << rs2_value;
 
                 if (has_writer) {
@@ -1838,7 +1838,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1871,10 +1871,10 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @bitCast(i64, hart.x[@enumToInt(rs2)]);
-                const result = @boolToInt(rs1_value < rs2_value);
+                const rs2_value = @bitCast(i64, hart.x[@intFromEnum(rs2)]);
+                const result = @intFromBool(rs1_value < rs2_value);
 
                 if (has_writer) {
                     try writer.print(
@@ -1894,7 +1894,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1927,10 +1927,10 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = hart.x[@enumToInt(rs2)];
-                const result = @boolToInt(rs1_value < rs2_value);
+                const rs2_value = hart.x[@intFromEnum(rs2)];
+                const result = @intFromBool(rs1_value < rs2_value);
 
                 if (has_writer) {
                     try writer.print(
@@ -1950,7 +1950,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -1983,9 +1983,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = hart.x[@enumToInt(rs2)];
+                const rs2_value = hart.x[@intFromEnum(rs2)];
                 const result = rs1_value ^ rs2_value;
 
                 if (has_writer) {
@@ -2007,7 +2007,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2040,9 +2040,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u6, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @truncate(u6, hart.x[@intFromEnum(rs2)]);
                 const result = rs1_value >> rs2_value;
 
                 if (has_writer) {
@@ -2064,7 +2064,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2097,9 +2097,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u6, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @truncate(u6, hart.x[@intFromEnum(rs2)]);
                 const result = @bitCast(u64, rs1_value >> rs2_value);
 
                 if (has_writer) {
@@ -2121,7 +2121,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2154,9 +2154,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = hart.x[@enumToInt(rs2)];
+                const rs2_value = hart.x[@intFromEnum(rs2)];
                 const result = rs1_value | rs2_value;
 
                 if (has_writer) {
@@ -2178,7 +2178,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2211,9 +2211,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = hart.x[@enumToInt(rs2)];
+                const rs2_value = hart.x[@intFromEnum(rs2)];
                 const result = rs1_value & rs2_value;
 
                 if (has_writer) {
@@ -2235,7 +2235,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2285,7 +2285,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
                 const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -2321,7 +2321,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = memory;
+                    hart.x[@intFromEnum(rd)] = memory;
                 }
             } else {
                 if (has_writer) {
@@ -2354,7 +2354,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
                 const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -2390,7 +2390,7 @@ fn execute(
                         };
                     };
 
-                    hart.x[@enumToInt(rd)] = memory;
+                    hart.x[@intFromEnum(rd)] = memory;
                 }
             } else {
                 if (has_writer) {
@@ -2419,9 +2419,9 @@ fn execute(
 
             // S-Type
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
             const rs2 = instruction.rs2();
-            const rs2_value = hart.x[@enumToInt(rs2)];
+            const rs2_value = hart.x[@intFromEnum(rs2)];
             const imm = instruction.s_imm.read();
 
             const address = addSignedToUnsignedWrap(rs1_value, imm);
@@ -2470,7 +2470,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
                 const result = signExtend32bit(addSignedToUnsignedIgnoreOverflow(rs1_value, imm) & 0xFFFFFFFF);
@@ -2493,7 +2493,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2526,7 +2526,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
                 const shmt = instruction.i_specialization.smallShift();
                 const result = signExtend32bit(rs1_value << shmt);
 
@@ -2548,7 +2548,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2581,7 +2581,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
                 const shmt = instruction.i_specialization.smallShift();
                 const result = signExtend32bit(rs1_value >> shmt);
 
@@ -2603,7 +2603,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2636,7 +2636,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs1)]));
+                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@intFromEnum(rs1)]));
                 const shmt = instruction.i_specialization.smallShift();
                 const result = signExtend32bit(@bitCast(u32, rs1_value >> shmt));
 
@@ -2658,7 +2658,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2690,9 +2690,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value_truncated = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs1_value_truncated = @truncate(u32, hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value_truncated = @truncate(u32, hart.x[@enumToInt(rs2)]);
+                const rs2_value_truncated = @truncate(u32, hart.x[@intFromEnum(rs2)]);
 
                 const result = @addWithOverflow(rs1_value_truncated, rs2_value_truncated)[0];
 
@@ -2715,7 +2715,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = signExtend32bit(result);
+                    hart.x[@intFromEnum(rd)] = signExtend32bit(result);
                 }
             } else {
                 if (has_writer) {
@@ -2748,9 +2748,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u32, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @truncate(u32, hart.x[@intFromEnum(rs2)]);
 
                 const result = @subWithOverflow(rs1_value, rs2_value)[0];
                 const extended_result = signExtend32bit(result);
@@ -2774,7 +2774,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = extended_result;
+                    hart.x[@intFromEnum(rd)] = extended_result;
                 }
             } else {
                 if (has_writer) {
@@ -2807,9 +2807,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u5, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @truncate(u5, hart.x[@intFromEnum(rs2)]);
                 const result = signExtend32bit(rs1_value << rs2_value);
 
                 if (has_writer) {
@@ -2831,7 +2831,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2864,9 +2864,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u5, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @truncate(u5, hart.x[@intFromEnum(rs2)]);
                 const result = signExtend32bit(rs1_value >> rs2_value);
 
                 if (has_writer) {
@@ -2888,7 +2888,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2921,9 +2921,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs1)]));
+                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@intFromEnum(rs1)]));
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u5, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @truncate(u5, hart.x[@intFromEnum(rs2)]);
                 const result = signExtend32bit(@bitCast(u32, rs1_value >> rs2_value));
 
                 if (has_writer) {
@@ -2945,7 +2945,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -2986,7 +2986,7 @@ fn execute(
 
             const rd = instruction.rd();
             const rs1 = instruction.rs1();
-            const rs1_value = hart.x[@enumToInt(rs1)];
+            const rs1_value = hart.x[@intFromEnum(rs1)];
 
             if (rd != .zero) {
                 if (has_writer) {
@@ -3016,7 +3016,7 @@ fn execute(
                 if (actually_execute) {
                     const initial_csr = readCsr(mode, hart, csr);
                     try writeCsr(mode, hart, csr, rs1_value);
-                    hart.x[@enumToInt(rd)] = initial_csr;
+                    hart.x[@intFromEnum(rd)] = initial_csr;
                 }
             } else {
                 if (has_writer) {
@@ -3064,9 +3064,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = hart.x[@enumToInt(rs2)];
+                const rs2_value = hart.x[@intFromEnum(rs2)];
 
                 const result = @mulWithOverflow(rs1_value, rs2_value)[0];
 
@@ -3089,7 +3089,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -3125,9 +3125,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @bitCast(i64, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @bitCast(i64, hart.x[@intFromEnum(rs2)]);
 
                 const result = @bitCast(
                     u64,
@@ -3160,7 +3160,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -3193,9 +3193,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = hart.x[@enumToInt(rs1)];
+                const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = hart.x[@enumToInt(rs2)];
+                const rs2_value = hart.x[@intFromEnum(rs2)];
 
                 const result = std.math.divTrunc(
                     u64,
@@ -3224,7 +3224,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -3260,9 +3260,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs1)]));
+                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@intFromEnum(rs1)]));
                 const rs2 = instruction.rs2();
-                const rs2_value = @bitCast(i32, @truncate(u32, hart.x[@enumToInt(rs2)]));
+                const rs2_value = @bitCast(i32, @truncate(u32, hart.x[@intFromEnum(rs2)]));
 
                 const result = signExtend32bit(
                     @bitCast(
@@ -3297,7 +3297,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@enumToInt(rd)] = result;
+                    hart.x[@intFromEnum(rd)] = result;
                 }
             } else {
                 if (has_writer) {
@@ -3330,9 +3330,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@enumToInt(rs1)]);
+                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u32, hart.x[@enumToInt(rs2)]);
+                const rs2_value = @truncate(u32, hart.x[@intFromEnum(rs2)]);
 
                 const result = signExtend32bit(
                     std.math.divTrunc(
@@ -3362,7 +3362,7 @@ fn execute(
                     });
                 }
 
-                hart.x[@enumToInt(rd)] = result;
+                hart.x[@intFromEnum(rd)] = result;
             } else {
                 if (has_writer) {
                     const rs1 = instruction.rs1();

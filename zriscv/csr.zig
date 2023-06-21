@@ -17,21 +17,21 @@ pub const Csr = enum(u12) {
     }
 
     pub fn canRead(self: Csr, privilege_level: zriscv.PrivilegeLevel) bool {
-        const csr_value = @enumToInt(self);
+        const csr_value = @intFromEnum(self);
 
         // TODO: Calculate this at comptime
         const lowest_privilege_level = bitjuggle.getBits(csr_value, 8, 2);
-        if (@enumToInt(privilege_level) < lowest_privilege_level) return false;
+        if (@intFromEnum(privilege_level) < lowest_privilege_level) return false;
 
         return true;
     }
 
     pub fn canWrite(self: Csr, privilege_level: zriscv.PrivilegeLevel) bool {
-        const csr_value = @enumToInt(self);
+        const csr_value = @intFromEnum(self);
 
         // TODO: Calculate this at comptime
         const lowest_privilege_level = bitjuggle.getBits(csr_value, 8, 2);
-        if (@enumToInt(privilege_level) < lowest_privilege_level) return false;
+        if (@intFromEnum(privilege_level) < lowest_privilege_level) return false;
 
         return bitjuggle.getBits(csr_value, 10, 2) != @as(u12, 0b11);
     }

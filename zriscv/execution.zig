@@ -129,7 +129,7 @@ fn execute(
                 }
 
                 if (actually_execute) {
-                    hart.x[@intFromEnum(rd)] = @bitCast(u64, imm);
+                    hart.x[@intFromEnum(rd)] = @bitCast(imm);
                 }
             } else {
                 if (has_writer) {
@@ -442,9 +442,9 @@ fn execute(
             // B-type
 
             const rs1 = instruction.rs1();
-            const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
+            const rs1_value: i64 = @bitCast(hart.x[@intFromEnum(rs1)]);
             const rs2 = instruction.rs2();
-            const rs2_value = @bitCast(i64, hart.x[@intFromEnum(rs2)]);
+            const rs2_value: i64 = @bitCast(hart.x[@intFromEnum(rs2)]);
 
             if (rs1_value < rs2_value) {
                 const imm = instruction.b_imm.read();
@@ -504,9 +504,9 @@ fn execute(
             // B-type
 
             const rs1 = instruction.rs1();
-            const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
+            const rs1_value: i64 = @bitCast(hart.x[@intFromEnum(rs1)]);
             const rs2 = instruction.rs2();
-            const rs2_value = @bitCast(i64, hart.x[@intFromEnum(rs2)]);
+            const rs2_value: i64 = @bitCast(hart.x[@intFromEnum(rs2)]);
 
             if (rs1_value >= rs2_value) {
                 const imm = instruction.b_imm.read();
@@ -1069,9 +1069,11 @@ fn execute(
                 }
 
                 if (options.execution_out_of_bounds_is_fatal) {
-                    try hart.storeMemory(8, address, @truncate(u8, rs2_value));
+                    // TODO https://github.com/ziglang/zig/issues/16258
+                    try hart.storeMemory(8, address, @as(u8, @truncate(rs2_value)));
                 } else {
-                    hart.storeMemory(8, address, @truncate(u8, rs2_value)) catch |err| switch (err) {
+                    // TODO https://github.com/ziglang/zig/issues/16258
+                    hart.storeMemory(8, address, @as(u8, @truncate(rs2_value))) catch |err| switch (err) {
                         error.ExecutionOutOfBounds => {
                             // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
                             try throw(mode, hart, {}, 0, writer, true);
@@ -1125,9 +1127,11 @@ fn execute(
                 }
 
                 if (options.execution_out_of_bounds_is_fatal) {
-                    try hart.storeMemory(16, address, @truncate(u16, rs2_value));
+                    // TODO https://github.com/ziglang/zig/issues/16258
+                    try hart.storeMemory(16, address, @as(u16, @truncate(rs2_value)));
                 } else {
-                    hart.storeMemory(16, address, @truncate(u16, rs2_value)) catch |err| switch (err) {
+                    // TODO https://github.com/ziglang/zig/issues/16258
+                    hart.storeMemory(16, address, @as(u16, @truncate(rs2_value))) catch |err| switch (err) {
                         error.ExecutionOutOfBounds => {
                             // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
                             try throw(mode, hart, {}, 0, writer, true);
@@ -1181,9 +1185,11 @@ fn execute(
                 }
 
                 if (options.execution_out_of_bounds_is_fatal) {
-                    try hart.storeMemory(32, address, @truncate(u32, rs2_value));
+                    // TODO https://github.com/ziglang/zig/issues/16258
+                    try hart.storeMemory(32, address, @as(u32, @truncate(rs2_value)));
                 } else {
-                    hart.storeMemory(32, address, @truncate(u32, rs2_value)) catch |err| switch (err) {
+                    // TODO https://github.com/ziglang/zig/issues/16258
+                    hart.storeMemory(32, address, @as(u32, @truncate(rs2_value))) catch |err| switch (err) {
                         error.ExecutionOutOfBounds => {
                             // TODO: Pass `.@"Store/AMOAccessFault"` once `throw` is implemented
                             try throw(mode, hart, {}, 0, writer, true);
@@ -1262,7 +1268,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: i64 = @bitCast(hart.x[@intFromEnum(rs1)]);
                 const imm = instruction.i_imm.read();
                 const result = @intFromBool(rs1_value < imm);
 
@@ -1317,7 +1323,7 @@ fn execute(
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
                 const rs1_value = hart.x[@intFromEnum(rs1)];
-                const imm = @bitCast(u64, instruction.i_imm.read());
+                const imm: u64 = @bitCast(instruction.i_imm.read());
                 const result = @intFromBool(rs1_value < imm);
 
                 if (has_writer) {
@@ -1371,8 +1377,8 @@ fn execute(
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
                 const rs1_value = hart.x[@intFromEnum(rs1)];
-                const imm = @bitCast(u64, instruction.i_imm.read());
-                const result = rs1_value ^ @bitCast(u64, imm);
+                const imm: u64 = @bitCast(instruction.i_imm.read());
+                const result = rs1_value ^ imm;
 
                 if (has_writer) {
                     try writer.print(
@@ -1426,8 +1432,8 @@ fn execute(
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
                 const rs1_value = hart.x[@intFromEnum(rs1)];
-                const imm = @bitCast(u64, instruction.i_imm.read());
-                const result = rs1_value | @bitCast(u64, imm);
+                const imm: u64 = @bitCast(instruction.i_imm.read());
+                const result = rs1_value | imm;
 
                 if (has_writer) {
                     try writer.print(
@@ -1480,7 +1486,7 @@ fn execute(
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
                 const rs1_value = hart.x[@intFromEnum(rs1)];
-                const imm = @bitCast(u64, instruction.i_imm.read());
+                const imm: u64 = @bitCast(instruction.i_imm.read());
                 const result = rs1_value & imm;
 
                 if (has_writer) {
@@ -1644,9 +1650,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: i64 = @bitCast(hart.x[@intFromEnum(rs1)]);
                 const shmt = instruction.i_specialization.fullShift();
-                const result = @bitCast(u64, @bitCast(i64, rs1_value >> shmt));
+                const result: u64 = @bitCast(rs1_value >> shmt);
 
                 if (has_writer) {
                     try writer.print(
@@ -1816,7 +1822,7 @@ fn execute(
                 const rs1 = instruction.rs1();
                 const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u6, hart.x[@intFromEnum(rs2)]);
+                const rs2_value: u6 = @truncate(hart.x[@intFromEnum(rs2)]);
                 const result = rs1_value << rs2_value;
 
                 if (has_writer) {
@@ -1871,9 +1877,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: i64 = @bitCast(hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @bitCast(i64, hart.x[@intFromEnum(rs2)]);
+                const rs2_value: i64 = @bitCast(hart.x[@intFromEnum(rs2)]);
                 const result = @intFromBool(rs1_value < rs2_value);
 
                 if (has_writer) {
@@ -2042,7 +2048,7 @@ fn execute(
                 const rs1 = instruction.rs1();
                 const rs1_value = hart.x[@intFromEnum(rs1)];
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u6, hart.x[@intFromEnum(rs2)]);
+                const rs2_value: u6 = @truncate(hart.x[@intFromEnum(rs2)]);
                 const result = rs1_value >> rs2_value;
 
                 if (has_writer) {
@@ -2097,10 +2103,10 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: i64 = @bitCast(hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u6, hart.x[@intFromEnum(rs2)]);
-                const result = @bitCast(u64, rs1_value >> rs2_value);
+                const rs2_value: u6 = @truncate(hart.x[@intFromEnum(rs2)]);
+                const result: u64 = @bitCast(rs1_value >> rs2_value);
 
                 if (has_writer) {
                     try writer.print(
@@ -2473,7 +2479,7 @@ fn execute(
                 const rs1_value = hart.x[@intFromEnum(rs1)];
                 const imm = instruction.i_imm.read();
 
-                const result = signExtend32bit(addSignedToUnsignedIgnoreOverflow(rs1_value, imm) & 0xFFFFFFFF);
+                const result = signExtend32bit(@truncate(addSignedToUnsignedIgnoreOverflow(rs1_value, imm) & 0xFFFFFFFF));
 
                 if (has_writer) {
                     try writer.print(
@@ -2526,7 +2532,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: u32 = @truncate(hart.x[@intFromEnum(rs1)]);
                 const shmt = instruction.i_specialization.smallShift();
                 const result = signExtend32bit(rs1_value << shmt);
 
@@ -2581,7 +2587,7 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: u32 = @truncate(hart.x[@intFromEnum(rs1)]);
                 const shmt = instruction.i_specialization.smallShift();
                 const result = signExtend32bit(rs1_value >> shmt);
 
@@ -2636,9 +2642,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@intFromEnum(rs1)]));
+                const rs1_value: i32 = @bitCast(@as(u32, @truncate(hart.x[@intFromEnum(rs1)])));
                 const shmt = instruction.i_specialization.smallShift();
-                const result = signExtend32bit(@bitCast(u32, rs1_value >> shmt));
+                const result = signExtend32bit(@bitCast(rs1_value >> shmt));
 
                 if (has_writer) {
                     try writer.print(
@@ -2690,9 +2696,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value_truncated = @truncate(u32, hart.x[@intFromEnum(rs1)]);
+                const rs1_value_truncated: u32 = @truncate(hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value_truncated = @truncate(u32, hart.x[@intFromEnum(rs2)]);
+                const rs2_value_truncated: u32 = @truncate(hart.x[@intFromEnum(rs2)]);
 
                 const result = @addWithOverflow(rs1_value_truncated, rs2_value_truncated)[0];
 
@@ -2748,9 +2754,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: u32 = @truncate(hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u32, hart.x[@intFromEnum(rs2)]);
+                const rs2_value: u32 = @truncate(hart.x[@intFromEnum(rs2)]);
 
                 const result = @subWithOverflow(rs1_value, rs2_value)[0];
                 const extended_result = signExtend32bit(result);
@@ -2807,9 +2813,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: u32 = @truncate(hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u5, hart.x[@intFromEnum(rs2)]);
+                const rs2_value: u5 = @truncate(hart.x[@intFromEnum(rs2)]);
                 const result = signExtend32bit(rs1_value << rs2_value);
 
                 if (has_writer) {
@@ -2864,9 +2870,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: u32 = @truncate(hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u5, hart.x[@intFromEnum(rs2)]);
+                const rs2_value: u5 = @truncate(hart.x[@intFromEnum(rs2)]);
                 const result = signExtend32bit(rs1_value >> rs2_value);
 
                 if (has_writer) {
@@ -2921,10 +2927,10 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@intFromEnum(rs1)]));
+                const rs1_value: i32 = @bitCast(@as(u32, @truncate(hart.x[@intFromEnum(rs1)])));
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u5, hart.x[@intFromEnum(rs2)]);
-                const result = signExtend32bit(@bitCast(u32, rs1_value >> rs2_value));
+                const rs2_value: u5 = @truncate(hart.x[@intFromEnum(rs2)]);
+                const result = signExtend32bit(@bitCast(rs1_value >> rs2_value));
 
                 if (has_writer) {
                     try writer.print(
@@ -3125,19 +3131,19 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i64, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: i64 = @bitCast(hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @bitCast(i64, hart.x[@intFromEnum(rs2)]);
+                const rs2_value: i64 = @bitCast(hart.x[@intFromEnum(rs2)]);
 
-                const result = @bitCast(
-                    u64,
+                const result: u64 =
+                    @bitCast(
                     std.math.divTrunc(
                         i64,
                         rs1_value,
                         rs2_value,
                     ) catch |err| switch (err) {
                         error.DivisionByZero => @as(i64, -1),
-                        error.Overflow => @as(i64, std.math.minInt(i64)),
+                        error.Overflow => std.math.minInt(i64),
                     },
                 );
 
@@ -3197,12 +3203,12 @@ fn execute(
                 const rs2 = instruction.rs2();
                 const rs2_value = hart.x[@intFromEnum(rs2)];
 
-                const result = std.math.divTrunc(
+                const result: u64 = std.math.divTrunc(
                     u64,
                     rs1_value,
                     rs2_value,
                 ) catch |err| switch (err) {
-                    error.DivisionByZero => @bitCast(u64, @as(i64, -1)),
+                    error.DivisionByZero => @bitCast(@as(i64, -1)),
                 };
 
                 if (has_writer) {
@@ -3260,20 +3266,19 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @bitCast(i32, @truncate(u32, hart.x[@intFromEnum(rs1)]));
+                const rs1_value: i32 = @bitCast(@as(u32, @truncate(hart.x[@intFromEnum(rs1)])));
                 const rs2 = instruction.rs2();
-                const rs2_value = @bitCast(i32, @truncate(u32, hart.x[@intFromEnum(rs2)]));
+                const rs2_value: i32 = @bitCast(@as(u32, @truncate(hart.x[@intFromEnum(rs2)])));
 
-                const result = signExtend32bit(
+                const result: u64 = signExtend32bit(
                     @bitCast(
-                        u32,
                         std.math.divTrunc(
                             i32,
                             rs1_value,
                             rs2_value,
                         ) catch |err| switch (err) {
                             error.DivisionByZero => @as(i32, -1),
-                            error.Overflow => @as(i32, std.math.minInt(i32)),
+                            error.Overflow => std.math.minInt(i32),
                         },
                     ),
                 );
@@ -3330,9 +3335,9 @@ fn execute(
 
             if (rd != .zero) {
                 const rs1 = instruction.rs1();
-                const rs1_value = @truncate(u32, hart.x[@intFromEnum(rs1)]);
+                const rs1_value: u32 = @truncate(hart.x[@intFromEnum(rs1)]);
                 const rs2 = instruction.rs2();
-                const rs2_value = @truncate(u32, hart.x[@intFromEnum(rs2)]);
+                const rs2_value: u32 = @truncate(hart.x[@intFromEnum(rs2)]);
 
                 const result = signExtend32bit(
                     std.math.divTrunc(
@@ -3340,7 +3345,7 @@ fn execute(
                         rs1_value,
                         rs2_value,
                     ) catch |err| switch (err) {
-                        error.DivisionByZero => @bitCast(u32, @as(i32, -1)),
+                        error.DivisionByZero => @bitCast(@as(i32, -1)),
                     },
                 );
 
@@ -3591,9 +3596,9 @@ fn throw(
 fn addSignedToUnsignedWrap(unsigned: u64, signed: i64) u64 {
     @setRuntimeSafety(false);
     return if (signed < 0)
-        unsigned -% @bitCast(u64, -signed)
+        unsigned -% @as(u64, @bitCast(-signed))
     else
-        unsigned +% @bitCast(u64, signed);
+        unsigned +% @as(u64, @bitCast(signed));
 }
 
 test "addSignedToUnsignedWrap" {
@@ -3610,15 +3615,15 @@ test "addSignedToUnsignedWrap" {
 fn addSignedToUnsignedIgnoreOverflow(unsigned: u64, signed: i64) u64 {
     @setRuntimeSafety(false);
     return if (signed < 0)
-        @subWithOverflow(unsigned, @bitCast(u64, -signed))[0]
+        @subWithOverflow(unsigned, @as(u64, @bitCast(-signed)))[0]
     else
-        @addWithOverflow(unsigned, @bitCast(u64, signed))[0];
+        @addWithOverflow(unsigned, @as(u64, @bitCast(signed)))[0];
 }
 
 test "addSignedToUnsignedIgnoreOverflow" {
     try std.testing.expectEqual(
         @as(u64, 42),
-        addSignedToUnsignedIgnoreOverflow(@as(u64, std.math.maxInt(u64)), 43),
+        addSignedToUnsignedIgnoreOverflow(std.math.maxInt(u64), 43),
     );
     try std.testing.expectEqual(
         @as(u64, std.math.maxInt(u64)),
@@ -3626,20 +3631,25 @@ test "addSignedToUnsignedIgnoreOverflow" {
     );
 }
 
-inline fn signExtend64bit(value: u64) i128 {
-    return @bitCast(i128, @as(u128, value) << 64) >> 64;
+inline fn signExtend32bit(value: u32) u64 {
+    const extended_value: u64 = value;
+    const shifted_up: i64 = @bitCast(extended_value << 32);
+    const sign_extended: i64 = shifted_up >> 32;
+    return @bitCast(sign_extended);
 }
 
-inline fn signExtend32bit(value: u64) u64 {
-    return @bitCast(u64, @bitCast(i64, value << 32) >> 32);
+inline fn signExtend16bit(value: u16) u64 {
+    const extended_value: u64 = value;
+    const shifted_up: i64 = @bitCast(extended_value << 48);
+    const sign_extended: i64 = shifted_up >> 48;
+    return @bitCast(sign_extended);
 }
 
-inline fn signExtend16bit(value: u64) u64 {
-    return @bitCast(u64, @bitCast(i64, value << 48) >> 48);
-}
-
-inline fn signExtend8bit(value: u64) u64 {
-    return @bitCast(u64, @bitCast(i64, value << 56) >> 56);
+inline fn signExtend8bit(value: u8) u64 {
+    const extended_value: u64 = value;
+    const shifted_up: i64 = @bitCast(extended_value << 56);
+    const sign_extended: i64 = shifted_up >> 56;
+    return @bitCast(sign_extended);
 }
 
 inline fn isWriter(comptime T: type) bool {

@@ -71,7 +71,12 @@ pub const SystemHart = struct {
             return StoreError.ExecutionOutOfBounds;
         }
 
-        std.mem.writeInt(MemoryType, @ptrCast(*[number_of_bytes]u8, memory.memory[address..].ptr), value, .Little);
+        std.mem.writeInt(
+            MemoryType,
+            @as(*[number_of_bytes]u8, @ptrCast(memory.memory[address..].ptr)),
+            value,
+            .Little,
+        );
     }
 
     fn translateAddress(self: *SystemHart, virtual_address: u64) !u64 {

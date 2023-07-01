@@ -6,7 +6,7 @@ pub const Completions = extern struct {
     cvec: [*c][*c]u8,
 
     pub inline fn addCompletion(self: *Completions, str: [:0]const u8) void {
-        c.bestlineAddCompletion(@ptrCast([*c]c.bestlineCompletions, self), str.ptr);
+        c.bestlineAddCompletion(@as([*c]c.bestlineCompletions, @ptrCast(self)), str.ptr);
     }
 };
 

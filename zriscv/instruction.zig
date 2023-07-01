@@ -665,17 +665,17 @@ pub const Instruction = extern union {
         pub fn read(self: CompressedJumpTarget) i64 {
             const shift_amount = 20 + 32;
 
-            return @bitCast(
-                i64,
-                (@as(u64, self.imm11.read()) << (11 + shift_amount) |
-                    @as(u64, self.imm10.read()) << (10 + shift_amount) |
-                    @as(u64, self.imm9_8.read()) << (8 + shift_amount) |
-                    @as(u64, self.imm7.read()) << (7 + shift_amount) |
-                    @as(u64, self.imm6.read()) << (6 + shift_amount) |
-                    @as(u64, self.imm5.read()) << (5 + shift_amount) |
-                    @as(u64, self.imm4.read()) << (4 + shift_amount) |
-                    @as(u64, self.imm3_1.read()) << (1 + shift_amount)),
-            ) >> shift_amount;
+            const result: u64 =
+                @as(u64, self.imm11.read()) << (11 + shift_amount) |
+                @as(u64, self.imm10.read()) << (10 + shift_amount) |
+                @as(u64, self.imm9_8.read()) << (8 + shift_amount) |
+                @as(u64, self.imm7.read()) << (7 + shift_amount) |
+                @as(u64, self.imm6.read()) << (6 + shift_amount) |
+                @as(u64, self.imm5.read()) << (5 + shift_amount) |
+                @as(u64, self.imm4.read()) << (4 + shift_amount) |
+                @as(u64, self.imm3_1.read()) << (1 + shift_amount);
+
+            return @as(i64, @bitCast(result)) >> shift_amount;
         }
 
         comptime {
@@ -692,11 +692,11 @@ pub const Instruction = extern union {
         backing: u32,
 
         pub fn smallShift(self: ISpecialization) u5 {
-            return @truncate(u5, self.shmt4_0.read());
+            return @truncate(self.shmt4_0.read());
         }
 
         pub fn fullShift(self: ISpecialization) u6 {
-            return @truncate(u6, @as(u64, self.shmt5.read()) << 5 | self.shmt4_0.read());
+            return @truncate(@as(u64, self.shmt5.read()) << 5 | self.shmt4_0.read());
         }
     };
 
@@ -707,7 +707,7 @@ pub const Instruction = extern union {
 
         pub fn read(self: IImm) i64 {
             const shift_amount = 20 + 32;
-            return @bitCast(i64, @as(u64, self.imm11_0.read()) << shift_amount) >> shift_amount;
+            return @as(i64, @bitCast(@as(u64, self.imm11_0.read()) << shift_amount)) >> shift_amount;
         }
 
         comptime {
@@ -724,10 +724,10 @@ pub const Instruction = extern union {
 
         pub fn read(self: SImm) i64 {
             const shift_amount = 20 + 32;
-            return @bitCast(
+            return @as(
                 i64,
-                @as(u64, self.imm11_5.read()) << (5 + shift_amount) |
-                    @as(u64, self.imm4_0.read()) << shift_amount,
+                @bitCast(@as(u64, self.imm11_5.read()) << (5 + shift_amount) |
+                    @as(u64, self.imm4_0.read()) << shift_amount),
             ) >> shift_amount;
         }
 
@@ -748,12 +748,12 @@ pub const Instruction = extern union {
         pub fn read(self: BImm) i64 {
             const shift_amount = 19 + 32;
 
-            return @bitCast(
+            return @as(
                 i64,
-                @as(u64, self.imm12.read()) << (12 + shift_amount) |
+                @bitCast(@as(u64, self.imm12.read()) << (12 + shift_amount) |
                     @as(u64, self.imm11.read()) << (11 + shift_amount) |
                     @as(u64, self.imm10_5.read()) << (5 + shift_amount) |
-                    @as(u64, self.imm4_1.read()) << (1 + shift_amount),
+                    @as(u64, self.imm4_1.read()) << (1 + shift_amount)),
             ) >> shift_amount;
         }
 
@@ -769,9 +769,9 @@ pub const Instruction = extern union {
         backing: u32,
 
         pub fn read(self: UImm) i64 {
-            return @bitCast(
+            return @as(
                 i64,
-                @as(u64, self.imm31_12.read()) << (12 + 32),
+                @bitCast(@as(u64, self.imm31_12.read()) << (12 + 32)),
             ) >> 32;
         }
 
@@ -792,12 +792,12 @@ pub const Instruction = extern union {
         pub fn read(self: JImm) i64 {
             const shift_amount = 11 + 32;
 
-            return @bitCast(
+            return @as(
                 i64,
-                @as(u64, self.imm20.read()) << 20 + shift_amount |
+                @bitCast(@as(u64, self.imm20.read()) << 20 + shift_amount |
                     @as(u64, self.imm19_12.read()) << 12 + shift_amount |
                     @as(u64, self.imm11.read()) << 11 + shift_amount |
-                    @as(u64, self.imm10_1.read()) << 1 + shift_amount,
+                    @as(u64, self.imm10_1.read()) << 1 + shift_amount),
             ) >> shift_amount;
         }
     };

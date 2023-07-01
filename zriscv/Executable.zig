@@ -311,8 +311,8 @@ const ElfHeader = struct {
 
     // Copied from `std.elf.Header.parse` but specialised to work on slice instead of a file
     pub fn parse(hdr_buf: *align(@alignOf(std.elf.Elf64_Ehdr)) const [@sizeOf(std.elf.Elf64_Ehdr)]u8) !ElfHeader {
-        const hdr32 = @ptrCast(*const std.elf.Elf32_Ehdr, hdr_buf);
-        const hdr64 = @ptrCast(*const std.elf.Elf64_Ehdr, hdr_buf);
+        const hdr32: *const std.elf.Elf32_Ehdr = @ptrCast(hdr_buf);
+        const hdr64: *const std.elf.Elf64_Ehdr = @ptrCast(hdr_buf);
         if (!std.mem.eql(u8, hdr32.e_ident[0..4], std.elf.MAGIC)) return error.InvalidElfMagic;
         if (hdr32.e_ident[std.elf.EI_VERSION] != 1) return error.InvalidElfVersion;
 
@@ -329,14 +329,14 @@ const ElfHeader = struct {
             else => return error.InvalidElfClass,
         };
 
-        const machine = if (need_bswap) blk: {
+        const machine: std.elf.EM = if (need_bswap) blk: {
             const value = @intFromEnum(hdr32.e_machine);
-            break :blk @enumFromInt(std.elf.EM, @byteSwap(value));
+            break :blk @enumFromInt(@byteSwap(value));
         } else hdr32.e_machine;
 
-        const @"type" = if (need_bswap) blk: {
+        const @"type": std.elf.ET = if (need_bswap) blk: {
             const value = @intFromEnum(hdr32.e_type);
-            break :blk @enumFromInt(std.elf.ET, @byteSwap(value));
+            break :blk @enumFromInt(@byteSwap(value));
         } else hdr32.e_type;
 
         return ElfHeader{
@@ -452,7 +452,7 @@ const ElfHeader = struct {
         var symbols = std.StringHashMap(u64).init(allocator);
         errdefer symbols.deinit();
 
-        try symbols.ensureTotalCapacity(@intCast(u32, symbol_names.len));
+        try symbols.ensureTotalCapacity(@intCast(symbol_names.len));
 
         const symbol_section_source = contents[symbol_section.sh_offset..(symbol_section.sh_offset + symbol_section.sh_size)];
         const string_section_source = contents[string_section.sh_offset..(string_section.sh_offset + string_section.sh_size) :0];

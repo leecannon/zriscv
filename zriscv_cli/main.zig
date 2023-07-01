@@ -334,10 +334,10 @@ fn writeOutSignature(signature_file: []const u8, memory: zriscv.SystemMemory, ex
     var buffered_writer = std.io.bufferedWriter(file.writer());
     const writer = buffered_writer.writer();
 
-    const signature_ptr = blk: {
+    const signature_ptr: [*]const u32 = blk: {
         const signature_ptr = &memory.memory[executable.begin_signature];
         if (!std.mem.isAligned(@intFromPtr(signature_ptr), 4)) @panic("riscof signature start is not 4-byte aligned");
-        break :blk @ptrCast([*]const u32, @alignCast(4, signature_ptr));
+        break :blk @ptrCast(@alignCast(signature_ptr));
     };
 
     const len = (executable.end_signature - executable.begin_signature) / @sizeOf(u32);

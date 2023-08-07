@@ -139,19 +139,19 @@ fn setupZriscvCli(
 
     exe.linkLibC();
 
-    exe.addIncludePath("libraries/bestline/bestline");
-    exe.addCSourceFile("libraries/bestline/bestline/bestline.c", &.{});
+    exe.addIncludePath(.{ .path = "libraries/bestline/bestline" });
+    exe.addCSourceFile(.{ .file = .{ .path = "libraries/bestline/bestline/bestline.c" }, .flags = &.{} });
 
     if (trace) {
         exe.linkLibCpp();
-        exe.addIncludePath("libraries/tracy/tracy/public");
+        exe.addIncludePath(.{ .path = "libraries/tracy/tracy/public" });
 
         const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
             &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
         else
             &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
 
-        exe.addCSourceFile("libraries/tracy/tracy/public/TracyClient.cpp", tracy_c_flags);
+        exe.addCSourceFile(.{ .file = .{ .path = "libraries/tracy/tracy/public/TracyClient.cpp" }, .flags = tracy_c_flags });
 
         if (exe.target.isWindows()) {
             exe.linkSystemLibrary("Advapi32");
@@ -182,14 +182,14 @@ fn setupZriscvGui(
 
     if (trace) {
         exe.linkLibCpp();
-        exe.addIncludePath("libraries/tracy/tracy/public");
+        exe.addIncludePath(.{ .path = "libraries/tracy/tracy/public" });
 
         const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
             &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
         else
             &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
 
-        exe.addCSourceFile("libraries/tracy/tracy/public/TracyClient.cpp", tracy_c_flags);
+        exe.addCSourceFile(.{ .file = .{ .path = "libraries/tracy/tracy/public/TracyClient.cpp" }, .flags = tracy_c_flags });
 
         if (exe.target.isWindows()) {
             exe.linkSystemLibrary("Advapi32");
@@ -218,14 +218,14 @@ fn setupZriscvForTests(
 
     if (trace) {
         exe.linkLibCpp();
-        exe.addIncludePath("libraries/tracy/tracy/public");
+        exe.addIncludePath(.{ .path = "libraries/tracy/tracy/public" });
 
         const tracy_c_flags: []const []const u8 = if (exe.target.isWindows() and exe.target.getAbi() == .gnu)
             &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined", "-D_WIN32_WINNT=0x601" }
         else
             &.{ "-DTRACY_ENABLE=1", "-fno-sanitize=undefined" };
 
-        exe.addCSourceFile("libraries/tracy/tracy/public/TracyClient.cpp", tracy_c_flags);
+        exe.addCSourceFile(.{ .file = .{ .path = "libraries/tracy/tracy/public/TracyClient.cpp" }, .flags = tracy_c_flags });
 
         if (exe.target.isWindows()) {
             exe.linkSystemLibrary("Advapi32");

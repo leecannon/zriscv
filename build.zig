@@ -262,7 +262,7 @@ fn getOptions(
         );
 
         var code: u8 = undefined;
-        const git_describe_untrimmed = b.execAllowFail(&[_][]const u8{
+        const git_describe_untrimmed = b.runAllowFail(&[_][]const u8{
             "git", "-C", b.build_root.path.?, "describe", "--match", "*.*.*", "--tags",
         }, &code, .Ignore) catch {
             break :v version_string;

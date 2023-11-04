@@ -53,7 +53,7 @@ pub fn load(allocator: std.mem.Allocator, stderr: anytype, file_path: []const u8
         return error.ElfNot64Bit;
     }
 
-    if (elf_header.endian != .Little) {
+    if (elf_header.endian != .little) {
         stderr.writeAll("ERROR: ELF file is not little endian\n") catch unreachable;
         return error.ElfNotLittleEndian;
     }
@@ -317,8 +317,8 @@ const ElfHeader = struct {
         if (hdr32.e_ident[std.elf.EI_VERSION] != 1) return error.InvalidElfVersion;
 
         const endian: std.builtin.Endian = switch (hdr32.e_ident[std.elf.EI_DATA]) {
-            std.elf.ELFDATA2LSB => .Little,
-            std.elf.ELFDATA2MSB => .Big,
+            std.elf.ELFDATA2LSB => .little,
+            std.elf.ELFDATA2MSB => .big,
             else => return error.InvalidElfEndian,
         };
         const need_bswap = endian != native_endian;

@@ -48,7 +48,7 @@ pub const SystemHart = struct {
             return LoadError.ExecutionOutOfBounds;
         }
 
-        return std.mem.readIntSlice(MemoryType, memory.memory[address..], .Little);
+        return std.mem.readInt(MemoryType, memory.memory[address..][0..@sizeOf(MemoryType)], .little);
     }
 
     pub fn storeMemory(
@@ -75,7 +75,7 @@ pub const SystemHart = struct {
             MemoryType,
             @as(*[number_of_bytes]u8, @ptrCast(memory.memory[address..].ptr)),
             value,
-            .Little,
+            .little,
         );
     }
 
